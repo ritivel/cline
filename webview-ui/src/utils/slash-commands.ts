@@ -37,6 +37,11 @@ const BASE_SLASH_COMMANDS: SlashCommand[] = [
 		description: "Invoke a Cline CLI subagent for focused research tasks",
 		section: "default",
 	},
+	{
+		name: "create-dossier",
+		description: "Create CTD dossier folder structure and organize PDFs",
+		section: "default",
+	},
 ]
 
 // VS Code-only slash commands
