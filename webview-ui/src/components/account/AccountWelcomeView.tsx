@@ -19,7 +19,7 @@ export const AccountWelcomeView = () => {
 			</p>
 
 			<VSCodeButton className="w-full mb-4" onClick={() => handleSignIn()}>
-				Sign up with Cline
+				Sign up with Ritivel
 			</VSCodeButton>
 
 			<p className="text-(--vscode-descriptionForeground) text-xs text-center m-0">

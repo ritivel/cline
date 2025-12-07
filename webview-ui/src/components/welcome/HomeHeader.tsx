@@ -23,14 +23,15 @@ const HomeHeader = ({ shouldShowQuickWins = false }: HomeHeaderProps) => {
 	return (
 		<div className="flex flex-col items-center mb-5">
 			<div className="my-7">
-				<ClineLogoVariable className="size-20" environment={environment} />
+				<ClineLogoVariable className="size-40" environment={environment} />
 			</div>
 			<div className="text-center flex items-center justify-center">
 				<h1 className="m-0 font-bold">What can I do for you?</h1>
 				<Tooltip>
 					<TooltipContent side="bottom">
-						I can develop software step-by-step by editing files, exploring projects, running commands, and using
-						browsers. I can even extend my capabilities with MCP tools to assist beyond basic code completion.
+						I can help with regulatory documentation step-by-step by editing files, exploring document structures,
+						running commands, and using browsers. I can even extend my capabilities with MCP tools to assist beyond
+						basic document editing.
 					</TooltipContent>
 					<TooltipTrigger asChild>
 						<InfoIcon className="ml-2 cursor-pointer text-link text-sm size-2" />

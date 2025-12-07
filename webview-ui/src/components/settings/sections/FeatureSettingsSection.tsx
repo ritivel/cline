@@ -409,7 +409,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 						</Tooltip>
 
 						<p className="text-xs text-(--vscode-errorForeground)">
-							EXPERIMENTAL & DANGEROUS: This mode disables safety checks and user confirmations. Cline will
+							EXPERIMENTAL & DANGEROUS: This mode disables safety checks and user confirmations. Ritivel will
 							automatically approve all actions without asking. Use with extreme caution.
 						</p>
 					</div>

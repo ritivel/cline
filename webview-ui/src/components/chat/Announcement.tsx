@@ -37,8 +37,8 @@ const linkContainerStyle: CSSProperties = { margin: "0" }
 const linkStyle: CSSProperties = { display: "inline" }
 
 /*
-Announcements are automatically shown when the major.minor version changes (for ex 3.19.x → 3.20.x or 4.0.x). 
-The latestAnnouncementId is now automatically generated from the extension's package.json version. 
+Announcements are automatically shown when the major.minor version changes (for ex 3.19.x → 3.20.x or 4.0.x).
+The latestAnnouncementId is now automatically generated from the extension's package.json version.
 Patch releases (3.19.1 → 3.19.2) will not trigger new announcements.
 */
 const Announcement = ({ version, hideAnnouncement }: AnnouncementProps) => {
@@ -99,16 +99,16 @@ const Announcement = ({ version, hideAnnouncement }: AnnouncementProps) => {
 							<VSCodeLink href="https://docs.cline.bot/features/explain-changes" style={linkStyle}>
 								Explain Changes
 							</VSCodeLink>{" "}
-							button when Cline completes a task to help review code with inline chat. You can reply to comments, or
-							send the chat as context back to Cline.
+							button when Ritivel completes a task to help review code with inline chat. You can reply to comments,
+							or send the chat as context back to Ritivel.
 						</li>
 						<li>
 							Use the new{" "}
 							<VSCodeLink href="https://docs.cline.bot/features/slash-commands/explain-changes" style={linkStyle}>
 								/explain-changes
 							</VSCodeLink>{" "}
-							slash command to explain the changes in branches, commits, etc. (Try asking Cline to explain a PR you
-							need to review!)
+							slash command to explain the changes in branches, commits, etc. (Try asking Ritivel to explain a PR
+							you need to review!)
 						</li>
 					</>
 				)}
@@ -131,7 +131,7 @@ const Announcement = ({ version, hideAnnouncement }: AnnouncementProps) => {
 							appearance="primary"
 							onClick={handleShowAccount}
 							style={{ margin: "5px 0", transform: "scale(0.85)", transformOrigin: "left center" }}>
-							Sign Up with Cline
+							Sign Up with Ritivel
 						</VSCodeButton>
 					)}
 				</li>

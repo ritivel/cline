@@ -35,18 +35,18 @@ const WelcomeView = memo(() => {
 	return (
 		<div className="fixed inset-0 p-0 flex flex-col">
 			<div className="h-full px-5 overflow-auto flex flex-col gap-2.5">
-				<h2 className="text-lg font-semibold">Hi, I'm Cline</h2>
+				<h2 className="text-lg font-semibold">Hi, I'm Ritivel</h2>
 				<div className="flex justify-center my-5">
 					<ClineLogoWhite className="size-16" />
 				</div>
 				<p>
-					I can do all kinds of tasks thanks to breakthroughs in{" "}
+					I can help with regulatory documentation tasks thanks to breakthroughs in{" "}
 					<VSCodeLink className="inline" href="https://www.anthropic.com/claude/sonnet">
 						Claude 4 Sonnet's
 					</VSCodeLink>
-					agentic coding capabilities and access to tools that let me create & edit files, explore complex projects, use
-					a browser, and execute terminal commands <i>(with your permission, of course)</i>. I can even use MCP to
-					create new tools and extend my own capabilities.
+					agentic capabilities and access to tools that let me create & edit files, explore regulatory document
+					structures, use a browser, and execute terminal commands <i>(with your permission, of course)</i>. I can even
+					use MCP to create new tools and extend my own capabilities.
 				</p>
 
 				<p className="text-(--vscode-descriptionForeground)">

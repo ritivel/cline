@@ -1,10 +1,12 @@
 import type { ApiProviderInfo } from "@core/api"
 import { ClineRulesToggles } from "@shared/cline-rules"
-import { spawn } from "child_process"
 import fs from "fs/promises"
 import path from "path"
+import * as vscode from "vscode"
 import { HostProvider } from "@/hosts/host-provider"
+import { PdfProcessingService } from "@/services/pdf/PdfProcessingService"
 import { telemetryService } from "@/services/telemetry"
+import { ShowMessageType } from "@/shared/proto/index.host"
 import { isNativeToolCallingConfig } from "@/utils/model-utils"
 import {
 	condenseToolResponse,
@@ -39,11 +41,13 @@ interface CTDSection {
 }
 
 interface CTDModuleDef {
+	moduleNumber: number
 	title: string
 	sections: Record<string, CTDSection>
 }
 
 const MODULE_1: CTDModuleDef = {
+	moduleNumber: 1,
 	title: "Administrative Information and Product Information",
 	sections: {
 		"1.1": { title: "Comprehensive Table of Contents for all Modules." },
@@ -77,6 +81,7 @@ const MODULE_1: CTDModuleDef = {
 }
 
 const MODULE_2: CTDModuleDef = {
+	moduleNumber: 2,
 	title: "Overview and Summaries",
 	sections: {
 		"2.1": { title: "Table of Contents of Module 2" },
@@ -121,6 +126,7 @@ const MODULE_2: CTDModuleDef = {
 }
 
 const MODULE_3: CTDModuleDef = {
+	moduleNumber: 3,
 	title: "Quality",
 	sections: {
 		"3.1": { title: "Table of Contents of Module 3" },
@@ -229,6 +235,7 @@ const MODULE_3: CTDModuleDef = {
 }
 
 const MODULE_5: CTDModuleDef = {
+	moduleNumber: 5,
 	title: "Clinical Study Reports",
 	sections: {
 		"5.1": { title: "Table of Contents of Module 5" },
@@ -280,7 +287,34 @@ const MODULE_5: CTDModuleDef = {
 	},
 }
 
-const CTD_MODULES: CTDModuleDef[] = [MODULE_1, MODULE_2, MODULE_3, MODULE_5]
+// CTD Template Definitions
+interface CTDTemplate {
+	name: string
+	description?: string
+	modules: CTDModuleDef[]
+}
+
+// Default CTD template (EAC-NMRA standard)
+const DEFAULT_CTD_TEMPLATE: CTDTemplate = {
+	name: "default",
+	description: "EAC-NMRA CTD Template",
+	modules: [MODULE_1, MODULE_2, MODULE_3, MODULE_5],
+}
+
+// Template registry - add new templates here
+const CTD_TEMPLATES: Record<string, CTDTemplate> = {
+	default: DEFAULT_CTD_TEMPLATE,
+}
+
+/**
+ * Gets a CTD template by name, or returns the default template
+ */
+function getCTDTemplate(templateName?: string): CTDTemplate {
+	if (templateName && CTD_TEMPLATES[templateName]) {
+		return CTD_TEMPLATES[templateName]
+	}
+	return DEFAULT_CTD_TEMPLATE
+}
 
 /**
  * Recursively builds folder paths from CTD module structure
@@ -307,9 +341,8 @@ function buildFolderPaths(module: CTDModuleDef, moduleNum: number, sectionId: st
 async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef[]): Promise<string[]> {
 	const createdPaths: string[] = []
 
-	for (let i = 0; i < modules.length; i++) {
-		const module = modules[i]
-		const moduleNum = i + 1
+	for (const module of modules) {
+		const moduleNum = module.moduleNumber
 
 		// Create module folder
 		const modulePath = path.join(workspaceRoot, "dossier", `module-${moduleNum}`)
@@ -336,47 +369,112 @@ async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef
 }
 
 /**
- * Spawns background process to organize PDFs into document folders
+ * Global service instance to allow cancellation
  */
-function spawnPdfProcessingProcess(workspaceRoot: string): void {
-	const isWindows = process.platform === "win32"
+let pdfProcessingService: PdfProcessingService | null = null
 
-	let command: string
-	if (isWindows) {
-		// Windows PowerShell command
-		command = `powershell -Command "Get-ChildItem -Path . -Recurse -Filter *.pdf -File | Where-Object { $_.FullName -notlike '*\\dossier\\*' -and $_.FullName -notlike '*\\documents\\*' } | ForEach-Object { $basename = [System.IO.Path]::GetFileNameWithoutExtension($_.Name); $folderPath = Join-Path 'documents' $basename; if (-not (Test-Path $folderPath)) { New-Item -ItemType Directory -Path $folderPath -Force | Out-Null } }"`
-	} else {
-		// Unix/Linux/macOS command
-		command = `find . -type f -name "*.pdf" -not -path "./dossier/*" -not -path "./documents/*" | while read pdf; do basename=$(basename "$pdf" .pdf); mkdir -p "documents/$basename"; done`
+/**
+ * Starts cloud-based PDF processing in the background
+ */
+function startCloudPdfProcessing(workspaceRoot: string): void {
+	// Cancel any existing processing
+	if (pdfProcessingService) {
+		pdfProcessingService.cancel()
+		pdfProcessingService = null
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message: "Previous PDF processing job cancelled",
+			type: ShowMessageType.INFORMATION,
+		})
 	}
 
-	// Spawn process in background
-	const child = spawn(isWindows ? "powershell" : "sh", isWindows ? ["-Command", command] : ["-c", command], {
-		cwd: workspaceRoot,
-		detached: true,
-		stdio: "ignore",
-	})
+	const service = new PdfProcessingService("https://isanthous-breccial-claire.ngrok-free.dev", "hellofromritivel")
+	pdfProcessingService = service
 
-	// Unref to allow parent process to exit independently
-	child.unref()
+	vscode.window.withProgress(
+		{
+			location: vscode.ProgressLocation.Notification,
+			title: "PDF Processing",
+			cancellable: true,
+		},
+		async (progress, token) => {
+			token.onCancellationRequested(() => {
+				service.cancel()
+			})
+
+			await service
+				.processPdfs(workspaceRoot, (stage, details) => {
+					console.log(`[PDF Processing ${stage}] ${details || ""}`)
+
+					// Update progress bar
+					progress.report({ message: details || stage })
+
+					// Show notification for each stage update (keep existing behavior)
+					const message = details ? `PDF Processing: ${details}` : `PDF Processing: ${stage}`
+					if (stage === "error") {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message,
+							type: ShowMessageType.ERROR,
+						})
+					} else if (stage === "completed") {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message,
+							type: ShowMessageType.INFORMATION,
+						})
+					} else {
+						// Use showInformationMessage for progress updates as well
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message,
+							type: ShowMessageType.INFORMATION,
+						})
+					}
+				})
+				.catch((error) => {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					if (errorMessage === "Operation cancelled by user") {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: "PDF Processing cancelled",
+							type: ShowMessageType.INFORMATION,
+						})
+					} else {
+						console.error("Error processing PDFs:", error)
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `PDF Processing Critical Error: ${errorMessage}`,
+							type: ShowMessageType.ERROR,
+						})
+					}
+				})
+				.finally(() => {
+					if (pdfProcessingService === service) {
+						pdfProcessingService = null
+					}
+				})
+		},
+	)
 }
 
 /**
  * Executes the create-dossier command
  */
-async function executeCreateDossier(workspaceRoot: string): Promise<{ success: boolean; message: string }> {
+async function executeCreateDossier(
+	workspaceRoot: string,
+	templateName?: string,
+): Promise<{ success: boolean; message: string }> {
 	try {
+		// Get the CTD template (default if not specified)
+		const template = getCTDTemplate(templateName)
+
 		// Create dossier folder structure
-		const createdPaths = await createDossierFolders(workspaceRoot, CTD_MODULES)
+		const createdPaths = await createDossierFolders(workspaceRoot, template.modules)
 
 		// Create documents folder
 		const documentsPath = path.join(workspaceRoot, "documents")
 		await fs.mkdir(documentsPath, { recursive: true })
 
-		// Spawn background PDF processing
-		spawnPdfProcessingProcess(workspaceRoot)
+		// Start cloud-based PDF processing in the background
+		startCloudPdfProcessing(workspaceRoot)
 
-		const message = `Successfully created dossier folder structure with ${createdPaths.length} folders and documents folder. PDF processing has been started in the background.`
+		const templateInfo = templateName ? ` using template "${template.name}"` : ""
+		const message = `Successfully created dossier folder structure${templateInfo} with ${createdPaths.length} folders and documents folder. Cloud-based PDF processing has been started in the background. Results will be saved to documents/results.zip when complete.`
 		return { success: true, message }
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)

@@ -2,7 +2,7 @@
 English | <a href="https://github.com/cline/cline/blob/main/locales/es/README.md" target="_blank">Español</a> | <a href="https://github.com/cline/cline/blob/main/locales/de/README.md" target="_blank">Deutsch</a> | <a href="https://github.com/cline/cline/blob/main/locales/ja/README.md" target="_blank">日本語</a> | <a href="https://github.com/cline/cline/blob/main/locales/zh-cn/README.md" target="_blank">简体中文</a> | <a href="https://github.com/cline/cline/blob/main/locales/zh-tw/README.md" target="_blank">繁體中文</a> | <a href="https://github.com/cline/cline/blob/main/locales/ko/README.md" target="_blank">한국어</a>
 </sub></div>
 
-# Cline
+# Ritivel
 
 <p align="center">
   <img src="https://media.githubusercontent.com/media/cline/cline/main/assets/docs/demo.gif" width="100%" />
@@ -30,20 +30,20 @@ English | <a href="https://github.com/cline/cline/blob/main/locales/es/README.md
 </table>
 </div>
 
-Meet Cline, an AI assistant that can use your **CLI** a**N**d **E**ditor.
+Meet Ritivel, an AI-native editor for regulatory teams in life-sciences.
 
-Thanks to [Claude Sonnet's agentic coding capabilities](https://www.anthropic.com/claude/sonnet), Cline can handle complex software development tasks step-by-step. With tools that let him create & edit files, explore large projects, use the browser, and execute terminal commands (after you grant permission), he can assist you in ways that go beyond code completion or tech support. Cline can even use the Model Context Protocol (MCP) to create new tools and extend his own capabilities. While autonomous AI scripts traditionally run in sandboxed environments, this extension provides a human-in-the-loop GUI to approve every file change and terminal command, providing a safe and accessible way to explore the potential of agentic AI.
+Ritivel streamlines regulatory document creation, CTD dossier management, and compliance workflows with intelligent assistance. Thanks to [Claude Sonnet's agentic capabilities](https://www.anthropic.com/claude/sonnet), Ritivel can handle complex regulatory documentation tasks step-by-step. With tools that let it create & edit files, explore large document repositories, use the browser, and execute terminal commands (after you grant permission), Ritivel assists regulatory teams in ways that go beyond simple document editing. Ritivel can even use the Model Context Protocol (MCP) to create new tools and extend its capabilities. While autonomous AI scripts traditionally run in sandboxed environments, this extension provides a human-in-the-loop GUI to approve every file change and terminal command, providing a safe and accessible way to leverage AI for regulatory work.
 
-1. Enter your task and add images to convert mockups into functional apps or fix bugs with screenshots.
-2. Cline starts by analyzing your file structure & source code ASTs, running regex searches, and reading relevant files to get up to speed in existing projects. By carefully managing what information is added to context, Cline can provide valuable assistance even for large, complex projects without overwhelming the context window.
-3. Once Cline has the information he needs, he can:
-    - Create and edit files + monitor linter/compiler errors along the way, letting him proactively fix issues like missing imports and syntax errors on his own.
-    - Execute commands directly in your terminal and monitor their output as he works, letting him e.g., react to dev server issues after editing a file.
-    - For web development tasks, Cline can launch the site in a headless browser, click, type, scroll, and capture screenshots + console logs, allowing him to fix runtime errors and visual bugs.
-4. When a task is completed, Cline will present the result to you with a terminal command like `open -a "Google Chrome" index.html`, which you run with a click of a button.
+1. Enter your regulatory documentation task and add context from existing documents or regulatory guidelines.
+2. Ritivel starts by analyzing your document structure, running searches, and reading relevant files to understand your regulatory project. By carefully managing what information is added to context, Ritivel can provide valuable assistance even for large, complex regulatory dossiers without overwhelming the context window.
+3. Once Ritivel has the information it needs, it can:
+    - Create and edit regulatory documents + monitor formatting and compliance requirements along the way, proactively fixing issues like missing sections and formatting errors.
+    - Execute commands directly in your terminal and monitor their output as it works, allowing it to react to document processing issues after editing files.
+    - For regulatory workflows, Ritivel can launch documents in a browser, navigate through CTD structures, and capture information, allowing it to assist with regulatory submissions and compliance checks.
+4. When a task is completed, Ritivel will present the result to you with clear documentation of changes made.
 
 > [!TIP]
-> Follow [this guide](https://docs.cline.bot/features/customization/opening-cline-in-sidebar) to open Cline on the right side of your editor. This lets you use Cline side-by-side with your file explorer, and see how he changes your workspace more clearly.
+> Follow [this guide](https://docs.cline.bot/features/customization/opening-cline-in-sidebar) to open Ritivel on the right side of your editor. This lets you use Ritivel side-by-side with your file explorer, and see how it changes your workspace more clearly.
 
 ---
 
@@ -51,7 +51,7 @@ Thanks to [Claude Sonnet's agentic coding capabilities](https://www.anthropic.c
 
 ### Use any API and Model
 
-Cline supports API providers like OpenRouter, Anthropic, OpenAI, Google Gemini, AWS Bedrock, Azure, GCP Vertex, Cerebras and Groq. You can also configure any OpenAI compatible API, or use a local model through LM Studio/Ollama. If you're using OpenRouter, the extension fetches their latest model list, allowing you to use the newest models as soon as they're available.
+Ritivel supports API providers like OpenRouter, Anthropic, OpenAI, Google Gemini, AWS Bedrock, Azure, GCP Vertex, Cerebras and Groq. You can also configure any OpenAI compatible API, or use a local model through LM Studio/Ollama. If you're using OpenRouter, the extension fetches their latest model list, allowing you to use the newest models as soon as they're available.
 
 The extension also keeps track of total tokens and API usage cost for the entire task loop and individual requests, keeping you informed of spend every step of the way.
 
@@ -63,9 +63,9 @@ The extension also keeps track of total tokens and API usage cost for the entire
 
 ### Run Commands in Terminal
 
-Thanks to the new [shell integration updates in VSCode v1.93](https://code.visualstudio.com/updates/v1_93#_terminal-shell-integration-api), Cline can execute commands directly in your terminal and receive the output. This allows him to perform a wide range of tasks, from installing packages and running build scripts to deploying applications, managing databases, and executing tests, all while adapting to your dev environment & toolchain to get the job done right.
+Thanks to the new [shell integration updates in VSCode v1.93](https://code.visualstudio.com/updates/v1_93#_terminal-shell-integration-api), Ritivel can execute commands directly in your terminal and receive the output. This allows it to perform a wide range of tasks, from processing documents and running validation scripts to managing regulatory workflows, all while adapting to your environment & toolchain to get the job done right.
 
-For long running processes like dev servers, use the "Proceed While Running" button to let Cline continue in the task while the command runs in the background. As Cline works he’ll be notified of any new terminal output along the way, letting him react to issues that may come up, such as compile-time errors when editing files.
+For long running processes like document processing, use the "Proceed While Running" button to let Ritivel continue in the task while the command runs in the background. As Ritivel works it'll be notified of any new terminal output along the way, letting it react to issues that may come up, such as formatting errors when editing documents.
 
 <!-- Transparent pixel to create line break after floating image -->
 
@@ -75,9 +75,9 @@ For long running processes like dev servers, use the "Proceed While Running" but
 
 ### Create and Edit Files
 
-Cline can create and edit files directly in your editor, presenting you a diff view of the changes. You can edit or revert Cline's changes directly in the diff view editor, or provide feedback in chat until you're satisfied with the result. Cline also monitors linter/compiler errors (missing imports, syntax errors, etc.) so he can fix issues that come up along the way on his own.
+Ritivel can create and edit files directly in your editor, presenting you a diff view of the changes. You can edit or revert Ritivel's changes directly in the diff view editor, or provide feedback in chat until you're satisfied with the result. Ritivel also monitors formatting and compliance requirements so it can fix issues that come up along the way on its own.
 
-All changes made by Cline are recorded in your file's Timeline, providing an easy way to track and revert modifications if needed.
+All changes made by Ritivel are recorded in your file's Timeline, providing an easy way to track and revert modifications if needed.
 
 <!-- Transparent pixel to create line break after floating image -->
 
@@ -87,9 +87,9 @@ All changes made by Cline are recorded in your file's Timeline, providing an eas
 
 ### Use the Browser
 
-With Claude Sonnet's new [Computer Use](https://www.anthropic.com/news/3-5-models-and-computer-use) capability, Cline can launch a browser, click elements, type text, and scroll, capturing screenshots and console logs at each step. This allows for interactive debugging, end-to-end testing, and even general web use! This gives him autonomy to fixing visual bugs and runtime issues without you needing to handhold and copy-pasting error logs yourself.
+With Claude Sonnet's new [Computer Use](https://www.anthropic.com/news/3-5-models-and-computer-use) capability, Ritivel can launch a browser, click elements, type text, and scroll, capturing screenshots and console logs at each step. This allows for interactive document review, regulatory portal navigation, and compliance checking! This gives it autonomy to navigate regulatory websites and extract information without you needing to manually copy-paste content.
 
-Try asking Cline to "test the app", and watch as he runs a command like `npm run dev`, launches your locally running dev server in a browser, and performs a series of tests to confirm that everything works. [See a demo here.](https://x.com/sdrzn/status/1850880547825823989)
+Try asking Ritivel to "review this regulatory submission", and watch as it navigates regulatory portals, extracts relevant information, and helps ensure compliance.
 
 <!-- Transparent pixel to create line break after floating image -->
 
@@ -99,11 +99,11 @@ Try asking Cline to "test the app", and watch as he runs a command like `npm run
 
 ### "add a tool that..."
 
-Thanks to the [Model Context Protocol](https://github.com/modelcontextprotocol), Cline can extend his capabilities through custom tools. While you can use [community-made servers](https://github.com/modelcontextprotocol/servers), Cline can instead create and install tools tailored to your specific workflow. Just ask Cline to "add a tool" and he will handle everything, from creating a new MCP server to installing it into the extension. These custom tools then become part of Cline's toolkit, ready to use in future tasks.
+Thanks to the [Model Context Protocol](https://github.com/modelcontextprotocol), Ritivel can extend its capabilities through custom tools. While you can use [community-made servers](https://github.com/modelcontextprotocol/servers), Ritivel can instead create and install tools tailored to your specific regulatory workflow. Just ask Ritivel to "add a tool" and it will handle everything, from creating a new MCP server to installing it into the extension. These custom tools then become part of Ritivel's toolkit, ready to use in future tasks.
 
--   "add a tool that fetches Jira tickets": Retrieve ticket ACs and put Cline to work
--   "add a tool that manages AWS EC2s": Check server metrics and scale instances up or down
--   "add a tool that pulls the latest PagerDuty incidents": Fetch details and ask Cline to fix bugs
+-   "add a tool that fetches regulatory guidelines": Retrieve FDA/EMA guidelines and put Ritivel to work
+-   "add a tool that manages CTD dossier structure": Check dossier completeness and organize sections
+-   "add a tool that pulls the latest regulatory updates": Fetch details and ask Ritivel to update documents
 
 <!-- Transparent pixel to create line break after floating image -->
 
@@ -113,13 +113,13 @@ Thanks to the [Model Context Protocol](https://github.com/modelcontextprotocol),
 
 ### Add Context
 
-**`@url`:** Paste in a URL for the extension to fetch and convert to markdown, useful when you want to give Cline the latest docs
+**`@url`:** Paste in a URL for the extension to fetch and convert to markdown, useful when you want to give Ritivel the latest regulatory guidelines
 
-**`@problems`:** Add workspace errors and warnings ('Problems' panel) for Cline to fix
+**`@problems`:** Add workspace errors and warnings ('Problems' panel) for Ritivel to fix
 
-**`@file`:** Adds a file's contents so you don't have to waste API requests approving read file (+ type to search files)
+**`@file`:** Adds a file's contents so you don't have to waste API requests approving read file (+ type to search files)
 
-**`@folder`:** Adds folder's files all at once to speed up your workflow even more
+**`@folder`:** Adds folder's files all at once to speed up your regulatory workflow even more
 
 <!-- Transparent pixel to create line break after floating image -->
 
@@ -129,9 +129,9 @@ Thanks to the [Model Context Protocol](https://github.com/modelcontextprotocol),
 
 ### Checkpoints: Compare and Restore
 
-As Cline works through a task, the extension takes a snapshot of your workspace at each step. You can use the 'Compare' button to see a diff between the snapshot and your current workspace, and the 'Restore' button to roll back to that point.
+As Ritivel works through a task, the extension takes a snapshot of your workspace at each step. You can use the 'Compare' button to see a diff between the snapshot and your current workspace, and the 'Restore' button to roll back to that point.
 
-For example, when working with a local web server, you can use 'Restore Workspace Only' to quickly test different versions of your app, then use 'Restore Task and Workspace' when you find the version you want to continue building from. This lets you safely explore different approaches without losing progress.
+For example, when working with regulatory documents, you can use 'Restore Workspace Only' to quickly test different versions of your documents, then use 'Restore Task and Workspace' when you find the version you want to continue building from. This lets you safely explore different approaches without losing progress.
 
 <!-- Transparent pixel to create line break after floating image -->
 
@@ -139,13 +139,12 @@ For example, when working with a local web server, you can use 'Restore Workspac
 
 ## Contributing
 
-To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.md) to learn the basics. You can also join our [Discord](https://discord.gg/cline) to chat with other contributors in the `#contributors` channel. If you're looking for full-time work, check out our open positions on our [careers page](https://cline.bot/join-us)!
+To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.md) to learn the basics.
 
 ## Enterprise
 
-Get the same Cline experience with enterprise-grade controls: SSO (SAML/OIDC), global policies and configuration, observability with audit trails, private networking (VPC/private link), and self-hosted or on-prem deployments, and enterprise support. Learn more at our [enterprise page](https://cline.bot/enterprise) or [talk to us](https://cline.bot/contact-sales).
-
+Get the same Ritivel experience with enterprise-grade controls: SSO (SAML/OIDC), global policies and configuration, observability with audit trails, private networking (VPC/private link), and self-hosted or on-prem deployments, and enterprise support.
 
 ## License
 
-[Apache 2.0 © 2025 Cline Bot Inc.](./LICENSE)
+[Apache 2.0](./LICENSE)

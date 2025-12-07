@@ -19,10 +19,10 @@ export const InfoBanner: React.FC = () => {
 				rel="noopener noreferrer"
 				style={{ color: "var(--vscode-foreground)", outline: "none" }}
 				target="_blank">
-				<h4 className="m-0">💡 Cline in the Right Sidebar</h4>
+				<h4 className="m-0">💡 Ritivel in the Right Sidebar</h4>
 				<p className="m-0">
-					Keep your files visible when chatting with Cline. Drag the Cline icon to the right sidebar panel for a better
-					experience. <span className="text-link cursor-pointer">See how →</span>
+					Keep your files visible when chatting with Ritivel. Drag the Ritivel icon to the right sidebar panel for a
+					better experience. <span className="text-link cursor-pointer">See how →</span>
 				</p>
 
 				{/* Close button */}

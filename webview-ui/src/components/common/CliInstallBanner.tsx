@@ -92,13 +92,13 @@ export const CliInstallBanner: React.FC = () => {
 			}}>
 			<h4 className="m-0 flex items-center gap-2" style={{ paddingRight: "24px" }}>
 				<Terminal className="w-4 h-4" />
-				{isMacOSOrLinux() ? "Cline for CLI is here!" : "Cline CLI Information"}
+				{isMacOSOrLinux() ? "Ritivel for CLI is here!" : "Ritivel CLI Information"}
 			</h4>
 			<p className="m-0">
 				{isMacOSOrLinux() ? (
 					<>
-						Install to use Cline directly in your terminal and enable subagent capabilities. Cline can spawn{" "}
-						<code>cline</code> commands to handle focused tasks like exploring large codebases for information. This
+						Install to use Ritivel directly in your terminal and enable subagent capabilities. Ritivel can spawn{" "}
+						<code>ritivel</code> commands to handle focused tasks like exploring large codebases for information. This
 						keeps your main context window clean by running these operations in separate subprocesses.{" "}
 						<a
 							href="https://docs.cline.bot/cline-cli/overview"
@@ -110,7 +110,7 @@ export const CliInstallBanner: React.FC = () => {
 					</>
 				) : (
 					<>
-						Cline CLI is available for macOS and Linux! Coming <code>soon</code> to other platforms.{" "}
+						Ritivel CLI is available for macOS and Linux! Coming <code>soon</code> to other platforms.{" "}
 						<a
 							href="https://docs.cline.bot/cline-cli/overview"
 							rel="noopener noreferrer"
@@ -183,7 +183,7 @@ export const CliInstallBanner: React.FC = () => {
 							appearance="secondary"
 							className="flex-1"
 							disabled
-							title="Cline CLI & subagents are only available on macOS & Linux">
+							title="Ritivel CLI & subagents are only available on macOS & Linux">
 							Subagents (Windows coming soon)
 						</VSCodeButton>
 					</div>
