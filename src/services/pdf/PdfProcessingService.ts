@@ -175,8 +175,8 @@ export class PdfProcessingService {
 	 */
 	private async pollJobStatus(jobId: string): Promise<string> {
 		// Poll for up to 2.5 hours
-		const pollInterval = 5000 // 5 seconds (reduced load)
-		const maxAttempts = (2.5 * 60 * 60 * 1000) / pollInterval // ~1800 attempts
+		const pollInterval = 10000 // 10 seconds (reduced load)
+		const maxAttempts = (2.5 * 60 * 60 * 1000) / pollInterval // ~900 attempts
 
 		for (let attempt = 0; attempt < maxAttempts; attempt++) {
 			if (this.abortController?.signal.aborted) {
@@ -350,8 +350,8 @@ export class PdfProcessingService {
 		workspaceRoot: string,
 		onProgress?: (stage: string, details?: string) => void,
 	): Promise<void> {
-		const pollInterval = 5000 // 5 seconds
-		const maxAttempts = (2.5 * 60 * 60 * 1000) / pollInterval // ~1800 attempts (2.5 hours)
+		const pollInterval = 10000 // 10 seconds
+		const maxAttempts = (2.5 * 60 * 60 * 1000) / pollInterval // ~900 attempts (2.5 hours)
 		const downloadedPdfs = new Set<number>()
 		const activeDownloads = new Set<Promise<void>>()
 
