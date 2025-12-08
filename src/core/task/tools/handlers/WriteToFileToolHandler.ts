@@ -107,8 +107,10 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 				operationIsLocatedInWorkspace: await isLocatedInWorkspace(relPath),
 			} satisfies ClineSayTool)
 
-			if (await config.callbacks.shouldAutoApproveToolWithPath(block.name, relPath)) {
-				// Auto-approval flow - apply changes directly
+			const shouldAutoApprove = await config.callbacks.shouldAutoApproveToolWithPath(block.name, relPath)
+
+			if (shouldAutoApprove) {
+				// Auto-approval flow - apply changes directly without pending approval
 				await config.callbacks.removeLastPartialMessageIfExistsWithType("ask", "tool")
 				await config.callbacks.say("tool", completeMessage, undefined, undefined, false)
 
@@ -124,7 +126,7 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 					block.isNativeToolCall,
 				)
 			} else {
-				// Manual approval flow
+				// Manual approval flow - show notification
 				const notificationMessage = `Cline wants to ${fileExists ? "edit" : "create"} ${getWorkspaceBasename(relPath, "WriteToFile.notification")}`
 
 				// Show notification
@@ -134,9 +136,6 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 
 				// Use say instead of ask to avoid triggering diff view
 				await config.callbacks.say("tool", completeMessage, undefined, undefined, false)
-
-				// For now, we'll proceed with applying (user can reject via notification if needed)
-				// TODO: Add a proper approval mechanism that doesn't trigger diff view
 			}
 
 			// Run PreToolUse hook before applying changes
@@ -151,28 +150,48 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 				throw error
 			}
 
-			// Apply changes directly using DirectFileOperations
+			// Apply changes using DirectFileOperations with pending approval if needed
 			let fileOpsResult
 			if (fileExists) {
-				fileOpsResult = await this.directFileOps.modifyFile(relPath, newContent)
+				fileOpsResult = await this.directFileOps.modifyFile(
+					relPath,
+					newContent,
+					config.ulid,
+					block.name,
+					!shouldAutoApprove,
+				)
 			} else {
-				fileOpsResult = await this.directFileOps.createFile(relPath, newContent)
+				fileOpsResult = await this.directFileOps.createFile(
+					relPath,
+					newContent,
+					config.ulid,
+					block.name,
+					!shouldAutoApprove,
+				)
 			}
 
-			// Mark the file as edited by Cline
-			config.services.fileContextTracker.markFileAsEditedByCline(relPath)
-			config.taskState.didEditFile = true
+			// Only mark as edited if auto-approved (pending files will be marked after approval)
+			if (shouldAutoApprove) {
+				// Mark the file as edited by Cline
+				config.services.fileContextTracker.markFileAsEditedByCline(relPath)
+				config.taskState.didEditFile = true
 
-			// Track file edit operation
-			await config.services.fileContextTracker.trackFileContext(relPath, "cline_edited")
+				// Track file edit operation
+				await config.services.fileContextTracker.trackFileContext(relPath, "cline_edited")
 
-			// Return success response
-			return formatResponse.fileEditWithoutUserChanges(
-				relPath,
-				undefined, // autoFormattingEdits - not tracked in direct mode
-				fileOpsResult.finalContent,
-				fileOpsResult.newProblemsMessage,
-			)
+				// Return success response
+				return formatResponse.fileEditWithoutUserChanges(
+					relPath,
+					undefined, // autoFormattingEdits - not tracked in direct mode
+					fileOpsResult.finalContent,
+					fileOpsResult.newProblemsMessage,
+				)
+			} else {
+				// File is pending approval - return response indicating pending status
+				return formatResponse.toolResult(
+					`File '${relPath}' has been updated and is pending your approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from the command palette to approve or reject the changes.`,
+				)
+			}
 		} catch (error) {
 			// Error handling - no diff view to reset
 			throw error

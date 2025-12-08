@@ -404,6 +404,18 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	// Register file approval/rejection commands
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.AcceptFileChanges, async () => {
+			const { handleAcceptFileChanges } = await import("./core/task/tools/utils/FileApprovalCommands")
+			await handleAcceptFileChanges()
+		}),
+		vscode.commands.registerCommand(commands.RejectFileChanges, async () => {
+			const { handleRejectFileChanges } = await import("./core/task/tools/utils/FileApprovalCommands")
+			await handleRejectFileChanges()
+		}),
+	)
+
 	context.subscriptions.push(
 		context.secrets.onDidChange(async (event) => {
 			if (event.key === "cline:clineAccountId") {

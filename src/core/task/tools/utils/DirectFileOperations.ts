@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import { resolveWorkspacePath } from "@core/workspace"
 import { openFile } from "@integrations/misc/open-file"
 import { showSystemNotification } from "@integrations/notifications"
-import { createDirectoriesForFile, writeFile } from "@utils/fs"
+import { createDirectoriesForFile } from "@utils/fs"
 import { arePathsEqual, getCwd } from "@utils/path"
 import * as fs from "fs/promises"
 import * as vscode from "vscode"
@@ -11,23 +11,28 @@ import { DIFF_VIEW_URI_SCHEME } from "@/hosts/vscode/VscodeDiffViewProvider"
 import { diagnosticsToProblemsString, getNewDiagnostics } from "@/integrations/diagnostics"
 import { detectEncoding } from "@/integrations/misc/extract-text"
 import { DiagnosticSeverity } from "@/shared/proto/index.cline"
+import { ClineDefaultTool } from "@/shared/tools"
 import type { FileOpsResult } from "./FileProviderOperations"
+import { PendingFileApprovalManager } from "./PendingFileApprovalManager"
+import { applyPendingFileDecorations, notifyMarkdownEditorDecorations } from "./PendingFileDecorations"
 
 /**
  * Utility class for direct file operations that write files to disk
  * and open them in the regular editor (not diff view)
+ * Uses WorkspaceEdit API to ensure TextDocument is immediately updated for other extensions
  */
 export class DirectFileOperations {
 	private preDiagnostics: any[] = []
+	private approvalManager = PendingFileApprovalManager.getInstance()
 
-	async createFile(path: string, content: string): Promise<FileOpsResult> {
+	async createFile(
+		path: string,
+		content: string,
+		taskId?: string,
+		toolName?: ClineDefaultTool,
+		requiresApproval: boolean = false,
+	): Promise<FileOpsResult> {
 		console.log("[DirectFileOperations] createFile called for:", path)
-
-		// VISIBLE TEST: Show notification to confirm new code is running
-		showSystemNotification({
-			subtitle: "✅ NEW BUILD ACTIVE",
-			message: `DirectFileOperations.createFile() - Applying patch directly (no diff view)`,
-		})
 
 		const cwd = await getCwd()
 		const pathResult = resolveWorkspacePath(cwd, path, "DirectFileOperations.createFile")
@@ -43,15 +48,72 @@ export class DirectFileOperations {
 		// Get pre-diagnostics
 		this.preDiagnostics = (await HostProvider.workspace.getDiagnostics({})).fileDiagnostics
 
-		// Write file directly
-		console.log("[DirectFileOperations] Writing file directly...")
-		await writeFile(absolutePath, content, "utf8")
-		console.log("[DirectFileOperations] File written successfully")
+		// Store original content (empty for new files)
+		const originalContent = ""
 
-		// Open file in regular editor
-		console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
-		await openFile(absolutePath, false, false)
-		console.log("[DirectFileOperations] File opened in editor")
+		// Write file using WorkspaceEdit API (ensures TextDocument is immediately updated)
+		console.log("[DirectFileOperations] Writing file using WorkspaceEdit API...")
+		const uri = vscode.Uri.file(absolutePath)
+		const edit = new vscode.WorkspaceEdit()
+		edit.createFile(uri, { ignoreIfExists: false, contents: Buffer.from(content, "utf8") })
+
+		const applied = await vscode.workspace.applyEdit(edit)
+		if (!applied) {
+			throw new Error(`Failed to create file: ${absolutePath}`)
+		}
+		console.log("[DirectFileOperations] File created successfully via WorkspaceEdit")
+
+		// Register as pending approval if required
+		if (requiresApproval && taskId && toolName) {
+			this.approvalManager.registerPendingFile(absolutePath, originalContent, content, taskId, toolName)
+			showSystemNotification({
+				subtitle: "File Changes Pending Approval",
+				message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
+			})
+		}
+
+		// Check if this is a markdown file and open in markdown editor if so
+		const isMarkdown = absolutePath.toLowerCase().endsWith(".md") || absolutePath.toLowerCase().endsWith(".markdown")
+
+		if (isMarkdown) {
+			console.log("[DirectFileOperations] Opening markdown file in markdown editor...")
+			try {
+				// biome-ignore lint: VS Code command API needed to open markdown editor
+				await vscode.commands.executeCommand("markdown-editor.openEditor", vscode.Uri.file(absolutePath))
+				console.log("[DirectFileOperations] Markdown editor opened")
+			} catch (error) {
+				console.log(`[DirectFileOperations] Failed to open markdown editor, falling back to default: ${error}`)
+				await openFile(absolutePath, false, false)
+			}
+		} else {
+			// Open file in regular editor
+			console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
+			await openFile(absolutePath, false, false)
+			console.log("[DirectFileOperations] File opened in editor")
+		}
+
+		// Apply visual decorations to show changes if pending approval (for new files, all lines are additions)
+		if (requiresApproval && content) {
+			if (isMarkdown) {
+				// For markdown files, wait for the markdown editor to be ready
+				setTimeout(() => {
+					notifyMarkdownEditorDecorations(absolutePath, originalContent, content)
+					// Also apply to text editor if it's open
+					const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+					if (editor) {
+						applyPendingFileDecorations(editor, originalContent, content)
+					}
+				}, 500) // Longer delay for markdown editor to initialize
+			} else {
+				const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+				if (editor) {
+					// Wait a bit for the editor to fully load before applying decorations
+					setTimeout(() => {
+						applyPendingFileDecorations(editor, originalContent, content)
+					}, 100)
+				}
+			}
+		}
 
 		// Get post-diagnostics
 		const postDiagnostics = (await HostProvider.workspace.getDiagnostics({})).fileDiagnostics
@@ -59,8 +121,15 @@ export class DirectFileOperations {
 		const newProblemsMessage =
 			(await diagnosticsToProblemsString(newProblems, [DiagnosticSeverity.DIAGNOSTIC_ERROR])) || undefined
 
-		// Read final content to return
-		const finalContent = await readFile(absolutePath, "utf8")
+		// Read final content from TextDocument (more reliable than fs)
+		let finalContent: string
+		try {
+			const document = await vscode.workspace.openTextDocument(uri)
+			finalContent = document.getText()
+		} catch {
+			// Fallback to fs read if TextDocument not available
+			finalContent = await readFile(absolutePath, "utf8")
+		}
 
 		return {
 			finalContent,
@@ -68,14 +137,14 @@ export class DirectFileOperations {
 		}
 	}
 
-	async modifyFile(path: string, content: string): Promise<FileOpsResult> {
+	async modifyFile(
+		path: string,
+		content: string,
+		taskId?: string,
+		toolName?: ClineDefaultTool,
+		requiresApproval: boolean = false,
+	): Promise<FileOpsResult> {
 		console.log("[DirectFileOperations] modifyFile called for:", path)
-
-		// VISIBLE TEST: Show notification to confirm new code is running
-		showSystemNotification({
-			subtitle: "✅ NEW BUILD ACTIVE",
-			message: `DirectFileOperations.modifyFile() - Applying patch directly (no diff view)`,
-		})
 
 		const cwd = await getCwd()
 		const pathResult = resolveWorkspacePath(cwd, path, "DirectFileOperations.modifyFile")
@@ -94,24 +163,84 @@ export class DirectFileOperations {
 		// Get pre-diagnostics
 		this.preDiagnostics = (await HostProvider.workspace.getDiagnostics({})).fileDiagnostics
 
-		// Read original content for encoding detection
+		// Read original content for storing and encoding detection
+		let originalContent = ""
 		let fileEncoding = "utf8"
 		try {
 			const fileBuffer = await fs.readFile(absolutePath)
 			fileEncoding = await detectEncoding(fileBuffer)
+			originalContent = fileBuffer.toString(fileEncoding as BufferEncoding)
 		} catch {
 			// File might not exist, use default encoding
 		}
 
-		// Write new content directly
-		console.log("[DirectFileOperations] Writing file directly...")
-		await writeFile(absolutePath, content, fileEncoding as BufferEncoding)
-		console.log("[DirectFileOperations] File written successfully")
+		// Write new content using WorkspaceEdit API (ensures TextDocument is immediately updated)
+		console.log("[DirectFileOperations] Writing file using WorkspaceEdit API...")
+		const uri = vscode.Uri.file(absolutePath)
+		const edit = new vscode.WorkspaceEdit()
 
-		// Open file in regular editor
-		console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
-		await openFile(absolutePath, false, false)
-		console.log("[DirectFileOperations] File opened in editor")
+		// Ensure document is available, then replace entire content
+		const document = await vscode.workspace.openTextDocument(uri)
+		const fullRange = new vscode.Range(0, 0, document.lineCount, 0)
+		edit.replace(uri, fullRange, content)
+
+		const applied = await vscode.workspace.applyEdit(edit)
+		if (!applied) {
+			throw new Error(`Failed to modify file: ${absolutePath}`)
+		}
+		console.log("[DirectFileOperations] File modified successfully via WorkspaceEdit")
+
+		// Register as pending approval if required
+		if (requiresApproval && taskId && toolName) {
+			this.approvalManager.registerPendingFile(absolutePath, originalContent, content, taskId, toolName)
+			showSystemNotification({
+				subtitle: "File Changes Pending Approval",
+				message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
+			})
+		}
+
+		// Check if this is a markdown file and open in markdown editor if so
+		const isMarkdown = absolutePath.toLowerCase().endsWith(".md") || absolutePath.toLowerCase().endsWith(".markdown")
+
+		if (isMarkdown) {
+			console.log("[DirectFileOperations] Opening markdown file in markdown editor...")
+			try {
+				// biome-ignore lint: VS Code command API needed to open markdown editor
+				await vscode.commands.executeCommand("markdown-editor.openEditor", vscode.Uri.file(absolutePath))
+				console.log("[DirectFileOperations] Markdown editor opened")
+			} catch (error) {
+				console.log(`[DirectFileOperations] Failed to open markdown editor, falling back to default: ${error}`)
+				await openFile(absolutePath, false, false)
+			}
+		} else {
+			// Open file in regular editor
+			console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
+			await openFile(absolutePath, false, false)
+			console.log("[DirectFileOperations] File opened in editor")
+		}
+
+		// Apply visual decorations to show changes if pending approval
+		if (requiresApproval && originalContent !== content) {
+			if (isMarkdown) {
+				// For markdown files, wait for the markdown editor to be ready
+				setTimeout(() => {
+					notifyMarkdownEditorDecorations(absolutePath, originalContent, content)
+					// Also apply to text editor if it's open
+					const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+					if (editor) {
+						applyPendingFileDecorations(editor, originalContent, content)
+					}
+				}, 500) // Longer delay for markdown editor to initialize
+			} else {
+				const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+				if (editor) {
+					// Wait a bit for the editor to fully load before applying decorations
+					setTimeout(() => {
+						applyPendingFileDecorations(editor, originalContent, content)
+					}, 100)
+				}
+			}
+		}
 
 		// Get post-diagnostics
 		const postDiagnostics = (await HostProvider.workspace.getDiagnostics({})).fileDiagnostics
@@ -119,8 +248,15 @@ export class DirectFileOperations {
 		const newProblemsMessage =
 			(await diagnosticsToProblemsString(newProblems, [DiagnosticSeverity.DIAGNOSTIC_ERROR])) || undefined
 
-		// Read final content to return
-		const finalContent = await readFile(absolutePath, fileEncoding as BufferEncoding)
+		// Read final content from TextDocument (more reliable than fs)
+		let finalContent: string
+		try {
+			const updatedDocument = await vscode.workspace.openTextDocument(uri)
+			finalContent = updatedDocument.getText()
+		} catch {
+			// Fallback to fs read if TextDocument not available
+			finalContent = await readFile(absolutePath, fileEncoding as BufferEncoding)
+		}
 
 		return {
 			finalContent,
@@ -137,8 +273,15 @@ export class DirectFileOperations {
 		await fs.rm(absolutePath, { force: true })
 	}
 
-	async moveFile(oldPath: string, newPath: string, content: string): Promise<FileOpsResult> {
-		const result = await this.createFile(newPath, content)
+	async moveFile(
+		oldPath: string,
+		newPath: string,
+		content: string,
+		taskId?: string,
+		toolName?: ClineDefaultTool,
+		requiresApproval: boolean = false,
+	): Promise<FileOpsResult> {
+		const result = await this.createFile(newPath, content, taskId, toolName, requiresApproval)
 		await this.deleteFile(oldPath)
 		return result
 	}
@@ -175,5 +318,13 @@ export class DirectFileOperations {
 			// Non-critical - if closing fails, we'll still try to open the regular editor
 			console.warn("[DirectFileOperations] Failed to close diff views:", error)
 		}
+	}
+
+	/**
+	 * Get file name from absolute path for display
+	 */
+	private getFileName(absolutePath: string): string {
+		const parts = absolutePath.split(/[/\\]/)
+		return parts[parts.length - 1] || absolutePath
 	}
 }

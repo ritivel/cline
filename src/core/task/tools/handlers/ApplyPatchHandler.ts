@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
 import type { ToolUse } from "@core/assistant-message"
+import { formatResponse } from "@core/prompts/responses"
 import { resolveWorkspacePath } from "@core/workspace"
 import { processFilesIntoText } from "@integrations/misc/extract-text"
 import type { ClineSayTool } from "@shared/ExtensionMessage"
@@ -116,11 +117,13 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 			const changedFiles = Object.keys(commit.changes)
 			const messages = await this.generateChangeSummary(commit.changes)
 
-			// For direct file operations, apply changes immediately without diff view
-			// Show notification but don't send tool messages that trigger diff view
+			// Determine which files need approval
+			const filesRequiringApproval: string[] = []
 			for (const message of messages) {
+				if (!message.path) continue
 				const shouldAutoApprove = await config.callbacks.shouldAutoApproveToolWithPath(block.name, message.path)
 				if (!shouldAutoApprove) {
+					filesRequiringApproval.push(message.path)
 					showNotificationForApproval(
 						`Cline wants to edit '${message.path}'`,
 						config.autoApprovalSettings.enableNotifications,
@@ -128,43 +131,99 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 				}
 			}
 
-			// Apply the commit directly - files will be written and opened in regular editor
+			// Apply the commit - files will be written and opened in regular editor
+			// Files requiring approval will be registered as pending
 			console.log("[ApplyPatchHandler] About to apply commit with", Object.keys(commit.changes).length, "file changes")
-			const applyResults = await this.applyCommit(commit)
+			const applyResults = await this.applyCommit(commit, config.ulid, block.name, filesRequiringApproval)
 			console.log("[ApplyPatchHandler] Commit applied, results:", Object.keys(applyResults))
 
-			// Log the tool usage for telemetry (after applying, so no diff view is triggered)
+			// Log the tool usage for telemetry
 			const apiConfig = config.services.stateManager.getApiConfiguration()
 			const currentMode = config.services.stateManager.getGlobalSettingsKey("mode")
 			const providerId = (currentMode === "plan" ? apiConfig.planModeApiProvider : apiConfig.actModeApiProvider) as string
 			const modelId = config.api.getModel().id
 
+			// Only mark files as edited if they were auto-approved
+			const autoApprovedFiles: string[] = []
 			for (const message of messages) {
+				if (!message.path) continue
 				const shouldAutoApprove = await config.callbacks.shouldAutoApproveToolWithPath(block.name, message.path)
-				telemetryService.captureToolUsage(
-					config.ulid,
-					this.name,
-					modelId,
-					providerId,
-					shouldAutoApprove,
-					true, // Always approved since we apply directly
-					undefined,
-					block.isNativeToolCall,
-				)
+				if (shouldAutoApprove) {
+					autoApprovedFiles.push(message.path)
+					telemetryService.captureToolUsage(
+						config.ulid,
+						this.name,
+						modelId,
+						providerId,
+						true,
+						true,
+						undefined,
+						block.isNativeToolCall,
+					)
+				} else {
+					telemetryService.captureToolUsage(
+						config.ulid,
+						this.name,
+						modelId,
+						providerId,
+						false,
+						false, // Pending approval, not yet approved
+						undefined,
+						block.isNativeToolCall,
+					)
+				}
 			}
 
-			for (const filePath of changedFiles) {
+			// Only mark auto-approved files as edited
+			for (const filePath of autoApprovedFiles) {
 				config.services.fileContextTracker.markFileAsEditedByCline(filePath)
 				await config.services.fileContextTracker.trackFileContext(filePath, "cline_edited")
 			}
 
-			config.taskState.didEditFile = true
+			if (autoApprovedFiles.length > 0) {
+				config.taskState.didEditFile = true
+			}
+
 			const finalResponses = messages.map((m) => m.path)
 
 			this.appliedCommit = undefined
 			this.config = undefined
 
 			// Build response with file contents and diagnostics
+			const pendingFiles = filesRequiringApproval.filter((path) => !autoApprovedFiles.includes(path))
+			if (pendingFiles.length > 0) {
+				const responseLines = [
+					`Patch applied to ${changedFiles.length} file(s). ${pendingFiles.length} file(s) are pending approval:`,
+				]
+				for (const path of pendingFiles) {
+					responseLines.push(`\n- ${path} (pending approval)`)
+				}
+				responseLines.push(
+					`\nUse 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from the command palette to approve or reject changes.`,
+				)
+
+				// Add info about auto-approved files
+				if (autoApprovedFiles.length > 0) {
+					responseLines.push(`\n\nAuto-approved files:`)
+					for (const path of autoApprovedFiles) {
+						const result = applyResults[path]
+						if (result && !result.deleted) {
+							responseLines.push(`\n${path}: Applied successfully`)
+							if (result.newProblemsMessage) {
+								responseLines.push(`  New problems: ${result.newProblemsMessage}`)
+							}
+						}
+					}
+				}
+
+				if (fuzz > 0) {
+					responseLines.push(`\nNote: Patch applied with fuzz factor ${fuzz}`)
+				}
+
+				return formatResponse.toolResult(responseLines.join(""))
+			}
+
+			// All files were auto-approved - show detailed response
 			const responseLines = ["Successfully applied patch to the following files:"]
 
 			for (const [path, result] of Object.entries(applyResults)) {
@@ -416,7 +475,12 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 		return endsWithNewline && !joined.endsWith("\n") ? `${joined}\n` : joined
 	}
 
-	private async applyCommit(commit: Commit): Promise<Record<string, FileOpsResult>> {
+	private async applyCommit(
+		commit: Commit,
+		taskId: string,
+		toolName: ClineDefaultTool,
+		filesRequiringApproval: string[],
+	): Promise<Record<string, FileOpsResult>> {
 		console.log("[ApplyPatchHandler.applyCommit] Starting to apply commit")
 		const ops = this.providerOps!
 		console.log("[ApplyPatchHandler.applyCommit] Using DirectFileOperations:", ops.constructor.name)
@@ -424,6 +488,8 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 
 		for (const [path, change] of Object.entries(commit.changes)) {
 			console.log("[ApplyPatchHandler.applyCommit] Processing change for:", path, "type:", change.type)
+			const requiresApproval = filesRequiringApproval.includes(path)
+
 			switch (change.type) {
 				case PatchActionType.DELETE:
 					await ops.deleteFile(path)
@@ -433,7 +499,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 					if (!change.newContent) {
 						throw new DiffError(`Cannot create ${path} with no content`)
 					}
-					const addResult = await ops.createFile(path, change.newContent)
+					const addResult = await ops.createFile(path, change.newContent, taskId, toolName, requiresApproval)
 					results[path] = {
 						finalContent: addResult.finalContent,
 						newProblemsMessage: addResult.newProblemsMessage,
@@ -455,7 +521,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 						}
 						results[path] = { deleted: true }
 					} else {
-						const updateResult = await ops.modifyFile(path, change.newContent)
+						const updateResult = await ops.modifyFile(path, change.newContent, taskId, toolName, requiresApproval)
 						results[path] = {
 							finalContent: updateResult.finalContent,
 							newProblemsMessage: updateResult.newProblemsMessage,

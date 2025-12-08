@@ -212,6 +212,16 @@
 				"category": "Cline"
 			},
 			{
+				"command": "cline.acceptFileChanges",
+				"title": "Accept File Changes",
+				"category": "Cline"
+			},
+			{
+				"command": "cline.rejectFileChanges",
+				"title": "Reject File Changes",
+				"category": "Cline"
+			},
+			{
 				"command": "cline.reviewComment.reply",
 				"title": "Reply",
 				"category": "Ritivel",

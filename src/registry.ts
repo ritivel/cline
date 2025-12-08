@@ -24,6 +24,8 @@ const ClineCommands = {
 	GenerateCommit: prefix + ".generateGitCommitMessage",
 	AbortCommit: prefix + ".abortGitCommitMessage",
 	ReconstructTaskHistory: prefix + ".reconstructTaskHistory",
+	AcceptFileChanges: prefix + ".acceptFileChanges",
+	RejectFileChanges: prefix + ".rejectFileChanges",
 }
 
 /**
