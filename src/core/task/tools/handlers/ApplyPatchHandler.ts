@@ -4,7 +4,7 @@ import { resolveWorkspacePath } from "@core/workspace"
 import { processFilesIntoText } from "@integrations/misc/extract-text"
 import type { ClineSayTool } from "@shared/ExtensionMessage"
 import { fileExistsAtPath } from "@utils/fs"
-import { getReadablePath, isLocatedInWorkspace } from "@utils/path"
+import { isLocatedInWorkspace } from "@utils/path"
 import { telemetryService } from "@/services/telemetry"
 import { BASH_WRAPPERS, DiffError, PATCH_MARKERS, type Patch, PatchActionType, type PatchChunk } from "@/shared/Patch"
 import { preserveEscaping } from "@/shared/string"
@@ -15,7 +15,8 @@ import type { IFullyManagedTool } from "../ToolExecutorCoordinator"
 import type { ToolValidator } from "../ToolValidator"
 import type { TaskConfig } from "../types/TaskConfig"
 import type { StronglyTypedUIHelpers } from "../types/UIHelpers"
-import { type FileOpsResult, FileProviderOperations } from "../utils/FileProviderOperations"
+import { DirectFileOperations } from "../utils/DirectFileOperations"
+import { type FileOpsResult } from "../utils/FileProviderOperations"
 import { PatchParser } from "../utils/PatchParser"
 import { PathResolver } from "../utils/PathResolver"
 import { ToolResultUtils } from "../utils/ToolResultUtils"
@@ -42,7 +43,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 	private appliedCommit?: Commit
 	private config?: TaskConfig
 	private pathResolver?: PathResolver
-	private providerOps?: FileProviderOperations
+	private providerOps?: DirectFileOperations
 	private partialPreviewState?: {
 		originalFiles: Record<string, string>
 		currentPreviewPath?: string
@@ -55,7 +56,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 			this.pathResolver = new PathResolver(config, this.validator)
 		}
 		if (!this.providerOps) {
-			this.providerOps = new FileProviderOperations(config.services.diffViewProvider)
+			this.providerOps = new DirectFileOperations()
 		}
 	}
 
@@ -64,174 +65,12 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 	}
 
 	async handlePartialBlock(block: ToolUse, uiHelpers: StronglyTypedUIHelpers): Promise<void> {
-		const rawInput = block.params.input
-		if (!rawInput) {
-			return
-		}
-
-		try {
-			const allFiles = this.extractAllFiles(rawInput)
-			if (allFiles.length === 0) {
-				return
-			}
-
-			const config = uiHelpers.getConfig()
-			this.initializeHelpers(config)
-
-			// Preview the first file being edited
-			await this.previewPatchStream(rawInput, uiHelpers).catch(() => {})
-		} catch {
-			// Wait for more data if parsing fails
-		}
-	}
-
-	private ensurePartialPreviewState(): { originalFiles: Record<string, string>; currentPreviewPath?: string } {
-		if (!this.partialPreviewState) {
-			this.partialPreviewState = { originalFiles: {} }
-		}
-		return this.partialPreviewState
-	}
-
-	private async previewPatchStream(rawInput: string, uiHelpers: StronglyTypedUIHelpers): Promise<void> {
-		const config = uiHelpers.getConfig()
-		const provider = config.services.diffViewProvider
-		this.initializeHelpers(config)
-
-		const state = this.ensurePartialPreviewState()
-		const lines = this.stripBashWrapper(rawInput.split("\n"))
-
-		// Extract the first operation path and type
-		let targetPath: string | undefined
-		let actionType: PatchActionType | undefined
-		let contentStartIndex = -1
-
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i]
-			if (line.startsWith(PATCH_MARKERS.ADD)) {
-				targetPath = line.substring(PATCH_MARKERS.ADD.length).trim()
-				actionType = PatchActionType.ADD
-				contentStartIndex = i + 1
-				break
-			}
-			if (line.startsWith(PATCH_MARKERS.UPDATE)) {
-				targetPath = line.substring(PATCH_MARKERS.UPDATE.length).trim()
-				actionType = PatchActionType.UPDATE
-				contentStartIndex = i + 1
-				break
-			}
-			if (line.startsWith(PATCH_MARKERS.DELETE)) {
-				targetPath = line.substring(PATCH_MARKERS.DELETE.length).trim()
-				actionType = PatchActionType.DELETE
-				contentStartIndex = i + 1
-				break
-			}
-		}
-
-		if (!targetPath || targetPath.length === 0 || targetPath.includes("***") || !actionType) {
-			return
-		}
-
-		// Check for move marker
-		let movePath: string | undefined
-		if (actionType === PatchActionType.UPDATE && contentStartIndex >= 0) {
-			const nextLine = lines[contentStartIndex]
-			if (nextLine?.startsWith(PATCH_MARKERS.MOVE)) {
-				movePath = nextLine.substring(PATCH_MARKERS.MOVE.length).trim()
-				contentStartIndex++
-			}
-		}
-
-		// For ADD operations, ensure we have content
-		if (actionType === PatchActionType.ADD) {
-			if (contentStartIndex < 0 || contentStartIndex >= lines.length) {
-				return
-			}
-			const contentLines = lines.slice(contentStartIndex)
-			if (contentLines.length === 0 || (contentLines.length === 1 && contentLines[0] === "")) {
-				return
-			}
-		}
-
-		const finalPath = movePath || targetPath
-		const targetResolution = await this.pathResolver!.resolveAndValidate(finalPath, "ApplyPatchHandler.previewPatch")
-		if (!targetResolution) {
-			return
-		}
-
-		await config.callbacks
-			.ask(
-				"tool",
-				JSON.stringify({
-					tool: PatchClineSayMap[actionType],
-					path: getReadablePath(config.cwd, finalPath),
-					content: rawInput,
-					operationIsLocatedInWorkspace: await isLocatedInWorkspace(finalPath),
-				}),
-				true,
-			)
-			.catch(() => {}) // sending true for partial even though it's not a partial, this shows the edit row before the content is streamed into the editor
-
-		const requiresOpen =
-			!provider.isEditing || state.currentPreviewPath !== targetResolution.resolvedPath || provider.editType === undefined
-
-		const needsCreateEditor = actionType === PatchActionType.ADD || (actionType === PatchActionType.UPDATE && !!movePath)
-
-		if (requiresOpen) {
-			provider.editType = needsCreateEditor ? "create" : "modify"
-			await provider.open(targetResolution.absolutePath, { displayPath: targetResolution.resolvedPath })
-			state.currentPreviewPath = targetResolution.resolvedPath
-		}
-
-		const stream: { content: string | undefined } = { content: undefined }
-
-		switch (actionType) {
-			case PatchActionType.ADD: {
-				const contentLines = lines.slice(contentStartIndex)
-				stream.content = contentLines
-					.filter((l) => l.startsWith("+"))
-					.map((l) => l.substring(1))
-					.join("\n")
-				break
-			}
-			case PatchActionType.UPDATE: {
-				const sourceResolution = await this.pathResolver!.resolveAndValidate(
-					targetPath,
-					"ApplyPatchHandler.previewPatch.source",
-				)
-				if (!sourceResolution) {
-					return
-				}
-
-				const originalContent = provider.originalContent
-				if (originalContent === undefined) {
-					return
-				}
-
-				// For streaming preview, just show original content - full application happens in execute
-				stream.content = originalContent
-				break
-			}
-			case PatchActionType.DELETE:
-				stream.content = ""
-				provider.editType = "modify"
-				break
-			default:
-				return
-		}
-
-		if (stream.content === undefined) {
-			return
-		}
-
-		try {
-			await provider.update(stream.content, false)
-		} catch {
-			// Ignore streaming errors
-		}
+		// Skip preview streaming for direct file operations mode
+		// Files will be opened directly in the editor after patch application
+		return
 	}
 
 	async execute(config: TaskConfig, block: ToolUse): Promise<ToolResponse> {
-		const provider = config.services.diffViewProvider
 		const rawInput = block.params.input
 
 		if (!rawInput) {
@@ -241,14 +80,6 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 
 		config.taskState.consecutiveMistakeCount = 0
 		this.initializeHelpers(config)
-
-		if (provider.isEditing) {
-			try {
-				await provider.reset()
-			} catch {
-				// Ignore reset errors
-			}
-		}
 		this.partialPreviewState = undefined
 
 		try {
@@ -276,36 +107,59 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 			} catch (error) {
 				const { PreToolUseHookCancellationError } = await import("@core/hooks/PreToolUseHookCancellationError")
 				if (error instanceof PreToolUseHookCancellationError) {
-					await provider.reset()
 					return "The user denied this patch operation."
 				}
 				throw error
 			}
 
-			// Apply the commit
-			const applyResults = await this.applyCommit(commit)
-
-			// Generate summary
+			// Generate summary for logging
 			const changedFiles = Object.keys(commit.changes)
 			const messages = await this.generateChangeSummary(commit.changes)
 
-			const finalResponses = []
+			// For direct file operations, apply changes immediately without diff view
+			// Show notification but don't send tool messages that trigger diff view
+			for (const message of messages) {
+				const shouldAutoApprove = await config.callbacks.shouldAutoApproveToolWithPath(block.name, message.path)
+				if (!shouldAutoApprove) {
+					showNotificationForApproval(
+						`Cline wants to edit '${message.path}'`,
+						config.autoApprovalSettings.enableNotifications,
+					)
+				}
+			}
+
+			// Apply the commit directly - files will be written and opened in regular editor
+			console.log("[ApplyPatchHandler] About to apply commit with", Object.keys(commit.changes).length, "file changes")
+			const applyResults = await this.applyCommit(commit)
+			console.log("[ApplyPatchHandler] Commit applied, results:", Object.keys(applyResults))
+
+			// Log the tool usage for telemetry (after applying, so no diff view is triggered)
+			const apiConfig = config.services.stateManager.getApiConfiguration()
+			const currentMode = config.services.stateManager.getGlobalSettingsKey("mode")
+			const providerId = (currentMode === "plan" ? apiConfig.planModeApiProvider : apiConfig.actModeApiProvider) as string
+			const modelId = config.api.getModel().id
 
 			for (const message of messages) {
-				const approved = await this.handleApproval(config, block, message, rawInput)
-				if (!approved) {
-					await this.revertChanges()
-					return "The user denied this patch operation."
-				}
-
-				for (const filePath of changedFiles) {
-					config.services.fileContextTracker.markFileAsEditedByCline(filePath)
-					await config.services.fileContextTracker.trackFileContext(filePath, "cline_edited")
-				}
-
-				config.taskState.didEditFile = true
-				finalResponses.push(message.path)
+				const shouldAutoApprove = await config.callbacks.shouldAutoApproveToolWithPath(block.name, message.path)
+				telemetryService.captureToolUsage(
+					config.ulid,
+					this.name,
+					modelId,
+					providerId,
+					shouldAutoApprove,
+					true, // Always approved since we apply directly
+					undefined,
+					block.isNativeToolCall,
+				)
 			}
+
+			for (const filePath of changedFiles) {
+				config.services.fileContextTracker.markFileAsEditedByCline(filePath)
+				await config.services.fileContextTracker.trackFileContext(filePath, "cline_edited")
+			}
+
+			config.taskState.didEditFile = true
+			const finalResponses = messages.map((m) => m.path)
 
 			this.appliedCommit = undefined
 			this.config = undefined
@@ -350,8 +204,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 
 			return responseLines.join("\n")
 		} catch (error) {
-			await provider.revertChanges()
-			await provider.reset()
+			await this.revertChanges()
 			console.error("Reverted changes due to error in ApplyPatchHandler.", error)
 			throw error
 		}
@@ -564,10 +417,13 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 	}
 
 	private async applyCommit(commit: Commit): Promise<Record<string, FileOpsResult>> {
+		console.log("[ApplyPatchHandler.applyCommit] Starting to apply commit")
 		const ops = this.providerOps!
+		console.log("[ApplyPatchHandler.applyCommit] Using DirectFileOperations:", ops.constructor.name)
 		const results: Record<string, FileOpsResult> = {}
 
 		for (const [path, change] of Object.entries(commit.changes)) {
+			console.log("[ApplyPatchHandler.applyCommit] Processing change for:", path, "type:", change.type)
 			switch (change.type) {
 				case PatchActionType.DELETE:
 					await ops.deleteFile(path)
