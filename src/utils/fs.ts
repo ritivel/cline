@@ -2,6 +2,7 @@ import { workspaceResolver } from "@core/workspace"
 import fs from "fs/promises"
 import * as path from "path"
 import { HostProvider } from "@/hosts/host-provider"
+import { ClineFileTracker } from "@/services/fileTracking/ClineFileTracker"
 
 const IS_WINDOWS = /^win/.test(process.platform)
 
@@ -27,9 +28,12 @@ export async function createDirectoriesForFile(filePath: string): Promise<string
 	}
 
 	// Create directories from the topmost missing one down to the target directory
+	const fileTracker = ClineFileTracker.getInstance()
 	for (let i = dirsToCreate.length - 1; i >= 0; i--) {
 		await fs.mkdir(dirsToCreate[i])
 		newDirectories.push(dirsToCreate[i])
+		// Track newly created directories
+		fileTracker.trackFile(dirsToCreate[i])
 	}
 
 	return newDirectories

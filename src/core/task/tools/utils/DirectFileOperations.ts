@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import { resolveWorkspacePath } from "@core/workspace"
 import { openFile } from "@integrations/misc/open-file"
 import { showSystemNotification } from "@integrations/notifications"
-import { createDirectoriesForFile } from "@utils/fs"
+import { createDirectoriesForFile, fileExistsAtPath } from "@utils/fs"
 import { arePathsEqual, getCwd } from "@utils/path"
 import * as fs from "fs/promises"
 import * as vscode from "vscode"
@@ -10,6 +10,7 @@ import { HostProvider } from "@/hosts/host-provider"
 import { DIFF_VIEW_URI_SCHEME } from "@/hosts/vscode/VscodeDiffViewProvider"
 import { diagnosticsToProblemsString, getNewDiagnostics } from "@/integrations/diagnostics"
 import { detectEncoding } from "@/integrations/misc/extract-text"
+import { ClineFileTracker } from "@/services/fileTracking/ClineFileTracker"
 import { DiagnosticSeverity } from "@/shared/proto/index.cline"
 import { ClineDefaultTool } from "@/shared/tools"
 import type { FileOpsResult } from "./FileProviderOperations"
@@ -24,6 +25,7 @@ import { applyPendingFileDecorations, notifyMarkdownEditorDecorations } from "./
 export class DirectFileOperations {
 	private preDiagnostics: any[] = []
 	private approvalManager = PendingFileApprovalManager.getInstance()
+	private fileTracker = ClineFileTracker.getInstance()
 
 	async createFile(
 		path: string,
@@ -62,6 +64,9 @@ export class DirectFileOperations {
 			throw new Error(`Failed to create file: ${absolutePath}`)
 		}
 		console.log("[DirectFileOperations] File created successfully via WorkspaceEdit")
+
+		// Track this file as created by Cline for decoration
+		this.fileTracker.trackFile(uri)
 
 		// Always register file for undo/keep functionality (even when auto-approved)
 		// This allows users to undo changes even if they were auto-approved
@@ -171,6 +176,7 @@ export class DirectFileOperations {
 		// Read original content for storing and encoding detection
 		let originalContent = ""
 		let fileEncoding = "utf8"
+		const fileExisted = await fileExistsAtPath(absolutePath)
 		try {
 			const fileBuffer = await fs.readFile(absolutePath)
 			fileEncoding = await detectEncoding(fileBuffer)
@@ -194,6 +200,11 @@ export class DirectFileOperations {
 			throw new Error(`Failed to modify file: ${absolutePath}`)
 		}
 		console.log("[DirectFileOperations] File modified successfully via WorkspaceEdit")
+
+		// Track file if it didn't exist before (was created by this operation)
+		if (!fileExisted) {
+			this.fileTracker.trackFile(uri)
+		}
 
 		// Always register file for undo/keep functionality (even when auto-approved)
 		// This allows users to undo changes even if they were auto-approved

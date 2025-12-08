@@ -42,6 +42,7 @@ import { VscodeWebviewProvider } from "./hosts/vscode/VscodeWebviewProvider"
 import { ExtensionRegistryInfo } from "./registry"
 import { AuthService } from "./services/auth/AuthService"
 import { LogoutReason } from "./services/auth/types"
+import { ClineFileDecorationProvider } from "./services/fileTracking/ClineFileDecorationProvider"
 import { telemetryService } from "./services/telemetry"
 import { SharedUriHandler } from "./services/uri/SharedUriHandler"
 import { ShowMessageType } from "./shared/proto/host/window"
@@ -93,6 +94,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(...testModeWatchers)
 
 	vscode.commands.executeCommand("setContext", "cline.isDevMode", IS_DEV && IS_DEV === "true")
+
+	// Register file decoration provider for "ai" badge on Cline-created files
+	const decorationProvider = new ClineFileDecorationProvider()
+	context.subscriptions.push(vscode.window.registerFileDecorationProvider(decorationProvider))
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(VscodeWebviewProvider.SIDEBAR_ID, webview, {

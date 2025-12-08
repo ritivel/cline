@@ -244,6 +244,10 @@ export const createRuleFile = async (isGlobal: boolean, filename: string, cwd: s
 
 		await fs.writeFile(filePath, "", "utf8")
 
+		// Track file as created by Cline
+		const { ClineFileTracker } = await import("@/services/fileTracking/ClineFileTracker")
+		ClineFileTracker.getInstance().trackFile(filePath)
+
 		return { filePath, fileExists: false }
 	} catch (_error) {
 		return { filePath: null, fileExists: false }

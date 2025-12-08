@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import path from "path"
 import * as vscode from "vscode"
 import { HostProvider } from "@/hosts/host-provider"
+import { ClineFileTracker } from "@/services/fileTracking/ClineFileTracker"
 import { DossierGeneratorService } from "@/services/pdf/DossierGeneratorService"
 import { PdfProcessingService } from "@/services/pdf/PdfProcessingService"
 import { telemetryService } from "@/services/telemetry"
@@ -85,6 +86,11 @@ function buildFolderPaths(module: CTDModuleDef, moduleNum: number, sectionId: st
  */
 async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef[]): Promise<string[]> {
 	const createdPaths: string[] = []
+	const fileTracker = ClineFileTracker.getInstance()
+
+	// Track the dossier folder itself (created by recursive mkdir)
+	const dossierPath = path.join(workspaceRoot, "dossier")
+	fileTracker.trackFile(dossierPath)
 
 	for (const module of modules) {
 		const moduleNum = module.moduleNumber
@@ -93,6 +99,7 @@ async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef
 		const modulePath = path.join(workspaceRoot, "dossier", `module-${moduleNum}`)
 		await fs.mkdir(modulePath, { recursive: true })
 		createdPaths.push(path.relative(workspaceRoot, modulePath))
+		fileTracker.trackFile(modulePath)
 
 		// Process all sections
 		for (const sectionId of Object.keys(module.sections)) {
@@ -105,6 +112,7 @@ async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef
 					const fullPath = path.join(workspaceRoot, folderPath)
 					await fs.mkdir(fullPath, { recursive: true })
 					createdPaths.push(folderPath)
+					fileTracker.trackFile(fullPath)
 				}
 			}
 		}
@@ -214,12 +222,14 @@ async function executeCreateDossier(
 
 		// Create documents folder only if it doesn't exist
 		const documentsPath = path.join(workspaceRoot, "documents")
+		const fileTracker = ClineFileTracker.getInstance()
 		try {
 			await fs.access(documentsPath)
 			// Documents folder already exists, skip creation
 		} catch {
 			// Documents folder doesn't exist, create it
 			await fs.mkdir(documentsPath, { recursive: true })
+			fileTracker.trackFile(documentsPath)
 		}
 
 		// Start cloud-based PDF processing in the background

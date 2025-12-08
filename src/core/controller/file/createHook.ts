@@ -1,6 +1,7 @@
 import { CreateHookRequest, CreateHookResponse } from "@shared/proto/cline/file"
 import fs from "fs/promises"
 import path from "path"
+import { ClineFileTracker } from "@/services/fileTracking/ClineFileTracker"
 import { HookDiscoveryCache } from "../../hooks/HookDiscoveryCache"
 import { getHookTemplate } from "../../hooks/templates"
 import { isValidHookType, resolveHooksDirectory, VALID_HOOK_TYPES } from "../../hooks/utils"
@@ -24,6 +25,8 @@ export async function createHook(
 
 	// Ensure directory exists
 	await fs.mkdir(hooksDir, { recursive: true })
+	const fileTracker = ClineFileTracker.getInstance()
+	fileTracker.trackFile(hooksDir)
 
 	const hookPath = path.join(hooksDir, hookName)
 
@@ -45,6 +48,7 @@ export async function createHook(
 	// User can enable it later when they're ready
 	const mode = 0o644
 	await fs.writeFile(hookPath, templateContent, { mode })
+	fileTracker.trackFile(hookPath)
 
 	// Invalidate hook discovery cache
 	await HookDiscoveryCache.getInstance().invalidateAll()
