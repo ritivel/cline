@@ -172,6 +172,20 @@ export class VscodeWebviewProvider extends WebviewProvider implements vscode.Web
 				}
 				break
 			}
+			case "clearMarkdownSelectionHighlights": {
+				// Handle request to clear selection highlights in markdown editor
+				const filePath = message.filePath
+				if (filePath) {
+					try {
+						await vscode.commands.executeCommand("markdown-editor.clearSelectionHighlights", {
+							uri: vscode.Uri.file(filePath),
+						})
+					} catch (error) {
+						console.error("Failed to clear markdown selection highlights:", error)
+					}
+				}
+				break
+			}
 			default: {
 				console.error("Received unhandled WebviewMessage type:", JSON.stringify(message))
 			}

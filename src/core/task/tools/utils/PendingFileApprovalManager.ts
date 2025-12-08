@@ -11,8 +11,9 @@ interface PendingFileInfo {
 }
 
 /**
- * Singleton manager to track files awaiting user approval/rejection
- * Files are written temporarily and can be accepted or reverted
+ * Singleton manager to track files that can be undone/reverted
+ * Files are written immediately, but registered here so users can undo/keep changes
+ * Works for both auto-approved and manually-approved files
  */
 export class PendingFileApprovalManager {
 	private static instance: PendingFileApprovalManager
@@ -28,7 +29,8 @@ export class PendingFileApprovalManager {
 	}
 
 	/**
-	 * Register a file as pending approval
+	 * Register a file for undo/keep functionality
+	 * Files are written immediately, but registered here so users can undo changes later
 	 */
 	registerPendingFile(
 		absolutePath: string,

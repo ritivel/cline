@@ -13,7 +13,6 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useShowNavbar } from "@/context/PlatformContext"
 import { FileServiceClient, UiServiceClient } from "@/services/grpc-client"
 import { Navbar } from "../menu/Navbar"
-import AutoApproveBar from "./auto-approve-menu/AutoApproveBar"
 // Import utilities and hooks from the new structure
 import {
 	ActionButtons,
@@ -266,8 +265,46 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 			{
 				onResponse: (event) => {
 					if (event.value) {
+						const value = event.value
+
+						// Check for special file context format from markdown editor
+						// Format: ___FILE_CONTEXT___{"filePath":...}___END_FILE_CONTEXT___
+						const fileContextMatch = value.match(/^___FILE_CONTEXT___(.+)___END_FILE_CONTEXT___$/)
+						if (fileContextMatch) {
+							try {
+								const fileContext = JSON.parse(fileContextMatch[1])
+								if (fileContext.type === "fileContext") {
+									// Add as a file with line range info encoded in the path
+									// Format: filepath:startLine-endLine|text
+									const filePathWithRange =
+										fileContext.startLine && fileContext.endLine
+											? `${fileContext.filePath}:${fileContext.startLine}-${fileContext.endLine}|${fileContext.text}`
+											: `${fileContext.filePath}|${fileContext.text}`
+
+									setSelectedFiles((prev) => {
+										// Avoid duplicates
+										if (prev.includes(filePathWithRange)) {
+											return prev
+										}
+										return [...prev, filePathWithRange]
+									})
+
+									// Focus the input
+									setTimeout(() => {
+										if (textAreaRef.current) {
+											textAreaRef.current.focus()
+										}
+									}, 0)
+									return
+								}
+							} catch (e) {
+								console.error("Failed to parse file context:", e)
+							}
+						}
+
+						// Regular text input
 						setInputValue((prevValue) => {
-							const newText = event.value
+							const newText = value
 							const newTextWithNewline = newText + "\n"
 							return prevValue ? `${prevValue}\n${newTextWithNewline}` : newTextWithNewline
 						})
@@ -375,7 +412,6 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 				)}
 			</div>
 			<footer className="bg-(--vscode-sidebar-background)" style={{ gridRow: "2" }}>
-				<AutoApproveBar />
 				<ActionButtons
 					chatState={chatState}
 					messageHandlers={messageHandlers}

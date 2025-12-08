@@ -63,13 +63,17 @@ export class DirectFileOperations {
 		}
 		console.log("[DirectFileOperations] File created successfully via WorkspaceEdit")
 
-		// Register as pending approval if required
-		if (requiresApproval && taskId && toolName) {
+		// Always register file for undo/keep functionality (even when auto-approved)
+		// This allows users to undo changes even if they were auto-approved
+		if (taskId && toolName) {
 			this.approvalManager.registerPendingFile(absolutePath, originalContent, content, taskId, toolName)
-			showSystemNotification({
-				subtitle: "File Changes Pending Approval",
-				message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
-			})
+			// Only show notification if manual approval was required
+			if (requiresApproval) {
+				showSystemNotification({
+					subtitle: "File Changes Pending Approval",
+					message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
+				})
+			}
 		}
 
 		// Check if this is a markdown file and open in markdown editor if so
@@ -92,8 +96,9 @@ export class DirectFileOperations {
 			console.log("[DirectFileOperations] File opened in editor")
 		}
 
-		// Apply visual decorations to show changes if pending approval (for new files, all lines are additions)
-		if (requiresApproval && content) {
+		// Always apply visual decorations to show changes (for new files, all lines are additions)
+		// This allows users to see what changed even when auto-approved
+		if (content && taskId && toolName) {
 			if (isMarkdown) {
 				// For markdown files, wait for the markdown editor to be ready
 				setTimeout(() => {
@@ -190,13 +195,17 @@ export class DirectFileOperations {
 		}
 		console.log("[DirectFileOperations] File modified successfully via WorkspaceEdit")
 
-		// Register as pending approval if required
-		if (requiresApproval && taskId && toolName) {
+		// Always register file for undo/keep functionality (even when auto-approved)
+		// This allows users to undo changes even if they were auto-approved
+		if (taskId && toolName && originalContent !== content) {
 			this.approvalManager.registerPendingFile(absolutePath, originalContent, content, taskId, toolName)
-			showSystemNotification({
-				subtitle: "File Changes Pending Approval",
-				message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
-			})
+			// Only show notification if manual approval was required
+			if (requiresApproval) {
+				showSystemNotification({
+					subtitle: "File Changes Pending Approval",
+					message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
+				})
+			}
 		}
 
 		// Check if this is a markdown file and open in markdown editor if so
@@ -219,8 +228,9 @@ export class DirectFileOperations {
 			console.log("[DirectFileOperations] File opened in editor")
 		}
 
-		// Apply visual decorations to show changes if pending approval
-		if (requiresApproval && originalContent !== content) {
+		// Always apply visual decorations to show changes
+		// This allows users to see what changed even when auto-approved
+		if (originalContent !== content && taskId && toolName) {
 			if (isMarkdown) {
 				// For markdown files, wait for the markdown editor to be ready
 				setTimeout(() => {

@@ -7,23 +7,41 @@ import { PendingFileApprovalManager } from "./PendingFileApprovalManager"
 import { clearPendingFileDecorations, notifyMarkdownEditorClearDecorations } from "./PendingFileDecorations"
 
 /**
- * Handle accepting file changes for the active editor
+ * Handle accepting file changes for the active editor or any pending file
  * Note: This is a VS Code command handler, so using vscode APIs directly is acceptable
  */
 export async function handleAcceptFileChanges(): Promise<void> {
+	const approvalManager = PendingFileApprovalManager.getInstance()
+
+	// Try to get the file path from active editor first
 	// biome-ignore lint: VS Code command handler needs direct access to activeTextEditor
 	const activeEditor = vscode.window.activeTextEditor
-	if (!activeEditor) {
+	let absolutePath: string | undefined
+
+	if (activeEditor) {
+		absolutePath = activeEditor.document.uri.fsPath
+	}
+
+	// If no active editor or active editor doesn't have pending changes,
+	// try to find any pending file (useful when called from markdown editor webview)
+	let pendingInfo = absolutePath ? approvalManager.getPendingFile(absolutePath) : undefined
+
+	if (!pendingInfo) {
+		// Get all pending files and use the first one
+		const allPendingFiles = approvalManager.getAllPendingFiles()
+		if (allPendingFiles.length > 0) {
+			absolutePath = allPendingFiles[0].absolutePath
+			pendingInfo = allPendingFiles[0]
+		}
+	}
+
+	if (!absolutePath) {
 		await HostProvider.window.showMessage({
 			type: ShowMessageType.WARNING,
 			message: "No active editor. Please open a file with pending changes.",
 		})
 		return
 	}
-
-	const absolutePath = activeEditor.document.uri.fsPath
-	const approvalManager = PendingFileApprovalManager.getInstance()
-	const pendingInfo = approvalManager.getPendingFile(absolutePath)
 
 	if (!pendingInfo) {
 		await HostProvider.window.showMessage({
@@ -44,7 +62,16 @@ export async function handleAcceptFileChanges(): Promise<void> {
 	}
 
 	// Clear visual decorations
-	clearPendingFileDecorations(activeEditor)
+	if (activeEditor && activeEditor.document.uri.fsPath === absolutePath) {
+		clearPendingFileDecorations(activeEditor)
+	} else {
+		// Try to find the editor for this file
+		// biome-ignore lint: VS Code command handler needs direct access to visibleTextEditors
+		const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+		if (editor) {
+			clearPendingFileDecorations(editor)
+		}
+	}
 	// Also clear decorations in markdown editor if open
 	await notifyMarkdownEditorClearDecorations(absolutePath)
 
@@ -88,23 +115,41 @@ export async function handleAcceptFileChanges(): Promise<void> {
 }
 
 /**
- * Handle rejecting file changes for the active editor
+ * Handle rejecting file changes for the active editor or any pending file
  * Note: This is a VS Code command handler, so using vscode APIs directly is acceptable
  */
 export async function handleRejectFileChanges(): Promise<void> {
+	const approvalManager = PendingFileApprovalManager.getInstance()
+
+	// Try to get the file path from active editor first
 	// biome-ignore lint: VS Code command handler needs direct access to activeTextEditor
 	const activeEditor = vscode.window.activeTextEditor
-	if (!activeEditor) {
+	let absolutePath: string | undefined
+
+	if (activeEditor) {
+		absolutePath = activeEditor.document.uri.fsPath
+	}
+
+	// If no active editor or active editor doesn't have pending changes,
+	// try to find any pending file (useful when called from markdown editor webview)
+	let pendingInfo = absolutePath ? approvalManager.getPendingFile(absolutePath) : undefined
+
+	if (!pendingInfo) {
+		// Get all pending files and use the first one
+		const allPendingFiles = approvalManager.getAllPendingFiles()
+		if (allPendingFiles.length > 0) {
+			absolutePath = allPendingFiles[0].absolutePath
+			pendingInfo = allPendingFiles[0]
+		}
+	}
+
+	if (!absolutePath) {
 		await HostProvider.window.showMessage({
 			type: ShowMessageType.WARNING,
 			message: "No active editor. Please open a file with pending changes.",
 		})
 		return
 	}
-
-	const absolutePath = activeEditor.document.uri.fsPath
-	const approvalManager = PendingFileApprovalManager.getInstance()
-	const pendingInfo = approvalManager.getPendingFile(absolutePath)
 
 	if (!pendingInfo) {
 		await HostProvider.window.showMessage({
@@ -125,7 +170,16 @@ export async function handleRejectFileChanges(): Promise<void> {
 	}
 
 	// Clear visual decorations
-	clearPendingFileDecorations(activeEditor)
+	if (activeEditor && activeEditor.document.uri.fsPath === absolutePath) {
+		clearPendingFileDecorations(activeEditor)
+	} else {
+		// Try to find the editor for this file
+		// biome-ignore lint: VS Code command handler needs direct access to visibleTextEditors
+		const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+		if (editor) {
+			clearPendingFileDecorations(editor)
+		}
+	}
 	// Also clear decorations in markdown editor if open
 	await notifyMarkdownEditorClearDecorations(absolutePath)
 

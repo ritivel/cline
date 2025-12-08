@@ -7,10 +7,10 @@ import * as vscode from "vscode"
  */
 // biome-ignore lint: Text editor decorations are VS Code-specific API with no abstraction
 const addedLineDecorationType = vscode.window.createTextEditorDecorationType({
-	backgroundColor: "rgba(0, 255, 0, 0.2)", // Green background for additions
+	backgroundColor: "rgba(35, 134, 54, 0.3)", // Green background for additions
 	isWholeLine: true,
 	gutterIconPath: vscode.Uri.parse(
-		"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggM0w4IDEzTTMgOEwxMyA4IiBzdHJva2U9IiMwMEQwMDAiIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4K",
+		"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggM0w4IDEzTTMgOEwxMyA4IiBzdHJva2U9IiMyOGE3NDUiIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4K",
 	),
 	gutterIconSize: "contain",
 	overviewRulerColor: new vscode.ThemeColor("gitDecoration.addedResourceForeground"),
@@ -18,16 +18,16 @@ const addedLineDecorationType = vscode.window.createTextEditorDecorationType({
 
 // biome-ignore lint: Text editor decorations are VS Code-specific API with no abstraction
 const deletedLineDecorationType = vscode.window.createTextEditorDecorationType({
-	backgroundColor: "rgba(255, 0, 0, 0.2)", // Red background for deletions
+	backgroundColor: "rgba(215, 58, 73, 0.3)", // Red background for deletions
 	isWholeLine: true,
 	textDecoration: "line-through",
-	opacity: "0.6",
+	opacity: "0.7",
 	overviewRulerColor: new vscode.ThemeColor("gitDecoration.deletedResourceForeground"),
 })
 
 // biome-ignore lint: Text editor decorations are VS Code-specific API with no abstraction
 const modifiedLineDecorationType = vscode.window.createTextEditorDecorationType({
-	backgroundColor: "rgba(255, 200, 0, 0.2)", // Yellow/orange background for modifications
+	backgroundColor: "rgba(227, 179, 65, 0.3)", // Yellow/orange background for modifications
 	isWholeLine: true,
 	overviewRulerColor: new vscode.ThemeColor("gitDecoration.modifiedResourceForeground"),
 })

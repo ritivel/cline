@@ -377,6 +377,119 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	// Register the addToChatDirect command handler - for webviews like markdown editor
+	// This command accepts direct text input instead of relying on active editor selection
+	// Supports optional range info for precise line number references
+	// Sends a special JSON format that the webview can parse to display as a file pill
+	context.subscriptions.push(
+		vscode.commands.registerCommand(
+			"cline.addToChatDirect",
+			async (params: {
+				selectedText: string
+				filePath?: string
+				language?: string
+				range?: { startLine: number; startChar: number; endLine: number; endChar: number }
+			}) => {
+				if (!params?.selectedText) {
+					return
+				}
+
+				const webview = WebviewProvider.getInstance() as VscodeWebviewProvider
+
+				// Show the webview
+				const webviewView = webview.getWebview()
+				if (webviewView) {
+					webviewView.show()
+				}
+
+				// Send as a special JSON format that the webview will parse and display as a file pill
+				// Format: ___FILE_CONTEXT___{"filePath":...,"startLine":...,"endLine":...,"text":...}___END_FILE_CONTEXT___
+				if (params.filePath && params.range) {
+					const relativePath = vscode.workspace.asRelativePath(params.filePath)
+					const fileName = path.basename(relativePath)
+					const startLine = params.range.startLine + 1
+					const endLine = params.range.endLine + 1
+
+					const fileContextJson = JSON.stringify({
+						type: "fileContext",
+						filePath: relativePath,
+						fileName: fileName,
+						startLine: startLine,
+						endLine: endLine,
+						text: params.selectedText,
+						language: params.language || "markdown",
+					})
+
+					await sendAddToInputEvent(`___FILE_CONTEXT___${fileContextJson}___END_FILE_CONTEXT___`)
+				} else {
+					// Fallback to plain text format if no file path or range
+					let fileContext = ""
+					if (params.filePath) {
+						const relativePath = vscode.workspace.asRelativePath(params.filePath)
+						fileContext = `\`${relativePath}\`:\n`
+					}
+					const input = `${fileContext}\`\`\`${params.language || ""}\n${params.selectedText}\n\`\`\``
+					await sendAddToInputEvent(input)
+				}
+
+				telemetryService.captureButtonClick("command_addToChatDirect", webview.controller?.task?.ulid)
+			},
+		),
+	)
+
+	// Register the improveCodeDirect command handler - for webviews like markdown editor
+	// This command accepts direct text input instead of relying on active editor selection
+	// Supports optional range info for precise line number references
+	context.subscriptions.push(
+		vscode.commands.registerCommand(
+			"cline.improveCodeDirect",
+			async (params: {
+				selectedText: string
+				filePath?: string
+				language?: string
+				range?: { startLine: number; startChar: number; endLine: number; endChar: number }
+			}) => {
+				if (!params?.selectedText?.trim()) {
+					HostProvider.window.showMessage({
+						type: ShowMessageType.INFORMATION,
+						message: "Please select some text to improve.",
+					})
+					return
+				}
+
+				const webview = WebviewProvider.getInstance() as VscodeWebviewProvider
+				const controller = webview.controller
+
+				// Format the prompt with file context and line numbers
+				let fileContext = ""
+				if (params.filePath) {
+					const relativePath = vscode.workspace.asRelativePath(params.filePath)
+					const fileName = path.basename(relativePath)
+					if (params.range) {
+						const startLine = params.range.startLine + 1
+						const endLine = params.range.endLine + 1
+						if (startLine === endLine) {
+							fileContext = `\`${fileName}\` (line ${startLine} in ${relativePath})`
+						} else {
+							fileContext = `\`${fileName}\` (lines ${startLine}-${endLine} in ${relativePath})`
+						}
+					} else {
+						fileContext = `\`${relativePath}\``
+					}
+				}
+
+				const prompt = `Improve the following text from ${fileContext} (e.g., suggest improvements, better wording, or enhancements):
+\`\`\`${params.language || ""}\n${params.selectedText}\n\`\`\``
+
+				if (controller) {
+					await controller.initTask(prompt)
+				}
+
+				telemetryService.captureButtonClick("command_improveCodeDirect", controller?.task?.ulid)
+			},
+		),
+	)
+
 	// Register the openWalkthrough command handler
 	context.subscriptions.push(
 		vscode.commands.registerCommand(commands.Walkthrough, async () => {
@@ -413,6 +526,33 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(commands.RejectFileChanges, async () => {
 			const { handleRejectFileChanges } = await import("./core/task/tools/utils/FileApprovalCommands")
 			await handleRejectFileChanges()
+		}),
+	)
+
+	// Listen for document save events to clear decorations
+	context.subscriptions.push(
+		vscode.workspace.onDidSaveTextDocument(async (document) => {
+			const { clearPendingFileDecorations, notifyMarkdownEditorClearDecorations } = await import(
+				"./core/task/tools/utils/PendingFileDecorations"
+			)
+			const { PendingFileApprovalManager } = await import("./core/task/tools/utils/PendingFileApprovalManager")
+
+			const absolutePath = document.uri.fsPath
+			const approvalManager = PendingFileApprovalManager.getInstance()
+
+			// Only clear decorations if this file has pending changes
+			if (approvalManager.hasPendingFile(absolutePath)) {
+				// Clear decorations in text editor
+				const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+				if (editor) {
+					clearPendingFileDecorations(editor)
+				}
+
+				// Clear decorations in markdown editor if open
+				await notifyMarkdownEditorClearDecorations(absolutePath)
+
+				console.log(`[DirectFileOperations] Cleared decorations on save for: ${absolutePath}`)
+			}
 		}),
 	)
 

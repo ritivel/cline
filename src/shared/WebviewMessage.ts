@@ -1,7 +1,8 @@
 export interface WebviewMessage {
-	type: "grpc_request" | "grpc_request_cancel"
+	type: "grpc_request" | "grpc_request_cancel" | "clearMarkdownSelectionHighlights"
 	grpc_request?: GrpcRequest
 	grpc_request_cancel?: GrpcCancel
+	filePath?: string // For clearMarkdownSelectionHighlights message
 }
 
 export type GrpcRequest = {

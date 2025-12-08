@@ -184,19 +184,78 @@ async function extractTextFromExcel(filePath: string): Promise<string> {
 }
 
 /**
+ * Parse a file entry that may contain line range and embedded text
+ * Format: "filepath:startLine-endLine|text" or "filepath"
+ * Returns: { filePath, lineRange, embeddedText }
+ */
+function parseFileEntry(fileEntry: string): {
+	filePath: string
+	lineRange: string | null
+	startLine: number | null
+	endLine: number | null
+	embeddedText: string | null
+} {
+	// Check for embedded text format: filepath:startLine-endLine|text
+	if (fileEntry.includes("|") && fileEntry.includes(":")) {
+		const pipeIndex = fileEntry.indexOf("|")
+		const pathWithRange = fileEntry.substring(0, pipeIndex)
+		const embeddedText = fileEntry.substring(pipeIndex + 1)
+
+		// Find the last colon that separates path from line range
+		const lastColonIndex = pathWithRange.lastIndexOf(":")
+		if (lastColonIndex !== -1) {
+			const potentialRange = pathWithRange.substring(lastColonIndex + 1)
+			// Verify it looks like a line range (e.g., "5-10" or "5")
+			if (/^\d+(-\d+)?$/.test(potentialRange)) {
+				const [startStr, endStr] = potentialRange.split("-")
+				const startLine = Number(startStr)
+				const endLine = endStr ? Number(endStr) : startLine
+				return {
+					filePath: pathWithRange.substring(0, lastColonIndex),
+					lineRange: potentialRange,
+					startLine,
+					endLine,
+					embeddedText,
+				}
+			}
+		}
+	}
+
+	return {
+		filePath: fileEntry,
+		lineRange: null,
+		startLine: null,
+		endLine: null,
+		embeddedText: null,
+	}
+}
+
+/**
  * Helper function used to load file(s) and format them into a string
+ * Supports embedded text format for files with line ranges from markdown editor
  */
 export async function processFilesIntoText(files: string[]): Promise<string> {
-	const fileContentsPromises = files.map(async (filePath) => {
+	const fileContentsPromises = files.map(async (fileEntry) => {
 		try {
-			// Check if file exists and is binary
-			//const isBinary = await isBinaryFile(filePath).catch(() => false)
-			//if (isBinary) {
-			//	return `<file_content path="${filePath.toPosix()}">\n(Binary file, unable to display content)\n</file_content>`
-			//}
+			const { filePath, lineRange, embeddedText, startLine, endLine } = parseFileEntry(fileEntry)
+
+			// If embedded text is provided (from markdown editor with line range), use it directly
+			if (embeddedText !== null) {
+				const lineInfo = lineRange ? ` (lines ${lineRange})` : ""
+				const rangeAttrs =
+					startLine !== null && endLine !== null ? ` start_line="${startLine}" end_line="${endLine}"` : ""
+				const guard =
+					startLine !== null && endLine !== null
+						? `# Edit only lines ${startLine}-${endLine} in this file. Keep all other lines unchanged.\n`
+						: ""
+				return `<file_content path="${filePath.toPosix()}"${rangeAttrs}${lineInfo}>\n${guard}${embeddedText}\n</file_content>`
+			}
+
+			// Otherwise, read the file from disk
 			const content = await extractTextFromFile(filePath)
 			return `<file_content path="${filePath.toPosix()}">\n${content}\n</file_content>`
 		} catch (error) {
+			const { filePath } = parseFileEntry(fileEntry)
 			console.error(`Error processing file ${filePath}:`, error)
 			return `<file_content path="${filePath.toPosix()}">\nError fetching content: ${error.message}\n</file_content>`
 		}
