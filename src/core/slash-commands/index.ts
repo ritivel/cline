@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import path from "path"
 import * as vscode from "vscode"
 import { HostProvider } from "@/hosts/host-provider"
+import { DossierGeneratorService } from "@/services/pdf/DossierGeneratorService"
 import { PdfProcessingService } from "@/services/pdf/PdfProcessingService"
 import { telemetryService } from "@/services/telemetry"
 import { ShowMessageType } from "@/shared/proto/index.host"
@@ -18,6 +19,9 @@ import {
 	subagentToolResponse,
 } from "../prompts/commands"
 import { StateManager } from "../storage/StateManager"
+
+// NOTE: New template system for classification is in @/core/ctd/templates/
+// See: @/core/ctd/templates/index.ts for template registry
 
 type FileBasedWorkflow = {
 	fullPath: string
@@ -34,286 +38,27 @@ type RemoteWorkflow = {
 
 type Workflow = FileBasedWorkflow | RemoteWorkflow
 
-// CTD Module Definitions
-interface CTDSection {
-	title: string
-	children?: string[]
-}
+// Import CTD template from SINGLE SOURCE OF TRUTH
+import { EAC_NMRA_TEMPLATE } from "@/core/ctd/templates/eac-nmra/definition"
+import type { CTDModuleDef } from "@/core/ctd/types"
 
-interface CTDModuleDef {
-	moduleNumber: number
-	title: string
-	sections: Record<string, CTDSection>
-}
-
-const MODULE_1: CTDModuleDef = {
-	moduleNumber: 1,
-	title: "Administrative Information and Product Information",
-	sections: {
-		"1.1": { title: "Comprehensive Table of Contents for all Modules." },
-		"1.2": { title: "Cover letter" },
-		"1.3": { title: "Comprehensive Table of Content" },
-		"1.4": { title: "Quality Information Summary (QIS)" },
-		"1.5": {
-			title: "Product Information",
-			children: ["1.5.1", "1.5.2", "1.5.3", "1.5.4"],
-		},
-		"1.5.1": { title: "Prescribing Information (Summary of Product Characteristics)" },
-		"1.5.2": { title: "Container Labelling" },
-		"1.5.3": { title: "Patient Information leaflet (PIL)" },
-		"1.5.4": { title: "Mock-ups and Specimens" },
-		"1.6": { title: "Information about the Experts" },
-		"1.7": { title: "APIMFs and certificates of suitability to the monographs of the European Pharmacopoeia" },
-		"1.8": { title: "Good Manufacturing Practice (GMP)" },
-		"1.9": {
-			title: "Regulatory status within EAC and in Countries with SRAs",
-			children: ["1.9.1", "1.9.2", "1.9.3", "1.9.4"],
-		},
-		"1.9.1": { title: "List of Countries in EAC and Countries With SRAs In Which A Similar Application has been Submitted" },
-		"1.9.2": { title: "Evaluation Reports from EAC-NMRA" },
-		"1.9.3": { title: "Evaluation Reports from SRAs" },
-		"1.9.4": { title: "Manufacturing and Marketing Authorization" },
-		"1.10": { title: "Paediatric Development Program" },
-		"1.11": { title: "Product Samples" },
-		"1.12": { title: "Requirement for Submission of a Risk Mitigation Plan" },
-		"1.13": { title: "Submission of Risk Management (RMP)" },
-	},
-}
-
-const MODULE_2: CTDModuleDef = {
-	moduleNumber: 2,
-	title: "Overview and Summaries",
-	sections: {
-		"2.1": { title: "Table of Contents of Module 2" },
-		"2.2": { title: "CTD Introduction" },
-		"2.3": { title: "Quality Overall Summary - Product Dossiers (QOS-PD)" },
-		"2.4": { title: "Nonclinical Overview for New Chemical Entities" },
-		"2.5": {
-			title: "Clinical Overview",
-			children: ["2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.5", "2.5.6", "2.5.7"],
-		},
-		"2.5.1": { title: "Product Development Rationale" },
-		"2.5.2": { title: "Overview of Bio-pharmaceutics" },
-		"2.5.3": { title: "Overview of Clinical Pharmacology" },
-		"2.5.4": { title: "Overview of Efficacy" },
-		"2.5.5": { title: "Overview of Safety" },
-		"2.5.6": { title: "Benefits and Risks Conclusions" },
-		"2.5.7": { title: "Literature References" },
-		"2.6": {
-			title: "Nonclinical Written and Tabulated Summaries",
-			children: ["2.6.1", "2.6.2", "2.6.3", "2.6.4", "2.6.5", "2.6.6", "2.6.7", "2.6.8"],
-		},
-		"2.6.1": { title: "Nonclinical Written Summaries" },
-		"2.6.2": { title: "Introduction" },
-		"2.6.3": { title: "Pharmacology Written Summary" },
-		"2.6.4": { title: "Pharmacology Tabulated Summary" },
-		"2.6.5": { title: "Pharmacokinetics Written Summary" },
-		"2.6.6": { title: "Pharmacokinetics Tabulated Summary" },
-		"2.6.7": { title: "Toxicology Written Summary" },
-		"2.6.8": { title: "Toxicology Tabulated Summary Nonclinical Tabulated Summaries" },
-		"2.7": {
-			title: "Clinical Summary",
-			children: ["2.7.1"],
-		},
-		"2.7.1": {
-			title: "Summary of Biopharmaceutical Studies and Associated Analytical Methods",
-			children: ["2.7.1.1", "2.7.1.2", "2.7.1.3"],
-		},
-		"2.7.1.1": { title: "Background and Overview" },
-		"2.7.1.2": { title: "Summary of Results of Individual Studies" },
-		"2.7.1.3": { title: "Comparison and Analyses of Results Across Studies" },
-	},
-}
-
-const MODULE_3: CTDModuleDef = {
-	moduleNumber: 3,
-	title: "Quality",
-	sections: {
-		"3.1": { title: "Table of Contents of Module 3" },
-		"3.2": {
-			title: "Body of Data",
-			children: ["3.2.S", "3.2.P", "3.2.R"],
-		},
-		"3.2.S": {
-			title: "Drug Substance (Active Pharmaceutical Ingredient (API))",
-			children: ["3.2.S.1", "3.2.S.2", "3.2.S.3", "3.2.S.4", "3.2.S.5", "3.2.S.6", "3.2.S.7"],
-		},
-		"3.2.S.1": {
-			title: "General Information",
-			children: ["3.2.S.1.1", "3.2.S.1.2", "3.2.S.1.3"],
-		},
-		"3.2.S.1.1": { title: "Nomenclature" },
-		"3.2.S.1.2": { title: "Structure" },
-		"3.2.S.1.3": { title: "General Properties" },
-		"3.2.S.2": {
-			title: "Manufacture",
-			children: ["3.2.S.2.1", "3.2.S.2.2", "3.2.S.2.3", "3.2.S.2.4", "3.2.S.2.5"],
-		},
-		"3.2.S.2.1": { title: "Manufacturer(s) (Name, Physical Address)" },
-		"3.2.S.2.2": { title: "Description of Manufacturing Process and Process Controls" },
-		"3.2.S.2.3": { title: "Control of Materials" },
-		"3.2.S.2.4": { title: "Controls of Critical Steps and Intermediates" },
-		"3.2.S.2.5": { title: "Process Validation and/or Evaluation" },
-		"3.2.S.3": {
-			title: "Characterization",
-			children: ["3.2.S.3.1", "3.2.S.3.2"],
-		},
-		"3.2.S.3.1": { title: "Elucidation of Structure and Other Characteristics" },
-		"3.2.S.3.2": { title: "Impurities" },
-		"3.2.S.4": {
-			title: "Control of the API",
-			children: ["3.2.S.4.1", "3.2.S.4.2", "3.2.S.4.3", "3.2.S.4.4", "3.2.S.4.5"],
-		},
-		"3.2.S.4.1": { title: "Specifications" },
-		"3.2.S.4.2": { title: "Analytical Procedures" },
-		"3.2.S.4.3": { title: "Validation of Analytical Procedures" },
-		"3.2.S.4.4": { title: "Batch Analyses" },
-		"3.2.S.4.5": { title: "Justification of Specification" },
-		"3.2.S.5": { title: "Reference Standards or Materials" },
-		"3.2.S.6": { title: "Container Closure Systems" },
-		"3.2.S.7": { title: "Stability" },
-		"3.2.P": {
-			title: "Drug product (or finished pharmaceutical product (FPP))",
-			children: ["3.2.P.1", "3.2.P.2", "3.2.P.3", "3.2.P.4", "3.2.P.5", "3.2.P.6", "3.2.P.7", "3.2.P.8"],
-		},
-		"3.2.P.1": { title: "Description and Composition of the FPP" },
-		"3.2.P.2": {
-			title: "Pharmaceutical Development",
-			children: ["3.2.P.2.1", "3.2.P.2.2", "3.2.P.2.3", "3.2.P.2.4", "3.2.P.2.5", "3.2.P.2.6"],
-		},
-		"3.2.P.2.1": { title: "Components of the FPP" },
-		"3.2.P.2.2": { title: "Finished Pharmaceutical Product" },
-		"3.2.P.2.3": { title: "Manufacturing Process Development" },
-		"3.2.P.2.4": { title: "Container Closure System" },
-		"3.2.P.2.5": { title: "Microbiological Attributes" },
-		"3.2.P.2.6": { title: "Compatibility" },
-		"3.2.P.3": {
-			title: "Manufacture",
-			children: ["3.2.P.3.1", "3.2.P.3.2", "3.2.P.3.3", "3.2.P.3.4", "3.2.P.3.5"],
-		},
-		"3.2.P.3.1": { title: "Manufacturer(s)" },
-		"3.2.P.3.2": { title: "Batch Formula" },
-		"3.2.P.3.3": { title: "Description of Manufacturing Process and Process Controls" },
-		"3.2.P.3.4": { title: "Controls of Critical Steps and Intermediates" },
-		"3.2.P.3.5": { title: "Process Validation and/or Evaluation" },
-		"3.2.P.4": {
-			title: "Control of excipients",
-			children: ["3.2.P.4.1", "3.2.P.4.2", "3.2.P.4.3", "3.2.P.4.4", "3.2.P.4.5", "3.2.P.4.6"],
-		},
-		"3.2.P.4.1": { title: "Specifications" },
-		"3.2.P.4.2": { title: "Analytical Procedures" },
-		"3.2.P.4.3": { title: "Validation of Analytical Procedures" },
-		"3.2.P.4.4": { title: "Justification of Specifications" },
-		"3.2.P.4.5": { title: "Excipients of Human or Animal Origin" },
-		"3.2.P.4.6": { title: "Novel Excipients" },
-		"3.2.P.5": {
-			title: "Control of FPP",
-			children: ["3.2.P.5.1", "3.2.P.5.2", "3.2.P.5.3", "3.2.P.5.4", "3.2.P.5.5", "3.2.P.5.6"],
-		},
-		"3.2.P.5.1": { title: "Specifications (S)" },
-		"3.2.P.5.2": { title: "Analytical Procedures" },
-		"3.2.P.5.3": { title: "Validation of Analytical Procedures" },
-		"3.2.P.5.4": { title: "Batch Analyses" },
-		"3.2.P.5.5": { title: "Characterization of Impurities" },
-		"3.2.P.5.6": { title: "Justification of Specifications" },
-		"3.2.P.6": { title: "Reference Standards or Materials" },
-		"3.2.P.7": { title: "Container Closure System" },
-		"3.2.P.8": { title: "Stability" },
-		"3.2.R": {
-			title: "Regional Information",
-			children: ["3.2.R.1", "3.2.R.2"],
-		},
-		"3.2.R.1": {
-			title: "Production documentation",
-			children: ["3.2.R.1.1", "3.2.R.1.2"],
-		},
-		"3.2.R.1.1": { title: "Executed Production Documents" },
-		"3.2.R.1.2": { title: "Master Production Documents" },
-		"3.2.R.2": { title: "Analytical Procedures and Validation Information" },
-		"3.3": { title: "Literature References" },
-	},
-}
-
-const MODULE_5: CTDModuleDef = {
-	moduleNumber: 5,
-	title: "Clinical Study Reports",
-	sections: {
-		"5.1": { title: "Table of Contents of Module 5" },
-		"5.2": { title: "Tabular Listing of All Clinical Studies" },
-		"5.3": {
-			title: "Clinical Study Reports",
-			children: ["5.3.1", "5.3.2", "5.3.3", "5.3.4", "5.3.5", "5.3.6", "5.3.7"],
-		},
-		"5.3.1": {
-			title: "Reports of Biopharmaceutic Studies",
-			children: ["5.3.1.1", "5.3.1.2", "5.3.1.3", "5.3.1.4"],
-		},
-		"5.3.1.1": { title: "Bioavailability (BA) Study Reports" },
-		"5.3.1.2": { title: "Comparative BA and Bioequivalence (BE) Study reports" },
-		"5.3.1.3": { title: "In vitro-In vivo Correlation Study Reports" },
-		"5.3.1.4": { title: "Reports of Bioanalytical and Analytical Methods for Human Studies" },
-		"5.3.2": {
-			title: "Reports of Studies Pertinent to Pharmacokinetics Using Human Biomaterials",
-			children: ["5.3.2.1", "5.3.2.2", "5.3.2.3"],
-		},
-		"5.3.2.1": { title: "Plasma Protein Binding Study Reports" },
-		"5.3.2.2": { title: "Reports of Hepatic Metabolism and Drug Interaction Studies" },
-		"5.3.2.3": { title: "Reports of Studies Using Other Human Biomaterials" },
-		"5.3.3": {
-			title: "Reports of Human Pharmacokinetic (PK) Studies",
-			children: ["5.3.3.1", "5.3.3.2", "5.3.3.3", "5.3.3.4", "5.3.3.5"],
-		},
-		"5.3.3.1": { title: "Healthy Subject PK and Initial Tolerability Study Reports" },
-		"5.3.3.2": { title: "Patient PK and Initial Tolerability Study Reports" },
-		"5.3.3.3": { title: "Intrinsic Factor PK Study Reports" },
-		"5.3.3.4": { title: "Extrinsic Factor PK Study Reports" },
-		"5.3.3.5": { title: "Population PK Study Reports" },
-		"5.3.4": {
-			title: "Reports of Human Pharmacodynamic (PD) Studies",
-			children: ["5.3.4.1", "5.3.4.2"],
-		},
-		"5.3.4.1": { title: "Healthy Subject PD and PK/PD Study Reports" },
-		"5.3.4.2": { title: "Patient PD and PK/PD Study Reports" },
-		"5.3.5": {
-			title: "Reports of Efficacy and Safety Studies",
-			children: ["5.3.5.1", "5.3.5.2", "5.3.5.3", "5.3.5.4"],
-		},
-		"5.3.5.1": { title: "Study Reports of Controlled Clinical Studies Pertinent to the Claimed Indication" },
-		"5.3.5.2": { title: "Study Reports of Uncontrolled Clinical Studies" },
-		"5.3.5.3": { title: "Reports of Analyses of Data from More than One Study" },
-		"5.3.5.4": { title: "Other Clinical Study Reports" },
-		"5.3.6": { title: "Reports of Post-Marketing Experience if Available" },
-		"5.3.7": { title: "Case Reports Forms and Individual Patient Listings" },
-	},
-}
-
-// CTD Template Definitions
-interface CTDTemplate {
-	name: string
-	description?: string
-	modules: CTDModuleDef[]
-}
-
-// Default CTD template (EAC-NMRA standard)
-const DEFAULT_CTD_TEMPLATE: CTDTemplate = {
-	name: "default",
-	description: "EAC-NMRA CTD Template",
-	modules: [MODULE_1, MODULE_2, MODULE_3, MODULE_5],
-}
-
-// Template registry - add new templates here
-const CTD_TEMPLATES: Record<string, CTDTemplate> = {
-	default: DEFAULT_CTD_TEMPLATE,
-}
+// ============================================================================
+// CTD TEMPLATE - SINGLE SOURCE OF TRUTH: @/core/ctd/templates/eac-nmra/definition.ts
+// ============================================================================
+// The template is now imported from the definition file.
+// This ensures consistency between:
+// - Dossier folder creation
+// - Classification prompts
+// - Tags.md path building
 
 /**
  * Gets a CTD template by name, or returns the default template
+ * Uses the SINGLE SOURCE OF TRUTH from @/core/ctd/templates/
  */
-function getCTDTemplate(templateName?: string): CTDTemplate {
-	if (templateName && CTD_TEMPLATES[templateName]) {
-		return CTD_TEMPLATES[templateName]
-	}
-	return DEFAULT_CTD_TEMPLATE
+function getCTDTemplate(templateName?: string): typeof EAC_NMRA_TEMPLATE {
+	// Currently only EAC_NMRA_TEMPLATE is available
+	// Add more templates to @/core/ctd/templates/ and import them here
+	return EAC_NMRA_TEMPLATE
 }
 
 /**
@@ -372,6 +117,7 @@ async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef
  * Global service instance to allow cancellation
  */
 let pdfProcessingService: PdfProcessingService | null = null
+let dossierGeneratorService: DossierGeneratorService | null = null
 
 /**
  * Starts cloud-based PDF processing in the background
@@ -466,9 +212,15 @@ async function executeCreateDossier(
 		// Create dossier folder structure
 		const createdPaths = await createDossierFolders(workspaceRoot, template.modules)
 
-		// Create documents folder
+		// Create documents folder only if it doesn't exist
 		const documentsPath = path.join(workspaceRoot, "documents")
-		await fs.mkdir(documentsPath, { recursive: true })
+		try {
+			await fs.access(documentsPath)
+			// Documents folder already exists, skip creation
+		} catch {
+			// Documents folder doesn't exist, create it
+			await fs.mkdir(documentsPath, { recursive: true })
+		}
 
 		// Start cloud-based PDF processing in the background
 		startCloudPdfProcessing(workspaceRoot)
@@ -481,6 +233,95 @@ async function executeCreateDossier(
 		return {
 			success: false,
 			message: `Failed to create dossier structure: ${errorMessage}`,
+		}
+	}
+}
+
+/**
+ * Starts dossier content generation in the background
+ */
+function startDossierGeneration(workspaceRoot: string): void {
+	const service = new DossierGeneratorService(workspaceRoot)
+	dossierGeneratorService = service
+
+	vscode.window.withProgress(
+		{
+			location: vscode.ProgressLocation.Notification,
+			title: "Generating Dossier Content",
+			cancellable: true,
+		},
+		async (progress, token) => {
+			token.onCancellationRequested(() => {
+				// Note: DossierGeneratorService doesn't have cancel yet, but we can set it to null
+				dossierGeneratorService = null
+			})
+
+			await service
+				.generateAllSections(
+					(stage, details) => {
+						console.log(`[Dossier Generation ${stage}] ${details || ""}`)
+
+						// Update progress bar
+						progress.report({ message: details || stage })
+
+						// Show notification for section completions
+						if (stage === "section" && details) {
+							HostProvider.get().hostBridge.windowClient.showMessage({
+								message: `Dossier Generation: ${details}`,
+								type: ShowMessageType.INFORMATION,
+							})
+						}
+					},
+					(sectionId, moduleNum) => {
+						// Section completed callback
+						console.log(`Completed section ${sectionId} in Module ${moduleNum}`)
+					},
+				)
+				.then((result) => {
+					if (result.success) {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Dossier generation completed: ${result.sectionsGenerated} sections generated`,
+							type: ShowMessageType.INFORMATION,
+						})
+					} else {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Dossier generation completed with ${result.errors.length} errors. ${result.sectionsGenerated} sections generated.`,
+							type: ShowMessageType.ERROR,
+						})
+					}
+				})
+				.catch((error) => {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					console.error("Error generating dossier content:", error)
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Dossier Generation Error: ${errorMessage}`,
+						type: ShowMessageType.ERROR,
+					})
+				})
+				.finally(() => {
+					if (dossierGeneratorService === service) {
+						dossierGeneratorService = null
+					}
+				})
+		},
+	)
+}
+
+/**
+ * Executes the generate-dossier command
+ */
+async function executeGenerateDossier(workspaceRoot: string): Promise<{ success: boolean; message: string }> {
+	try {
+		// Start dossier content generation in the background
+		startDossierGeneration(workspaceRoot)
+
+		const message = `Dossier content generation has been started in the background. Content will be generated for all leaf sections in regulatory order (Module 3 → 5 → 2 → 1). Progress notifications will appear as sections are completed.`
+		return { success: true, message }
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		return {
+			success: false,
+			message: `Failed to start dossier generation: ${errorMessage}`,
 		}
 	}
 }
@@ -508,6 +349,7 @@ export async function parseSlashCommands(
 		"subagent",
 		"explain-changes",
 		"create-dossier",
+		"generate-dossier",
 	]
 
 	// Determine if the current provider/model/setting actually uses native tool calling
@@ -619,6 +461,44 @@ ${textWithoutSlashCommand}`
 					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
 					const processedText = `<explicit_instructions type="create-dossier-result">
 The /create-dossier command failed to execute. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+					return { processedText, needsClinerulesFileCheck: false }
+				}
+			}
+
+			// Special handling for generate-dossier: execute directly
+			if (commandName === "generate-dossier") {
+				try {
+					// Get workspace root
+					const workspacePaths = await HostProvider.workspace.getWorkspacePaths({})
+					const workspaceRoot = workspacePaths.paths?.[0] || process.cwd()
+
+					// Execute the command
+					const result = await executeGenerateDossier(workspaceRoot)
+
+					// Remove slash command from text
+					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+
+					// Return message for AI to report to user
+					const processedText = `<explicit_instructions type="generate-dossier-result">
+The /generate-dossier command has been executed. ${result.message}
+
+Please inform the user about the result: ${result.success ? "Success" : "Error"} - ${result.message}
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+
+					// Track telemetry for builtin slash command usage
+					telemetryService.captureSlashCommandUsed(ulid, commandName, "builtin")
+
+					return { processedText, needsClinerulesFileCheck: false }
+				} catch (error) {
+					console.error(`Error executing generate-dossier command: ${error}`)
+					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+					const processedText = `<explicit_instructions type="generate-dossier-result">
+The /generate-dossier command failed to execute. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
 </explicit_instructions>
 
 ${textWithoutSlashCommand}`
