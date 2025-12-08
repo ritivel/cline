@@ -4,6 +4,9 @@ import fs from "fs"
 import path from "path"
 import { Readable } from "stream"
 import { fetch, getAxiosSettings } from "@/shared/net"
+// Use the new template-driven classifier with pre-generated prompts
+import { CtdClassifierServiceV2 as CtdClassifierService } from "./CtdClassifierServiceV2"
+import { PdfMetadataService } from "./PdfMetadataService"
 
 const DUMMY_API_BASE_URL = "https://dummy-api.com"
 
@@ -44,6 +47,8 @@ export class PdfProcessingService {
 	private readonly maxConcurrentUploads: number
 	private readonly maxConcurrentDownloads: number
 	private abortController: AbortController | null = null
+	private readonly metadataService: PdfMetadataService
+	private readonly ctdClassifierService: CtdClassifierService
 
 	constructor(
 		apiBaseUrl: string = DUMMY_API_BASE_URL,
@@ -55,6 +60,8 @@ export class PdfProcessingService {
 		this.apiToken = apiToken
 		this.maxConcurrentUploads = maxConcurrentUploads
 		this.maxConcurrentDownloads = maxConcurrentDownloads
+		this.metadataService = new PdfMetadataService()
+		this.ctdClassifierService = new CtdClassifierService()
 	}
 
 	/**
@@ -260,8 +267,84 @@ export class PdfProcessingService {
 	}
 
 	/**
+	 * Checks if a PDF folder already exists with valid extracted content
+	 */
+	private async isPdfFolderAlreadyProcessed(extractPath: string): Promise<boolean> {
+		try {
+			// Check if folder exists
+			await fs.promises.access(extractPath)
+
+			// Check if folder has any .mmd or .md files (indicating successful extraction)
+			const entries = await fs.promises.readdir(extractPath)
+			const hasMarkdownFiles = entries.some((f) => f.endsWith(".mmd") || f.endsWith(".md"))
+
+			if (hasMarkdownFiles) {
+				console.log(`PDF folder already exists with content: ${extractPath}, skipping download`)
+				return true
+			}
+		} catch {
+			// Folder doesn't exist or can't be accessed
+		}
+		return false
+	}
+
+	/**
+	 * Calculates the expected output folder path for a PDF file
+	 */
+	private getExpectedOutputPath(pdfPath: string, workspaceRoot: string, outputDir: string): string {
+		const relativePath = path.relative(workspaceRoot, pdfPath)
+		const relativeDir = path.dirname(relativePath)
+		const pdfFolderName = path.basename(pdfPath, ".pdf")
+
+		return relativeDir === "." || relativeDir === ""
+			? path.join(outputDir, pdfFolderName)
+			: path.join(outputDir, relativeDir, pdfFolderName)
+	}
+
+	/**
+	 * Filters out PDFs that have already been processed (output folder exists with content)
+	 */
+	private async filterUnprocessedPdfs(
+		pdfFiles: string[],
+		workspaceRoot: string,
+		outputDir: string,
+		onProgress?: (stage: string, details?: string) => void,
+	): Promise<string[]> {
+		const unprocessedPdfs: string[] = []
+		let skippedCount = 0
+
+		for (const pdfPath of pdfFiles) {
+			const expectedOutputPath = this.getExpectedOutputPath(pdfPath, workspaceRoot, outputDir)
+			const alreadyProcessed = await this.isPdfFolderAlreadyProcessed(expectedOutputPath)
+
+			if (alreadyProcessed) {
+				skippedCount++
+				// Still run metadata and classification for existing folders
+				try {
+					const relativePath = path.relative(outputDir, expectedOutputPath)
+					const extracted = await this.metadataService.extractMetadataForFolder(expectedOutputPath, relativePath)
+					if (extracted) {
+						await this.ctdClassifierService.classifyFolder(expectedOutputPath, relativePath, workspaceRoot)
+					}
+				} catch (error) {
+					console.error(`Error processing existing folder for ${pdfPath}:`, error)
+				}
+			} else {
+				unprocessedPdfs.push(pdfPath)
+			}
+		}
+
+		if (skippedCount > 0 && onProgress) {
+			onProgress("skipped", `Skipped ${skippedCount} already processed PDF(s)`)
+		}
+
+		return unprocessedPdfs
+	}
+
+	/**
 	 * Downloads and extracts a single PDF's result folder from S3
 	 * Preserves the directory structure relative to workspace root
+	 * Skips download if folder already exists with valid content
 	 */
 	private async downloadAndExtractPdfResults(
 		downloadUrl: string,
@@ -269,7 +352,62 @@ export class PdfProcessingService {
 		pdfName: string,
 		outputDir: string,
 		workspaceRoot: string,
+		onProgress?: (stage: string, details?: string) => void,
 	): Promise<void> {
+		// Calculate extraction path first to check if already processed
+		const relativePath = path.relative(workspaceRoot, pdfName)
+		const relativeDir = path.dirname(relativePath)
+		const pdfFolderName = path.basename(pdfName, ".pdf")
+		const extractPath =
+			relativeDir === "." || relativeDir === ""
+				? path.join(outputDir, pdfFolderName)
+				: path.join(outputDir, relativeDir, pdfFolderName)
+
+		// Check if folder already exists with valid content - skip download if so
+		if (await this.isPdfFolderAlreadyProcessed(extractPath)) {
+			// Still try to extract metadata if info.json is missing or has placeholders
+			try {
+				if (onProgress) {
+					onProgress("metadata", `Extracting metadata for ${path.basename(pdfName)}...`)
+				}
+				const extracted = await this.metadataService.extractMetadataForFolder(
+					extractPath,
+					path.relative(outputDir, extractPath),
+				)
+				if (extracted && onProgress) {
+					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
+				}
+
+				// Run CTD classification after metadata extraction (for existing folders)
+				if (extracted) {
+					try {
+						if (onProgress) {
+							onProgress("classification", `Classifying ${path.basename(pdfName)} into CTD modules...`)
+						}
+						const classified = await this.ctdClassifierService.classifyFolder(
+							extractPath,
+							path.relative(outputDir, extractPath),
+							workspaceRoot,
+						)
+						if (classified && onProgress) {
+							onProgress("classification", `CTD classification complete for ${path.basename(pdfName)}`)
+						}
+					} catch (classificationError) {
+						console.error(`Failed to classify ${pdfName}:`, classificationError)
+						if (onProgress) {
+							onProgress("error", `CTD classification failed for ${path.basename(pdfName)}`)
+						}
+					}
+				}
+			} catch (metadataError) {
+				console.error(`Failed to extract metadata for existing folder ${pdfName}:`, metadataError)
+				if (onProgress) {
+					onProgress("error", `Metadata extraction failed for ${path.basename(pdfName)}`)
+				}
+			}
+			return
+		}
+
 		const tempZipPath = path.join(outputDir, `temp_${pdfIndex}_${Date.now()}.zip`)
 
 		try {
@@ -311,22 +449,56 @@ export class PdfProcessingService {
 				}
 			})
 
-			// Calculate relative path from workspace root to preserve directory structure
-			const relativePath = path.relative(workspaceRoot, pdfName)
-			const relativeDir = path.dirname(relativePath)
-			const pdfFolderName = path.basename(pdfName, ".pdf")
-
-			// Build extraction path preserving the original directory structure
-			const extractPath =
-				relativeDir === "." || relativeDir === ""
-					? path.join(outputDir, pdfFolderName)
-					: path.join(outputDir, relativeDir, pdfFolderName)
+			// Create extraction directory (extractPath already calculated above)
 			await fs.promises.mkdir(extractPath, { recursive: true })
 
 			await extractZip(tempZipPath, { dir: extractPath })
 
 			// Clean up temp zip
 			await fs.promises.unlink(tempZipPath)
+
+			// Extract metadata from the folder after extraction is complete
+			try {
+				if (onProgress) {
+					onProgress("metadata", `Extracting metadata for ${path.basename(pdfName)}...`)
+				}
+				const extracted = await this.metadataService.extractMetadataForFolder(
+					extractPath,
+					path.relative(outputDir, extractPath),
+				)
+				if (extracted && onProgress) {
+					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
+				}
+
+				// Run CTD classification after metadata extraction
+				if (extracted) {
+					try {
+						if (onProgress) {
+							onProgress("classification", `Classifying ${path.basename(pdfName)} into CTD modules...`)
+						}
+						const classified = await this.ctdClassifierService.classifyFolder(
+							extractPath,
+							path.relative(outputDir, extractPath),
+							workspaceRoot,
+						)
+						if (classified && onProgress) {
+							onProgress("classification", `CTD classification complete for ${path.basename(pdfName)}`)
+						}
+					} catch (classificationError) {
+						console.error(`Failed to classify ${pdfName}:`, classificationError)
+						if (onProgress) {
+							onProgress("error", `CTD classification failed for ${path.basename(pdfName)}`)
+						}
+						// Don't fail the whole process for classification errors
+					}
+				}
+			} catch (metadataError) {
+				console.error(`Failed to extract metadata for ${pdfName}:`, metadataError)
+				if (onProgress) {
+					onProgress("error", `Metadata extraction failed for ${path.basename(pdfName)}`)
+				}
+				// Don't fail the whole process for metadata extraction errors
+			}
 		} catch (error) {
 			// Clean up temp zip on error
 			if (fs.existsSync(tempZipPath)) {
@@ -374,6 +546,7 @@ export class PdfProcessingService {
 					pdfName,
 					outputDir,
 					workspaceRoot,
+					onProgress,
 				)
 
 				downloadedPdfs.add(pdfStatus.pdfIndex)
@@ -551,9 +724,9 @@ export class PdfProcessingService {
 			if (onProgress) {
 				onProgress("discovering", "Scanning workspace for PDF files...")
 			}
-			const pdfFiles = await this.findPdfFiles(workspaceRoot)
+			const allPdfFiles = await this.findPdfFiles(workspaceRoot)
 
-			if (pdfFiles.length === 0) {
+			if (allPdfFiles.length === 0) {
 				if (onProgress) {
 					onProgress("completed", "No PDF files found to process")
 				}
@@ -561,12 +734,37 @@ export class PdfProcessingService {
 			}
 
 			if (onProgress) {
-				onProgress("discovered", `Found ${pdfFiles.length} PDF file(s)`)
+				onProgress("discovered", `Found ${allPdfFiles.length} PDF file(s)`)
 			}
 
 			if (signal.aborted) throw new Error("Operation cancelled")
 
-			// Stage 2: Request upload slots
+			// Stage 1.5: Filter out already processed PDFs
+			const documentsPath = path.join(workspaceRoot, "documents")
+			await fs.promises.mkdir(documentsPath, { recursive: true })
+
+			if (onProgress) {
+				onProgress("checking", "Checking for already processed PDFs...")
+			}
+			const pdfFiles = await this.filterUnprocessedPdfs(allPdfFiles, workspaceRoot, documentsPath, onProgress)
+
+			if (pdfFiles.length === 0) {
+				if (onProgress) {
+					onProgress("completed", `All ${allPdfFiles.length} PDF(s) already processed. No new files to upload.`)
+				}
+				return
+			}
+
+			if (onProgress) {
+				onProgress(
+					"filtered",
+					`${pdfFiles.length} PDF(s) need processing (${allPdfFiles.length - pdfFiles.length} skipped)`,
+				)
+			}
+
+			if (signal.aborted) throw new Error("Operation cancelled")
+
+			// Stage 2: Request upload slots (only for unprocessed PDFs)
 			if (onProgress) {
 				onProgress("requesting", "Requesting upload slots from server...")
 			}
@@ -584,7 +782,7 @@ export class PdfProcessingService {
 
 			if (signal.aborted) throw new Error("Operation cancelled")
 
-			// Stage 3: Upload files to S3
+			// Stage 3: Upload files to S3 (only unprocessed PDFs)
 			if (onProgress) {
 				onProgress("uploading", `Uploading ${pdfFiles.length} file(s) to S3...`)
 			}
@@ -606,9 +804,6 @@ export class PdfProcessingService {
 			if (signal.aborted) throw new Error("Operation cancelled")
 
 			// Stage 5: Poll and download results
-			const documentsPath = path.join(workspaceRoot, "documents")
-			await fs.promises.mkdir(documentsPath, { recursive: true })
-
 			if (incremental) {
 				// New: Incremental download approach - download folders as they become available
 				if (onProgress) {
