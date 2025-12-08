@@ -1381,6 +1381,15 @@ export class Task {
 	}
 
 	async abortTask() {
+		// Clean up pending file approvals for this task
+		try {
+			const { PendingFileApprovalManager } = await import("./tools/utils/PendingFileApprovalManager")
+			const approvalManager = PendingFileApprovalManager.getInstance()
+			approvalManager.clearPendingFilesForTask(this.ulid)
+		} catch (error) {
+			// Non-critical - log but don't fail abort
+			Logger.warn(`Failed to clear pending file approvals during task abort: ${error}`)
+		}
 		try {
 			// PHASE 1: Check if TaskCancel should run BEFORE any cleanup
 			// We must capture this state now because subsequent cleanup will
