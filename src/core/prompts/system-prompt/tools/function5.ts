@@ -10,7 +10,8 @@ const generic: ClineToolSpec = {
 	name: "function5",
 	description:
 		"Query pharmaceutical safety and pharmacovigilance data including adverse event reports, safety profiles, and risk assessments. This tool is only available in PLAN MODE. Use this tool to gather safety information when planning pharmaceutical safety assessments or risk analysis tasks.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "drug_name",
@@ -27,7 +28,8 @@ const NATIVE_GPT_5: ClineToolSpec = {
 	name: "function5",
 	description:
 		"Query pharmaceutical safety and pharmacovigilance data including adverse event reports, safety profiles, and risk assessments. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "drug_name",
@@ -48,7 +50,8 @@ const GEMINI_3: ClineToolSpec = {
 	name: "function5",
 	description:
 		"Query pharmaceutical safety and pharmacovigilance data including adverse event reports, safety profiles, and risk assessments. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "drug_name",

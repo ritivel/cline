@@ -10,7 +10,8 @@ const generic: ClineToolSpec = {
 	name: "function3",
 	description:
 		"Access clinical trial data including trial phases, endpoints, patient populations, and study outcomes. This tool is only available in PLAN MODE. Use this tool to gather clinical evidence when planning pharmaceutical research or development tasks.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "query",
@@ -28,7 +29,8 @@ const NATIVE_GPT_5: ClineToolSpec = {
 	name: "function3",
 	description:
 		"Access clinical trial data including trial phases, endpoints, patient populations, and study outcomes. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "query",
@@ -50,7 +52,8 @@ const GEMINI_3: ClineToolSpec = {
 	name: "function3",
 	description:
 		"Access clinical trial data including trial phases, endpoints, patient populations, and study outcomes. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "query",

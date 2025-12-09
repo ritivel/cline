@@ -3,6 +3,7 @@ import { ClineRulesToggles } from "@shared/cline-rules"
 import fs from "fs/promises"
 import path from "path"
 import * as vscode from "vscode"
+import { WebviewProvider } from "@/core/webview"
 import { HostProvider } from "@/hosts/host-provider"
 import { ClineFileTracker } from "@/services/fileTracking/ClineFileTracker"
 import { DossierGeneratorService } from "@/services/pdf/DossierGeneratorService"
@@ -251,7 +252,20 @@ async function executeCreateDossier(
  * Starts dossier content generation in the background
  */
 function startDossierGeneration(workspaceRoot: string): void {
-	const service = new DossierGeneratorService(workspaceRoot)
+	// Get controller from webview provider for subagents
+	const webview = WebviewProvider.getVisibleInstance()
+	const controller = webview?.controller
+
+	if (!controller) {
+		console.error("Cannot start dossier generation: No controller available")
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message: "Cannot start dossier generation: No controller available. Please ensure Cline is properly initialized.",
+			type: ShowMessageType.ERROR,
+		})
+		return
+	}
+
+	const service = new DossierGeneratorService(workspaceRoot, controller)
 	dossierGeneratorService = service
 
 	vscode.window.withProgress(
@@ -325,13 +339,90 @@ async function executeGenerateDossier(workspaceRoot: string): Promise<{ success:
 		// Start dossier content generation in the background
 		startDossierGeneration(workspaceRoot)
 
-		const message = `Dossier content generation has been started in the background. Content will be generated for all leaf sections in regulatory order (Module 3 → 5 → 2 → 1). Progress notifications will appear as sections are completed.`
+		const message = `Dossier content generation has been started in the background. AI subagents will work in parallel to generate standalone LaTeX documents for all leaf sections in regulatory order (Module 3 → 5 → 2 → 1). Progress notifications will appear as sections are completed.`
 		return { success: true, message }
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		return {
 			success: false,
 			message: `Failed to start dossier generation: ${errorMessage}`,
+		}
+	}
+}
+
+/**
+ * Executes the generate-section command
+ */
+async function executeGenerateSection(
+	workspaceRoot: string,
+	sectionNameOrId: string,
+): Promise<{ success: boolean; message: string }> {
+	try {
+		// Get controller from webview provider for subagents
+		const webview = WebviewProvider.getVisibleInstance()
+		const controller = webview?.controller
+
+		if (!controller) {
+			return {
+				success: false,
+				message: "Cannot start section generation: No controller available. Please ensure Cline is properly initialized.",
+			}
+		}
+
+		const service = new DossierGeneratorService(workspaceRoot, controller)
+
+		// Start section generation in the background
+		vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Notification,
+				title: `Generating Section: ${sectionNameOrId}`,
+				cancellable: true,
+			},
+			async (progress, token) => {
+				token.onCancellationRequested(() => {
+					// Note: DossierGeneratorService doesn't have cancel yet
+				})
+
+				await service
+					.generateSectionByName(sectionNameOrId, (status) => {
+						console.log(`[Section Generation ${sectionNameOrId}] ${status}`)
+						progress.report({ message: status })
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Section Generation (${sectionNameOrId}): ${status}`,
+							type: ShowMessageType.INFORMATION,
+						})
+					})
+					.then((result) => {
+						if (result.success) {
+							HostProvider.get().hostBridge.windowClient.showMessage({
+								message: `Section generation completed: ${sectionNameOrId}`,
+								type: ShowMessageType.INFORMATION,
+							})
+						} else {
+							HostProvider.get().hostBridge.windowClient.showMessage({
+								message: `Section generation failed for ${sectionNameOrId}: ${result.error || "Unknown error"}`,
+								type: ShowMessageType.ERROR,
+							})
+						}
+					})
+					.catch((error) => {
+						const errorMessage = error instanceof Error ? error.message : String(error)
+						console.error(`Error generating section ${sectionNameOrId}:`, error)
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Section Generation Error (${sectionNameOrId}): ${errorMessage}`,
+							type: ShowMessageType.ERROR,
+						})
+					})
+			},
+		)
+
+		const message = `Section generation for "${sectionNameOrId}" has been started in the background. An AI subagent will generate a standalone LaTeX document for this section. Progress notifications will appear as the section is generated.`
+		return { success: true, message }
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		return {
+			success: false,
+			message: `Failed to start section generation: ${errorMessage}`,
 		}
 	}
 }
@@ -360,6 +451,7 @@ export async function parseSlashCommands(
 		"explain-changes",
 		"create-dossier",
 		"generate-dossier",
+		"generate-section",
 	]
 
 	// Determine if the current provider/model/setting actually uses native tool calling
@@ -509,6 +601,75 @@ ${textWithoutSlashCommand}`
 					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
 					const processedText = `<explicit_instructions type="generate-dossier-result">
 The /generate-dossier command failed to execute. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+					return { processedText, needsClinerulesFileCheck: false }
+				}
+			}
+
+			// Special handling for generate-section: execute directly with section name parameter
+			if (commandName === "generate-section") {
+				try {
+					// Extract section name/ID from the command
+					// The command format is: /generate-section <section-name-or-id>
+					const commandEndPosition = slashMatch.index + slashMatch[1].length + slashMatch[2].length + 1 // +1 for the slash
+					const remainingText = tagContent.substring(commandEndPosition).trim()
+
+					// Extract the section parameter (could be quoted or unquoted)
+					let sectionName: string | undefined
+					if (remainingText) {
+						// Check if it's quoted
+						const quotedMatch = remainingText.match(/^["']([^"']+)["']/)
+						if (quotedMatch) {
+							sectionName = quotedMatch[1]
+						} else {
+							// Take the first word/token
+							const firstToken = remainingText.split(/\s+/)[0]
+							sectionName = firstToken || undefined
+						}
+					}
+
+					if (!sectionName) {
+						const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+						const processedText = `<explicit_instructions type="generate-section-result">
+The /generate-section command requires a section name or ID as a parameter. Usage: /generate-section <section-name-or-id>
+
+Example: /generate-section "3.2.P.5" or /generate-section 3.2.P.5
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+						return { processedText, needsClinerulesFileCheck: false }
+					}
+
+					// Get workspace root
+					const workspacePaths = await HostProvider.workspace.getWorkspacePaths({})
+					const workspaceRoot = workspacePaths.paths?.[0] || process.cwd()
+
+					// Execute the command
+					const result = await executeGenerateSection(workspaceRoot, sectionName)
+
+					// Remove slash command from text
+					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+
+					// Return message for AI to report to user
+					const processedText = `<explicit_instructions type="generate-section-result">
+The /generate-section command has been executed for section "${sectionName}". ${result.message}
+
+Please inform the user about the result: ${result.success ? "Success" : "Error"} - ${result.message}
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+
+					// Track telemetry for builtin slash command usage
+					telemetryService.captureSlashCommandUsed(ulid, commandName, "builtin")
+
+					return { processedText, needsClinerulesFileCheck: false }
+				} catch (error) {
+					console.error(`Error executing generate-section command: ${error}`)
+					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+					const processedText = `<explicit_instructions type="generate-section-result">
+The /generate-section command failed to execute. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
 </explicit_instructions>
 
 ${textWithoutSlashCommand}`

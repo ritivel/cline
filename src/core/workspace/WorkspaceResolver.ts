@@ -20,7 +20,7 @@ const MAX_EXAMPLE_PATHS = 5
 
 export class WorkspaceResolver {
 	private usageMap = new Map<string, UsageStats>()
-	private traceEnabled = process.env.MULTI_ROOT_TRACE === "true" || process.env.NODE_ENV === "development"
+	private traceEnabled = process.env.MULTI_ROOT_TRACE === "true"
 
 	/**
 	 * Track usage statistics for a given context and path

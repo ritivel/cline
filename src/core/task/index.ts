@@ -2127,6 +2127,7 @@ export class Task {
 			enableNativeToolCalls: this.stateManager.getGlobalStateKey("nativeToolCallEnabled"),
 			runtimePlaceholders: {
 				mode: this.stateManager.getGlobalSettingsKey("mode"),
+				isSubagent: this.taskId.startsWith("dossier-subagent-"),
 			},
 		}
 

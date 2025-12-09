@@ -10,7 +10,8 @@ const generic: ClineToolSpec = {
 	name: "function4",
 	description:
 		"Retrieve pharmaceutical manufacturing and quality control information including batch records, quality specifications, and manufacturing processes. This tool is only available in PLAN MODE. Use this tool to understand manufacturing requirements when planning pharmaceutical production tasks.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "product_code",
@@ -27,7 +28,8 @@ const NATIVE_GPT_5: ClineToolSpec = {
 	name: "function4",
 	description:
 		"Retrieve pharmaceutical manufacturing and quality control information including batch records, quality specifications, and manufacturing processes. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "product_code",
@@ -48,7 +50,8 @@ const GEMINI_3: ClineToolSpec = {
 	name: "function4",
 	description:
 		"Retrieve pharmaceutical manufacturing and quality control information including batch records, quality specifications, and manufacturing processes. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "product_code",

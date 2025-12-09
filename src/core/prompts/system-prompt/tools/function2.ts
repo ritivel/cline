@@ -10,7 +10,8 @@ const generic: ClineToolSpec = {
 	name: "function2",
 	description:
 		"Query regulatory compliance information for pharmaceutical products including FDA approval status, regulatory pathways, and compliance requirements. This tool is only available in PLAN MODE. Use this tool to understand regulatory constraints when planning pharmaceutical projects.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "drug_name",
@@ -27,7 +28,8 @@ const NATIVE_GPT_5: ClineToolSpec = {
 	name: "function2",
 	description:
 		"Query regulatory compliance information for pharmaceutical products including FDA approval status, regulatory pathways, and compliance requirements. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "drug_name",
@@ -48,7 +50,8 @@ const GEMINI_3: ClineToolSpec = {
 	name: "function2",
 	description:
 		"Query regulatory compliance information for pharmaceutical products including FDA approval status, regulatory pathways, and compliance requirements. This tool is only available in PLAN MODE.",
-	contextRequirements: (context) => context.runtimePlaceholders?.mode === "plan",
+	contextRequirements: (context) =>
+		context.runtimePlaceholders?.mode === "plan" || context.runtimePlaceholders?.isSubagent === true,
 	parameters: [
 		{
 			name: "drug_name",

@@ -47,6 +47,11 @@ const BASE_SLASH_COMMANDS: SlashCommand[] = [
 		description: "Generate regulatory content for all leaf sections from tagged documents",
 		section: "default",
 	},
+	{
+		name: "generate-section",
+		description: "Generate regulatory content for a specific section by name or ID",
+		section: "default",
+	},
 ]
 
 // VS Code-only slash commands
