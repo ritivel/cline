@@ -178,7 +178,7 @@ class ImagePreview extends React.Component<
 								width: "16px",
 								height: "16px",
 								border: "2px solid rgba(127, 127, 127, 0.3)",
-								borderTopColor: "var(--vscode-textLink-foreground, #3794ff)",
+								borderTopColor: "var(--vscode-textLink-foreground, #5A8AB5)",
 								borderRadius: "50%",
 								animation: "spin 1s linear infinite",
 							}}

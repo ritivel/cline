@@ -6,6 +6,7 @@ import { HostProvider } from "@/hosts/host-provider"
 import { ExtensionRegistryInfo } from "@/registry"
 import type { ExtensionMessage } from "@/shared/ExtensionMessage"
 import { WebviewMessage } from "@/shared/WebviewMessage"
+import { contextDecorationController } from "./ContextDecorationController"
 
 /*
 https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -162,6 +163,9 @@ export class VscodeWebviewProvider extends WebviewProvider implements vscode.Web
 		switch (message.type) {
 			case "grpc_request": {
 				if (message.grpc_request) {
+					if (message.grpc_request.method === "AskResponse") {
+						contextDecorationController.clearHighlights()
+					}
 					await handleGrpcRequest(this.controller, postMessageToWebview, message.grpc_request)
 				}
 				break

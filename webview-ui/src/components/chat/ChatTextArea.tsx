@@ -1472,10 +1472,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								className="w-full h-full"
 								colorBack={"rgba(0,0,0,0)"}
 								colors={[
-									"#9d57fa", // purple
-									"#57c7fa", // cyan
-									"#fa57a8", // pink
-									"#9d57fa", // purple again for smooth loop
+									"#7EB6E8", // pastel sky blue
+									"#8BC4A8", // pastel sage green
+									"#B8A8D8", // soft lavender
+									"#7EB6E8", // pastel sky blue again for smooth loop
 								]}
 								intensity={0.4}
 								pulse={0.3}

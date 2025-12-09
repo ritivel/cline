@@ -142,7 +142,7 @@ const OcaModelPicker: React.FC<OcaModelPickerProps> = ({
 					style={{
 						fontSize: 14,
 						fontWeight: 500,
-						background: "var(--vscode-button-background, #0078d4)",
+						background: "var(--vscode-button-background, #7EB6E8)",
 						color: "var(--vscode-button-foreground, #fff)",
 						minWidth: 0,
 						margin: 0,
@@ -175,12 +175,12 @@ const OcaRestrictivePopup: React.FC<{
 		<div
 			aria-labelledby="oca-popup-title"
 			aria-modal="true"
-			className={`p-6 max-w-[600px] w-[90%] rounded-[8px] [box-shadow:0_4px_24px_0_var(--vscode-widget-shadow,rgba(0,0,0,.4))] [border:1px_solid_var(--vscode-focusBorder,#007acc)] [background:var(--vscode-editor-background,#252526)] [color:var(${VSC_FOREGROUND},#cccccc)] [font-family:var(--vscode-font-family,sans-serif)] [font-size:var(--vscode-font-size,13px)] flex flex-col max-h-[80vh]`}
+			className={`p-6 max-w-[600px] w-[90%] rounded-[8px] [box-shadow:0_4px_24px_0_var(--vscode-widget-shadow,rgba(0,0,0,.15))] [border:1px_solid_var(--vscode-focusBorder,#9AC5E8)] [background:var(--vscode-editor-background,#FAFAF8)] [color:var(${VSC_FOREGROUND},#4A5A6A)] [font-family:var(--vscode-font-family,sans-serif)] [font-size:var(--vscode-font-size,13px)] flex flex-col max-h-[80vh]`}
 			role="dialog">
 			<h2 className={`mt-0 [color:var(${VSC_FOREGROUND},#111)] font-bold`} id="oca-popup-title">
 				Acknowledgement Required
 			</h2>
-			<h4 className={`mb-2 [color:var(${VSC_DESCRIPTION_FOREGROUND},#b3b3b3)] font-semibold`}>
+			<h4 className={`mb-2 [color:var(${VSC_DESCRIPTION_FOREGROUND},#7A8B9C)] font-semibold`}>
 				Disclaimer: Prohibited Data Submission
 			</h4>
 			<div className="overflow-y-auto flex-1 pr-2 mb-4 text-[13px] leading-normal text-(--vscode-foreground,#222) mask-[linear-gradient(to_bottom,black_96%,transparent_100%)]">
@@ -190,7 +190,7 @@ const OcaRestrictivePopup: React.FC<{
 				<VSCodeButton
 					onClick={onAcknowledge}
 					style={{
-						background: `var(${VSC_BUTTON_BACKGROUND}, #0e639c)`,
+						background: `var(${VSC_BUTTON_BACKGROUND}, #7EB6E8)`,
 						color: `var(${VSC_BUTTON_FOREGROUND}, #fff)`,
 					}}
 					type="button">

@@ -19,13 +19,15 @@ export async function getContextForCommand(
 	| {
 			controller: Controller
 			commandContext: CommandContext
+			editor: vscode.TextEditor
+			range: vscode.Range
 	  }
 > {
+	const editor = vscode.window.activeTextEditor
 	const activeWebview = await focusChatInput()
 	// Use the controller from the active instance
 	const controller = activeWebview.controller
 
-	const editor = vscode.window.activeTextEditor
 	if (!editor) {
 		return
 	}
@@ -43,7 +45,7 @@ export async function getContextForCommand(
 		diagnostics,
 		language,
 	}
-	return { controller, commandContext }
+	return { controller, commandContext, editor, range: textRange }
 }
 
 export async function focusChatInput(): Promise<WebviewProvider> {

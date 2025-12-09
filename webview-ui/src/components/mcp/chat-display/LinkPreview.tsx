@@ -193,7 +193,7 @@ class LinkPreview extends React.Component<LinkPreviewProps, LinkPreviewState> {
 								width: "16px",
 								height: "16px",
 								border: "2px solid rgba(127, 127, 127, 0.3)",
-								borderTopColor: "var(--vscode-textLink-foreground, #3794ff)",
+								borderTopColor: "var(--vscode-textLink-foreground, #5A8AB5)",
 								borderRadius: "50%",
 								animation: "spin 1s linear infinite",
 							}}
@@ -355,7 +355,7 @@ class LinkPreview extends React.Component<LinkPreviewProps, LinkPreviewState> {
 							className="link-preview-url"
 							style={{
 								fontSize: "12px",
-								color: "var(--vscode-textLink-foreground, #3794ff)",
+								color: "var(--vscode-textLink-foreground, #5A8AB5)",
 								marginBottom: "8px", // Increased for better separation
 								whiteSpace: "nowrap",
 								overflow: "hidden",

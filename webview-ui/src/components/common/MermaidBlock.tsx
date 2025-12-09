@@ -7,72 +7,72 @@ import { FileServiceClient } from "@/services/grpc-client"
 import { useDebounceEffect } from "@/utils/useDebounceEffect"
 
 const MERMAID_THEME = {
-	background: "#1e1e1e", // VS Code dark theme background
-	textColor: "#ffffff", // Main text color
-	mainBkg: "#2d2d2d", // Background for nodes
-	nodeBorder: "#888888", // Border color for nodes
-	lineColor: "#cccccc", // Lines connecting nodes
-	primaryColor: "#3c3c3c", // Primary color for highlights
-	primaryTextColor: "#ffffff", // Text in primary colored elements
-	primaryBorderColor: "#888888",
-	secondaryColor: "#2d2d2d", // Secondary color for alternate elements
-	tertiaryColor: "#454545", // Third color for special elements
+	background: "#FAFAF8", // Warm off-white background (Notion-inspired)
+	textColor: "#4A5A6A", // Soft slate text
+	mainBkg: "#E8F0F8", // Pastel blue node background
+	nodeBorder: "#B8C8D8", // Soft blue-gray border
+	lineColor: "#A8B8C8", // Muted line color
+	primaryColor: "#7EB6E8", // Pastel sky blue primary
+	primaryTextColor: "#3D4F5F", // Darker text for readability
+	primaryBorderColor: "#6BA8DC",
+	secondaryColor: "#EEF4F9", // Very light blue secondary
+	tertiaryColor: "#F5F8FA", // Almost white tertiary
 
 	// Class diagram specific
-	classText: "#ffffff",
+	classText: "#4A5A6A",
 
 	// State diagram specific
-	labelColor: "#ffffff",
+	labelColor: "#4A5A6A",
 
 	// Sequence diagram specific
-	actorLineColor: "#cccccc",
-	actorBkg: "#2d2d2d",
-	actorBorder: "#888888",
-	actorTextColor: "#ffffff",
+	actorLineColor: "#B8C8D8",
+	actorBkg: "#E8F0F8",
+	actorBorder: "#9AC5E8",
+	actorTextColor: "#3D4F5F",
 
 	// Flow diagram specific
-	fillType0: "#2d2d2d",
-	fillType1: "#3c3c3c",
-	fillType2: "#454545",
+	fillType0: "#E8F0F8",
+	fillType1: "#D8E8F4",
+	fillType2: "#C8DCF0",
 }
 
 mermaid.initialize({
 	startOnLoad: false,
 	securityLevel: "loose",
-	theme: "dark",
+	theme: "base",
 	themeVariables: {
 		...MERMAID_THEME,
 		fontSize: "16px",
 		fontFamily: "var(--vscode-font-family, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif)",
 
 		// Additional styling
-		noteTextColor: "#ffffff",
-		noteBkgColor: "#454545",
-		noteBorderColor: "#888888",
+		noteTextColor: "#4A5A6A",
+		noteBkgColor: "#F0F4F8",
+		noteBorderColor: "#B8C8D8",
 
 		// Improve contrast for special elements
-		critBorderColor: "#ff9580",
-		critBkgColor: "#803d36",
+		critBorderColor: "#E8A8A8",
+		critBkgColor: "#FCF2F2",
 
 		// Task diagram specific
-		taskTextColor: "#ffffff",
-		taskTextOutsideColor: "#ffffff",
-		taskTextLightColor: "#ffffff",
+		taskTextColor: "#3D4F5F",
+		taskTextOutsideColor: "#4A5A6A",
+		taskTextLightColor: "#6A7A8A",
 
 		// Numbers/sections
-		sectionBkgColor: "#2d2d2d",
-		sectionBkgColor2: "#3c3c3c",
+		sectionBkgColor: "#E8F0F8",
+		sectionBkgColor2: "#D8E8F4",
 
 		// Alt sections in sequence diagrams
-		altBackground: "#2d2d2d",
+		altBackground: "#F5F8FA",
 
 		// Links
-		linkColor: "#6cb6ff",
+		linkColor: "#5A8AB5",
 
 		// Borders and lines
-		compositeBackground: "#2d2d2d",
-		compositeBorder: "#888888",
-		titleColor: "#ffffff",
+		compositeBackground: "#EEF4F9",
+		compositeBorder: "#B8C8D8",
+		titleColor: "#3D4F5F",
 	},
 })
 

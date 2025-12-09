@@ -26,6 +26,11 @@ const ClineCommands = {
 	ReconstructTaskHistory: prefix + ".reconstructTaskHistory",
 	AcceptFileChanges: prefix + ".acceptFileChanges",
 	RejectFileChanges: prefix + ".rejectFileChanges",
+	// Submissions pane commands
+	SubmissionsOpenFolder: prefix + ".submissions.openFolder",
+	SubmissionsCreateFolder: prefix + ".submissions.createFolder",
+	SubmissionsRefresh: prefix + ".submissions.refresh",
+	SubmissionsUseSuggestedFolder: prefix + ".submissions.useSuggestedFolder",
 }
 
 /**
@@ -34,6 +39,7 @@ const ClineCommands = {
  */
 const ClineViewIds = {
 	Sidebar: name + ".SidebarProvider",
+	SubmissionsPane: "cline.SubmissionsPane",
 }
 
 /**

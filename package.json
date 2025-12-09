@@ -124,6 +124,15 @@
 					"name": "",
 					"icon": "assets/icons/icon.svg"
 				}
+			],
+			"explorer": [
+				{
+					"type": "tree",
+					"id": "cline.SubmissionsPane",
+					"name": "Submissions",
+					"icon": "assets/icons/icon.svg",
+					"weight": 20
+				}
 			]
 		},
 		"commands": [
@@ -151,6 +160,29 @@
 				"command": "cline.settingsButtonClicked",
 				"title": "Settings",
 				"icon": "$(settings-gear)"
+			},
+			{
+				"command": "cline.submissions.openFolder",
+				"title": "Open Submissions Folder",
+				"icon": "$(folder-opened)",
+				"category": "Ritivel"
+			},
+			{
+				"command": "cline.submissions.createFolder",
+				"title": "Create Submissions Folder",
+				"icon": "$(new-folder)",
+				"category": "Ritivel"
+			},
+			{
+				"command": "cline.submissions.refresh",
+				"title": "Refresh Submissions",
+				"icon": "$(refresh)",
+				"category": "Ritivel"
+			},
+			{
+				"command": "cline.submissions.useSuggestedFolder",
+				"title": "Use Suggested Folder",
+				"category": "Ritivel"
 			},
 			{
 				"command": "cline.dev.createTestTasks",
@@ -287,6 +319,21 @@
 					"command": "cline.settingsButtonClicked",
 					"group": "navigation@6",
 					"when": "view == claude-dev.SidebarProvider"
+				},
+				{
+					"command": "cline.submissions.createFolder",
+					"group": "navigation@1",
+					"when": "view == cline.SubmissionsPane"
+				},
+				{
+					"command": "cline.submissions.openFolder",
+					"group": "navigation@2",
+					"when": "view == cline.SubmissionsPane"
+				},
+				{
+					"command": "cline.submissions.refresh",
+					"group": "navigation@3",
+					"when": "view == cline.SubmissionsPane"
 				}
 			],
 			"editor/context": [

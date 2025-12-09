@@ -293,7 +293,7 @@ export const OcaProvider = ({ isPopup, currentMode }: OcaProviderProps) => {
 						style={{
 							fontSize: 14,
 							fontWeight: 500,
-							background: `var(${VSC_BUTTON_BACKGROUND}, #0078d4)`,
+							background: `var(${VSC_BUTTON_BACKGROUND}, #7EB6E8)`,
 							color: `var(${VSC_BUTTON_FOREGROUND}, #fff)`,
 							minWidth: 0,
 							margin: "12px 0",

@@ -7,13 +7,13 @@ const DangerButton: React.FC<DangerButtonProps> = (props) => {
 		<VSCodeButton
 			{...props}
 			className={`
-				bg-[#c42b2b]! 
-				border-[#c42b2b]! 
+				bg-[#D98B8B]!
+				border-[#D98B8B]!
 				text-white!
-				hover:bg-[#a82424]! 
-				hover:border-[#a82424]!
-				active:bg-[#8f1f1f]! 
-				active:border-[#8f1f1f]!
+				hover:bg-[#E8A8A8]!
+				hover:border-[#E8A8A8]!
+				active:bg-[#C87878]!
+				active:border-[#C87878]!
 				${props.className || ""}
 			`}
 		/>

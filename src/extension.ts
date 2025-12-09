@@ -31,12 +31,14 @@ import { sendFocusChatInputEvent } from "./core/controller/ui/subscribeToFocusCh
 import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
 import { HookProcessRegistry } from "./core/hooks/HookProcessRegistry"
 import { workspaceResolver } from "./core/workspace"
+import { contextDecorationController } from "./hosts/vscode/ContextDecorationController"
 import { focusChatInput, getContextForCommand } from "./hosts/vscode/commandUtils"
 import { abortCommitGeneration, generateCommitMsg } from "./hosts/vscode/commit-message-generator"
 import {
 	disposeVscodeCommentReviewController,
 	getVscodeCommentReviewController,
 } from "./hosts/vscode/review/VscodeCommentReviewController"
+import { SubmissionsPaneProvider } from "./hosts/vscode/SubmissionsPaneProvider"
 import { VscodeDiffViewProvider } from "./hosts/vscode/VscodeDiffViewProvider"
 import { VscodeWebviewProvider } from "./hosts/vscode/VscodeWebviewProvider"
 import { ExtensionRegistryInfo } from "./registry"
@@ -105,7 +107,35 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	const submissionsProvider = new SubmissionsPaneProvider(context)
+	context.subscriptions.push(submissionsProvider)
+
 	const { commands } = ExtensionRegistryInfo
+
+	// Register submissions pane commands
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.SubmissionsOpenFolder, async () => {
+			await submissionsProvider.openFolder()
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.SubmissionsCreateFolder, async () => {
+			await submissionsProvider.createFolder()
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.SubmissionsRefresh, async () => {
+			await submissionsProvider.refresh()
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.SubmissionsUseSuggestedFolder, async () => {
+			await submissionsProvider.useSuggestedFolder()
+		}),
+	)
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand(commands.PlusButton, async () => {
@@ -334,6 +364,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (!context) {
 				return
 			}
+			contextDecorationController.addHighlight(context.editor, context.range)
 			await addToCline(context.controller, context.commandContext)
 		}),
 	)

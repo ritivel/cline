@@ -1,6 +1,20 @@
+/* ============================================
+   RITIVEL - Life Sciences AI Platform
+   Pastel Blue Notion-Inspired Theme
+
+   Color Philosophy:
+   - Primary Blues: Calming, professional, trustworthy
+   - Success Greens: Growth, health, vitality
+   - Warning Ambers: Attention, caution
+   - Error Corals: Soft alerts, not alarming
+   - Background: Warm off-white, easy on eyes
+   ============================================ */
+
 /* Editor theme mapping */
 @theme {
-	--color-cline: #9663f1;
+	--color-cline: #7eb6e8;
+	--color-cline-dark: #5a8ab5;
+	--color-cline-light: #9ac5e8;
 	--color-background: var(--vscode-sideBar-background);
 	--color-border: var(--vscode-focusBorder);
 	--color-border-panel: var(--vscode-panel-border);
@@ -62,8 +76,17 @@
 	--text-xs: calc(0.85 * var(--vscode-font-size));
 	--text-xxs: calc(0.5 * var(--vscode-font-size));
 	--breakpoint-xs: 400px;
-	--radius-xs: 4px;
+	--radius-xs: 6px;
 	--breakpoint-xxs: 180px;
+
+	/* Life Sciences Semantic Colors */
+	--color-ls-primary: #7eb6e8;
+	--color-ls-primary-dark: #5a8ab5;
+	--color-ls-success: #8bc4a8;
+	--color-ls-warning: #e8c878;
+	--color-ls-error: #d98b8b;
+	--color-ls-info: #6ab8b8;
+	--color-ls-purple: #b8a8d8;
 }
 
 @theme inline {
@@ -106,73 +129,104 @@
 	--size-4: calc(1.5 * var(--vscode-font-size));
 }
 
+/* ============================================
+   LIGHT THEME (Default) - Clinical Blue
+   Solid backgrounds, professional trust
+   ============================================ */
 :root {
-	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
+	--radius: 0.75rem;
+	/* Background - Clinical Blue (Solid) */
+	--background: oklch(0.94 0.04 220);
+	--foreground: oklch(0.32 0.02 230);
+	/* Cards - White to stand out against colored background */
 	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
+	--card-foreground: oklch(0.32 0.02 230);
+	/* Popovers - Clean white */
 	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.145 0 0);
-	--sidebar-primary: oklch(0.205 0 0);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.97 0 0);
-	--sidebar-accent-foreground: oklch(0.205 0 0);
-	--sidebar-border: oklch(0.922 0 0);
-	--sidebar-ring: oklch(0.708 0 0);
+	--popover-foreground: oklch(0.32 0.02 230);
+	/* Primary - Trustworthy Blue */
+	--primary: oklch(0.65 0.15 240);
+	--primary-foreground: oklch(1 0 0);
+	/* Secondary - Darker Blue tint */
+	--secondary: oklch(0.9 0.05 230);
+	--secondary-foreground: oklch(0.3 0.05 240);
+	/* Muted - Soft blue-gray */
+	--muted: oklch(0.9 0.02 220);
+	--muted-foreground: oklch(0.52 0.02 230);
+	/* Accent - Bright Blue highlight */
+	--accent: oklch(0.85 0.1 230);
+	--accent-foreground: oklch(0.3 0.05 240);
+	/* Destructive - Medical Coral */
+	--destructive: oklch(0.72 0.12 18);
+	/* Borders - Visible Blue-Gray */
+	--border: oklch(0.85 0.05 230);
+	--input: oklch(0.96 0.02 230);
+	/* Focus ring - Primary Blue */
+	--ring: oklch(0.65 0.15 240);
+	/* Charts - Life Sciences color palette */
+	--chart-1: oklch(0.65 0.15 240); /* Primary Blue */
+	--chart-2: oklch(0.7 0.15 170); /* Teal/Cyan */
+	--chart-3: oklch(0.75 0.12 290); /* Lavender */
+	--chart-4: oklch(0.8 0.15 85); /* Amber */
+	--chart-5: oklch(0.7 0.15 140); /* Sage Green */
+	/* Sidebar - Distinct Solid Blue Pane */
+	--sidebar: oklch(0.88 0.06 230);
+	--sidebar-foreground: oklch(0.3 0.05 240);
+	--sidebar-primary: oklch(0.65 0.15 240);
+	--sidebar-primary-foreground: oklch(1 0 0);
+	--sidebar-accent: oklch(0.85 0.08 230);
+	--sidebar-accent-foreground: oklch(0.3 0.05 240);
+	--sidebar-border: oklch(0.82 0.06 230);
+	--sidebar-ring: oklch(0.65 0.15 240);
 }
 
+/* ============================================
+   DARK THEME - Life Sciences Dark Mode
+   Deep backgrounds with blue accents
+   ============================================ */
 .dark {
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.922 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.556 0 0);
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.205 0 0);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.269 0 0);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.556 0 0);
+	/* Background - Deep blue-gray */
+	--background: oklch(0.16 0.01 240);
+	--foreground: oklch(0.92 0.01 220);
+	/* Cards - Slightly lighter */
+	--card: oklch(0.2 0.012 240);
+	--card-foreground: oklch(0.92 0.01 220);
+	/* Popovers */
+	--popover: oklch(0.22 0.015 240);
+	--popover-foreground: oklch(0.92 0.01 220);
+	/* Primary - Brighter blue for dark mode */
+	--primary: oklch(0.75 0.12 220);
+	--primary-foreground: oklch(0.15 0.01 240);
+	/* Secondary */
+	--secondary: oklch(0.28 0.015 240);
+	--secondary-foreground: oklch(0.9 0.01 220);
+	/* Muted */
+	--muted: oklch(0.28 0.01 240);
+	--muted-foreground: oklch(0.65 0.02 220);
+	/* Accent */
+	--accent: oklch(0.3 0.02 240);
+	--accent-foreground: oklch(0.9 0.01 220);
+	/* Destructive - Softer coral */
+	--destructive: oklch(0.68 0.15 20);
+	/* Borders */
+	--border: oklch(0.3 0.015 240);
+	--input: oklch(0.28 0.015 240);
+	--ring: oklch(0.65 0.1 220);
+	/* Charts - Brighter for dark mode */
+	--chart-1: oklch(0.7 0.15 220); /* Blue */
+	--chart-2: oklch(0.7 0.15 165); /* Teal */
+	--chart-3: oklch(0.75 0.12 280); /* Lavender */
+	--chart-4: oklch(0.78 0.15 85); /* Amber */
+	--chart-5: oklch(0.7 0.12 145); /* Green */
+	/* Sidebar */
+	--sidebar: oklch(0.18 0.012 240);
+	--sidebar-foreground: oklch(0.92 0.01 220);
+	--sidebar-primary: oklch(0.7 0.15 220);
+	--sidebar-primary-foreground: oklch(0.98 0 0);
+	--sidebar-accent: oklch(0.28 0.02 240);
+	--sidebar-accent-foreground: oklch(0.9 0.01 220);
+	--sidebar-border: oklch(0.28 0.015 240);
+	--sidebar-ring: oklch(0.65 0.1 220);
 }
 
 @layer utilities {
@@ -203,5 +257,20 @@
 
 	.animate-flash {
 		animation: flash 1.5s ease-in-out infinite;
+	}
+
+	/* Life Sciences specific utilities */
+	@keyframes pulse-gentle {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.7;
+		}
+	}
+
+	.animate-pulse-gentle {
+		animation: pulse-gentle 2s ease-in-out infinite;
 	}
 }
