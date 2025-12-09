@@ -12,18 +12,18 @@ const initial = `
 	- [x] For any tasks already completed
 
 **Your todo/task_progress list should include:**
-   - All major implementation steps
-   - Testing and validation tasks
-   - Documentation updates if needed
+   - All major document editing steps
+   - Regulatory compliance verification tasks
+   - Document formatting and structure updates if needed
    - Final verification steps
 
 **Example format:**\
-   - [ ] Set up project structure
-   - [ ] Implement core functionality
-   - [ ] Add error handling
-   - [ ] Write tests
-   - [ ] Test implementation
-   - [ ] Document changes
+   - [ ] Review existing regulatory document structure
+   - [ ] Update clinical trial data section
+   - [ ] Add manufacturing compliance information
+   - [ ] Verify regulatory formatting requirements
+   - [ ] Validate document completeness
+   - [ ] Final regulatory compliance check
 
 **Remember:** Keeping the task_progress list updated helps track progress and ensures nothing is missed.`
 
@@ -34,18 +34,18 @@ const listInstructionsRecommended = `
 3. Use markdown format: - [ ] for incomplete, - [x] for complete
 
 **Benefits of creating a todo/task_progress list now:**
-	- Clear roadmap for implementation
+	- Clear roadmap for document editing
 	- Progress tracking throughout the task
 	- Nothing gets forgotten or missed
 	- Users can see, monitor, and edit the plan
 
 **Example structure:**\`\`\`
-- [ ] Analyze requirements
-- [ ] Set up necessary files
-- [ ] Implement main functionality
-- [ ] Handle edge cases
-- [ ] Test the implementation
-- [ ] Verify results\`\`\`
+- [ ] Analyze regulatory document requirements
+- [ ] Review existing document sections
+- [ ] Update regulatory compliance sections
+- [ ] Add missing regulatory information
+- [ ] Verify document formatting
+- [ ] Validate regulatory compliance\`\`\`
 
 Keeping the task_progress list updated helps track progress and ensures nothing is missed.`
 
@@ -72,7 +72,7 @@ const completed = `
 
 **Next Steps:**
 - If the task is fully complete and meets all requirements, use attempt_completion
-- If you've discovered additional work that wasn't in the original scope (new features, improvements, edge cases, etc.), create a new task_progress list with those items
+- If you've discovered additional work that wasn't in the original scope (new document sections, compliance updates, formatting improvements, etc.), create a new task_progress list with those items
 - If there are related tasks or follow-up items the user might want, you can suggest them in a new checklist
 
 **Remember:** Only use attempt_completion if you're confident the task is truly finished. If there's any remaining work, create a new focus chain list to track it.`
@@ -80,7 +80,7 @@ const completed = `
 const planModeReminder = `
 # task_progress List (Optional - Plan Mode)
 
-While in PLAN MODE, if you've outlined concrete steps or requirements for the user, you may include a preliminary todo list using the task_progress parameter.
+While in PLAN MODE, if you've provided information about multiple aspects of a drug or regulatory question, you may include a preliminary todo list using the task_progress parameter.
 
 Reminder on how to use the task_progress parameter:
 

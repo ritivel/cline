@@ -8,6 +8,11 @@ import { attempt_completion_variants } from "./attempt_completion"
 import { browser_action_variants } from "./browser_action"
 import { execute_command_variants } from "./execute_command"
 import { focus_chain_variants } from "./focus_chain"
+import { function1_variants } from "./function1"
+import { function2_variants } from "./function2"
+import { function3_variants } from "./function3"
+import { function4_variants } from "./function4"
+import { function5_variants } from "./function5"
 import { generate_explanation_variants } from "./generate_explanation"
 import { list_code_definition_names_variants } from "./list_code_definition_names"
 import { list_files_variants } from "./list_files"
@@ -36,6 +41,11 @@ export function registerClineToolSets(): void {
 		...browser_action_variants,
 		...execute_command_variants,
 		...focus_chain_variants,
+		...function1_variants,
+		...function2_variants,
+		...function3_variants,
+		...function4_variants,
+		...function5_variants,
 		...generate_explanation_variants,
 		...list_code_definition_names_variants,
 		...list_files_variants,

@@ -19,9 +19,9 @@ You have access to a set of tools. One tool may be used per message, results wil
 
 ## TOOLS
 
-**execute_command** — Run terminal commands in {{CWD}} or other directories.  
+**execute_command** — Run terminal commands in {{CWD}} or other directories.
 Params: command, requires_approval. "requires_approval" should be true if the command is dangerous, otherwise false.
-Key: If output doesn't stream, assume success unless critical; else ask user to paste via ask_followup_question.  
+Key: If output doesn't stream, assume success unless critical; else ask user to paste via ask_followup_question.
 *Example:*
 <execute_command>
 <command>npm run build</command>
@@ -83,7 +83,7 @@ Params: path, recursive (optional).
 Key: Rely on returned tool results instead of using list_files to “confirm” writes.
 
 **attempt_completion** — Final result (no questions). Use this tool only when all goals have been completed.
-Params: result, command (optional demonstration of completed work).  
+Params: result, command (optional demonstration of completed work).
 *Example:*
 <attempt_completion>
 <result>Your final result description here</result>
@@ -99,14 +99,14 @@ Param: context (Current Work; Key Concepts; Relevant Files/Code; Problem Solving
 <context>context to preload new task with</context>
 </new_task>
 
-**plan_mode_respond** — PLAN-only reply.
-Params: response, needs_more_exploration (optional).  
-Include options/trade-offs when helpful, ask if plan matches, then add the exact mode-switch line.
+**plan_mode_respond** — PLAN-only reply for pharmaceutical regulatory inquiries.
+Params: response, needs_more_exploration (optional).
+Respond to the user's pharmaceutical regulatory inquiry. This tool should ONLY be used when you have already gathered the necessary information using the specialized pharmaceutical tools (function1-function5) or read_file to read regulatory documents. If you need to gather more information, set needs_more_exploration to true.
 *Example:*
 <plan_mode_respond>
 <response>Your response here</response>
-<needs_more_exploration>true or false (optional, but you MUST set to true if in <response> you need to read files or use other exploration tools)</needs_more_exploration>
-<task_progress>Checklist here (If you have presented the user with concrete steps or requirements, you can optionally include a todo list outlining these steps.)</task_progress>
+<needs_more_exploration>true or false (optional, but you MUST set to true if in <response> you need to use pharmaceutical tools or read regulatory documents)</needs_more_exploration>
+<task_progress>Checklist here (If you have provided information about multiple aspects of a drug or regulatory question, you can optionally include a todo list outlining these aspects.)</task_progress>
 </plan_mode_respond>`
 
 const HERMES_OBJECTIVE_TEMPLATE = `OBJECTIVE
