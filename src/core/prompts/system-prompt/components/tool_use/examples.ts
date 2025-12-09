@@ -2,26 +2,26 @@ import { TemplateEngine } from "../../templates/TemplateEngine"
 import type { PromptVariant, SystemPromptContext } from "../../types"
 
 const FOCUS_CHAIN_EXAMPLE_BASH = `<task_progress>
-- [x] Set up project structure
-- [x] Install dependencies
-- [ ] Run command to start server
-- [ ] Test application
+- [x] Review existing regulatory document structure
+- [x] Gather required regulatory information
+- [ ] Process document formatting
+- [ ] Verify regulatory compliance
 </task_progress>
 `
 
 const FOCUS_CHAIN_EXAMPLE_NEW_FILE = `<task_progress>
-- [x] Set up project structure
-- [x] Install dependencies
-- [ ] Create components
-- [ ] Test application
+- [x] Review existing regulatory document structure
+- [x] Gather required regulatory information
+- [ ] Create new regulatory document section
+- [ ] Verify regulatory compliance
 </task_progress>
 `
 
 const FOCUS_CHAIN_EXAMPLE_EDIT = `<task_progress>
-- [x] Set up project structure
-- [x] Install dependencies
-- [ ] Create components
-- [ ] Test application
+- [x] Review existing regulatory document structure
+- [x] Gather required regulatory information
+- [ ] Update regulatory document sections
+- [ ] Verify regulatory compliance
 </task_progress>
 `
 
@@ -30,29 +30,34 @@ const TOOL_USE_EXAMPLES_TEMPLATE_TEXT = `# Tool Use Examples
 ## Example 1: Requesting to execute a command
 
 <execute_command>
-<command>npm run dev</command>
+<command>validate-regulatory-format IND_submission.md</command>
 <requires_approval>false</requires_approval>
 {{FOCUS_CHAIN_EXAMPLE_BASH}}</execute_command>
 
 ## Example 2: Requesting to create a new file
 
 <write_to_file>
-<path>src/frontend-config.json</path>
+<path>IND_submission_template.md</path>
 <content>
-{
-  "apiEndpoint": "https://api.example.com",
-  "theme": {
-    "primaryColor": "#007bff",
-    "secondaryColor": "#6c757d",
-    "fontFamily": "Arial, sans-serif"
-  },
-  "features": {
-    "darkMode": true,
-    "notifications": true,
-    "analytics": false
-  },
-  "version": "1.0.0"
-}
+# IND Submission Document
+
+## Drug Information
+- Drug Name: [Name]
+- Active Ingredient: [Ingredient]
+- Therapeutic Classification: [Classification]
+
+## Clinical Trial Information
+- Phase: [Phase]
+- Endpoints: [Endpoints]
+- Patient Population: [Population]
+
+## Manufacturing Information
+- Manufacturing Site: [Site]
+- Quality Control: [QC Details]
+
+## Safety Information
+- Adverse Events: [Events]
+- Risk Assessment: [Assessment]
 </content>
 {{FOCUS_CHAIN_EXAMPLE_NEW_FILE}}</write_to_file>
 
@@ -63,18 +68,18 @@ const TOOL_USE_EXAMPLES_TEMPLATE_TEXT = `# Tool Use Examples
 1. Current Work:
    [Detailed description]
 
-2. Key Technical Concepts:
+2. Key Regulatory Concepts:
    - [Concept 1]
    - [Concept 2]
    - [...]
 
-3. Relevant Files and Code:
-   - [File Name 1]
-      - [Summary of why this file is important]
-      - [Summary of the changes made to this file, if any]
-      - [Important Code Snippet]
-   - [File Name 2]
-      - [Important Code Snippet]
+3. Relevant Regulatory Documents:
+   - [Document Name 1]
+      - [Summary of why this document is important]
+      - [Summary of the changes made to this document, if any]
+      - [Important Regulatory Information]
+   - [Document Name 2]
+      - [Important Regulatory Information]
    - [...]
 
 4. Problem Solving:
@@ -90,34 +95,35 @@ const TOOL_USE_EXAMPLES_TEMPLATE_TEXT = `# Tool Use Examples
 ## Example 4: Requesting to make targeted edits to a file
 
 <replace_in_file>
-<path>src/components/App.tsx</path>
+<path>IND_submission.md</path>
 <diff>
 ------- SEARCH
-import React from 'react';
+## Clinical Trial Information
+- Phase: Phase I
+- Endpoints: Safety and tolerability
 =======
-import React, { useState } from 'react';
+## Clinical Trial Information
+- Phase: Phase I
+- Endpoints: Safety and tolerability
+- Patient Population: Adults aged 18-65
 +++++++ REPLACE
 
 ------- SEARCH
-function handleSubmit() {
-  saveData();
-  setLoading(false);
-}
-
+## Manufacturing Information
+- Manufacturing Site: Site A
 =======
 +++++++ REPLACE
 
 ------- SEARCH
-return (
-  <div>
+## Safety Information
+- Adverse Events: None reported
 =======
-function handleSubmit() {
-  saveData();
-  setLoading(false);
-}
+## Manufacturing Information
+- Manufacturing Site: Site A
+- Quality Control: GMP compliant
 
-return (
-  <div>
+## Safety Information
+- Adverse Events: None reported
 +++++++ REPLACE
 </diff>
 {{FOCUS_CHAIN_EXAMPLE_EDIT}}</replace_in_file>

@@ -44,6 +44,11 @@ export const toolParamNames = [
 	"input",
 	"from_ref",
 	"to_ref",
+	"query",
+	"product_id",
+	"trial_id",
+	"product_code",
+	"drug_name",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]

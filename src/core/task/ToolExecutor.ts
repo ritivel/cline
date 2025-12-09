@@ -28,6 +28,11 @@ import { AttemptCompletionHandler } from "./tools/handlers/AttemptCompletionHand
 import { BrowserToolHandler } from "./tools/handlers/BrowserToolHandler"
 import { CondenseHandler } from "./tools/handlers/CondenseHandler"
 import { ExecuteCommandToolHandler } from "./tools/handlers/ExecuteCommandToolHandler"
+import { Function1Handler } from "./tools/handlers/Function1Handler"
+import { Function2Handler } from "./tools/handlers/Function2Handler"
+import { Function3Handler } from "./tools/handlers/Function3Handler"
+import { Function4Handler } from "./tools/handlers/Function4Handler"
+import { Function5Handler } from "./tools/handlers/Function5Handler"
 import { GenerateExplanationToolHandler } from "./tools/handlers/GenerateExplanationToolHandler"
 import { ListCodeDefinitionNamesToolHandler } from "./tools/handlers/ListCodeDefinitionNamesToolHandler"
 import { ListFilesToolHandler } from "./tools/handlers/ListFilesToolHandler"
@@ -228,6 +233,11 @@ export class ToolExecutor {
 		this.coordinator.register(new ReportBugHandler())
 		this.coordinator.register(new ApplyPatchHandler(validator))
 		this.coordinator.register(new GenerateExplanationToolHandler())
+		this.coordinator.register(new Function1Handler())
+		this.coordinator.register(new Function2Handler())
+		this.coordinator.register(new Function3Handler())
+		this.coordinator.register(new Function4Handler())
+		this.coordinator.register(new Function5Handler())
 	}
 
 	/**
