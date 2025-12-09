@@ -42,6 +42,11 @@ const BASE_SLASH_COMMANDS: SlashCommand[] = [
 		description: "Create CTD dossier folder structure and organize PDFs",
 		section: "default",
 	},
+	{
+		name: "generate-dossier",
+		description: "Generate regulatory content for all leaf sections from tagged documents",
+		section: "default",
+	},
 ]
 
 // VS Code-only slash commands
