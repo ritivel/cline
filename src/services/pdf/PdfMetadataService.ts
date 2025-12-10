@@ -19,6 +19,8 @@ interface PdfMetadata {
 	dossier_summary: string
 	filepath: string
 	processed_at: string
+	source_hash?: string // SHA-256 hash of source PDF
+	source_path?: string // Original relative path to source PDF
 }
 
 // Placeholder values that indicate failed or incomplete extraction
@@ -133,8 +135,15 @@ export class PdfMetadataService {
 	/**
 	 * Extracts metadata for a single PDF folder and saves info.json
 	 * Skips if valid info.json already exists, re-processes if it has placeholder values
+	 * @param sourceHash Optional SHA-256 hash of the source PDF file
+	 * @param sourcePath Optional original relative path to the source PDF
 	 */
-	async extractMetadataForFolder(folderPath: string, relativePath: string): Promise<boolean> {
+	async extractMetadataForFolder(
+		folderPath: string,
+		relativePath: string,
+		sourceHash?: string,
+		sourcePath?: string,
+	): Promise<boolean> {
 		const infoJsonPath = path.join(folderPath, "info.json")
 
 		// Check if info.json already exists and has valid content
@@ -176,6 +185,8 @@ export class PdfMetadataService {
 			dossier_summary,
 			filepath: relativePath,
 			processed_at: new Date().toISOString(),
+			...(sourceHash && { source_hash: sourceHash }),
+			...(sourcePath && { source_path: sourcePath }),
 		}
 
 		// Write info.json

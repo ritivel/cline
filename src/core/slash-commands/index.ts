@@ -157,7 +157,8 @@ function startCloudPdfProcessing(workspaceRoot: string): void {
 			})
 
 			await service
-				.processPdfs(workspaceRoot, (stage, details) => {
+				.processPdfs(workspaceRoot, workspaceRoot, (stage, details) => {
+					// Note: For /create-dossier, we use workspaceRoot for both since submissions folder may not be set yet
 					console.log(`[PDF Processing ${stage}] ${details || ""}`)
 
 					// Update progress bar
@@ -233,11 +234,11 @@ async function executeCreateDossier(
 			fileTracker.trackFile(documentsPath)
 		}
 
-		// Start cloud-based PDF processing in the background
-		startCloudPdfProcessing(workspaceRoot)
+		// PDF processing will be automatically started when submissions folder is selected
+		// via the PdfProcessingManager in SubmissionsPaneProvider
 
 		const templateInfo = templateName ? ` using template "${template.name}"` : ""
-		const message = `Successfully created dossier folder structure${templateInfo} with ${createdPaths.length} folders and documents folder. Cloud-based PDF processing has been started in the background. Results will be saved to documents/results.zip when complete.`
+		const message = `Successfully created dossier folder structure${templateInfo} with ${createdPaths.length} folders and documents folder. PDF processing will start automatically when you select a submissions folder.`
 		return { success: true, message }
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)

@@ -96,6 +96,12 @@ export class SubmissionsPaneProvider implements vscode.WebviewViewProvider {
 		if (savedConfig && fs.existsSync(savedConfig.submissionsPath)) {
 			this._currentSubmissionsFolder = savedConfig.submissionsPath
 			await this._refreshView()
+
+			// Hide submissions folder from explorer
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+			if (workspaceFolder) {
+				await this._hideSubmissionsFolderFromExplorer(savedConfig.submissionsPath, workspaceFolder.uri.fsPath)
+			}
 		} else {
 			// Suggest a submissions folder based on current workspace
 			await this._suggestSubmissionsFolder()
@@ -134,6 +140,42 @@ export class SubmissionsPaneProvider implements vscode.WebviewViewProvider {
 
 		const configPath = path.join(vscodeDir, "submissions-config.json")
 		fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+	}
+
+	/**
+	 * Hides the submissions folder from the VS Code explorer by updating files.exclude setting
+	 */
+	private async _hideSubmissionsFolderFromExplorer(submissionsFolderPath: string, workspaceRoot: string): Promise<void> {
+		try {
+			// Calculate relative path from workspace root
+			const relativePath = path.relative(workspaceRoot, submissionsFolderPath)
+
+			// If the submissions folder is outside the workspace, we can't hide it via files.exclude
+			if (relativePath.startsWith("..")) {
+				return
+			}
+
+			// Normalize path separators for the pattern (use forward slashes for glob patterns)
+			const folderName = path.basename(relativePath) || relativePath
+			const excludePattern = folderName === relativePath ? `**/${folderName}/**` : relativePath.replace(/\\/g, "/") + "/**"
+
+			// Get current files.exclude configuration
+			const config = vscode.workspace.getConfiguration("files")
+			const currentExclude: Record<string, boolean> = config.get("exclude") || {}
+
+			// Add submissions folder to exclude if not already excluded
+			if (!currentExclude[excludePattern] && !currentExclude[folderName]) {
+				// Try the most specific pattern first
+				const patternToUse = excludePattern
+				currentExclude[patternToUse] = true
+
+				// Update the workspace configuration
+				await config.update("exclude", currentExclude, vscode.ConfigurationTarget.Workspace)
+			}
+		} catch (error) {
+			// Silently fail - hiding from explorer is not critical
+			console.error("Failed to hide submissions folder from explorer:", error)
+		}
 	}
 
 	private async _suggestSubmissionsFolder() {
@@ -464,6 +506,9 @@ export class SubmissionsPaneProvider implements vscode.WebviewViewProvider {
 					workspacePath: workspaceFolder.uri.fsPath,
 					submissionsPath: folderPath,
 				})
+
+				// Hide submissions folder from explorer
+				await this._hideSubmissionsFolderFromExplorer(folderPath, workspaceFolder.uri.fsPath)
 			}
 		}
 	}

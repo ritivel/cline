@@ -7,6 +7,7 @@ import { fetch, getAxiosSettings } from "@/shared/net"
 // Use the new template-driven classifier with pre-generated prompts
 import { CtdClassifierServiceV2 as CtdClassifierService } from "./CtdClassifierServiceV2"
 import { PdfMetadataService } from "./PdfMetadataService"
+import { PdfProcessingTracker } from "./PdfProcessingTracker"
 
 const DUMMY_API_BASE_URL = "https://dummy-api.com"
 
@@ -49,6 +50,7 @@ export class PdfProcessingService {
 	private abortController: AbortController | null = null
 	private readonly metadataService: PdfMetadataService
 	private readonly ctdClassifierService: CtdClassifierService
+	private trackerCache: Map<string, PdfProcessingTracker> = new Map()
 
 	constructor(
 		apiBaseUrl: string = DUMMY_API_BASE_URL,
@@ -62,6 +64,16 @@ export class PdfProcessingService {
 		this.maxConcurrentDownloads = maxConcurrentDownloads
 		this.metadataService = new PdfMetadataService()
 		this.ctdClassifierService = new CtdClassifierService()
+	}
+
+	/**
+	 * Gets or creates the processing tracker for a workspace
+	 */
+	private getTracker(workspaceRoot: string): PdfProcessingTracker {
+		if (!this.trackerCache.has(workspaceRoot)) {
+			this.trackerCache.set(workspaceRoot, new PdfProcessingTracker(workspaceRoot))
+		}
+		return this.trackerCache.get(workspaceRoot)!
 	}
 
 	/**
@@ -83,7 +95,7 @@ export class PdfProcessingService {
 	 */
 	private async findPdfFiles(workspaceRoot: string): Promise<string[]> {
 		const pdfFiles: string[] = []
-		const excludedDirs = new Set(["dossier", "documents", ".git", "node_modules"])
+		const excludedDirs = new Set(["dossier", "documents", ".git", "node_modules", "submissions"])
 
 		async function traverse(currentPath: string): Promise<void> {
 			let entries
@@ -268,41 +280,25 @@ export class PdfProcessingService {
 
 	/**
 	 * Checks if a PDF folder already exists with valid extracted content
+	 * Uses hash-based tracking to handle file moves/renames
 	 */
-	private async isPdfFolderAlreadyProcessed(extractPath: string): Promise<boolean> {
-		try {
-			// Check if folder exists
-			await fs.promises.access(extractPath)
-
-			// Check if folder has any .mmd or .md files (indicating successful extraction)
-			const entries = await fs.promises.readdir(extractPath)
-			const hasMarkdownFiles = entries.some((f) => f.endsWith(".mmd") || f.endsWith(".md"))
-
-			if (hasMarkdownFiles) {
-				console.log(`PDF folder already exists with content: ${extractPath}, skipping download`)
-				return true
-			}
-		} catch {
-			// Folder doesn't exist or can't be accessed
-		}
-		return false
+	private async isPdfFolderAlreadyProcessed(pdfPath: string, extractPath: string, workspaceRoot: string): Promise<boolean> {
+		const tracker = this.getTracker(workspaceRoot)
+		return tracker.isProcessed(pdfPath, workspaceRoot)
 	}
 
 	/**
 	 * Calculates the expected output folder path for a PDF file
+	 * Uses linear structure: all PDFs as folders directly in documents/
 	 */
 	private getExpectedOutputPath(pdfPath: string, workspaceRoot: string, outputDir: string): string {
-		const relativePath = path.relative(workspaceRoot, pdfPath)
-		const relativeDir = path.dirname(relativePath)
 		const pdfFolderName = path.basename(pdfPath, ".pdf")
-
-		return relativeDir === "." || relativeDir === ""
-			? path.join(outputDir, pdfFolderName)
-			: path.join(outputDir, relativeDir, pdfFolderName)
+		// Linear structure: always put directly in documents folder
+		return path.join(outputDir, pdfFolderName)
 	}
 
 	/**
-	 * Filters out PDFs that have already been processed (output folder exists with content)
+	 * Filters out PDFs that have already been processed (using hash-based tracking)
 	 */
 	private async filterUnprocessedPdfs(
 		pdfFiles: string[],
@@ -312,17 +308,26 @@ export class PdfProcessingService {
 	): Promise<string[]> {
 		const unprocessedPdfs: string[] = []
 		let skippedCount = 0
+		const tracker = this.getTracker(workspaceRoot)
 
 		for (const pdfPath of pdfFiles) {
 			const expectedOutputPath = this.getExpectedOutputPath(pdfPath, workspaceRoot, outputDir)
-			const alreadyProcessed = await this.isPdfFolderAlreadyProcessed(expectedOutputPath)
+			const alreadyProcessed = await this.isPdfFolderAlreadyProcessed(pdfPath, expectedOutputPath, workspaceRoot)
 
 			if (alreadyProcessed) {
 				skippedCount++
-				// Still run metadata and classification for existing folders
+				// Still run metadata and classification for existing folders (in case they need updates)
 				try {
 					const relativePath = path.relative(outputDir, expectedOutputPath)
-					const extracted = await this.metadataService.extractMetadataForFolder(expectedOutputPath, relativePath)
+					// Get source hash from tracker to include in metadata
+					const sourceHash = await tracker.getSourceHash(pdfPath)
+					const sourcePath = path.relative(workspaceRoot, pdfPath)
+					const extracted = await this.metadataService.extractMetadataForFolder(
+						expectedOutputPath,
+						relativePath,
+						sourceHash,
+						sourcePath,
+					)
 					if (extracted) {
 						await this.ctdClassifierService.classifyFolder(expectedOutputPath, relativePath, workspaceRoot)
 					}
@@ -355,24 +360,26 @@ export class PdfProcessingService {
 		onProgress?: (stage: string, details?: string) => void,
 	): Promise<void> {
 		// Calculate extraction path first to check if already processed
-		const relativePath = path.relative(workspaceRoot, pdfName)
-		const relativeDir = path.dirname(relativePath)
+		// Linear structure: always put directly in documents folder
 		const pdfFolderName = path.basename(pdfName, ".pdf")
-		const extractPath =
-			relativeDir === "." || relativeDir === ""
-				? path.join(outputDir, pdfFolderName)
-				: path.join(outputDir, relativeDir, pdfFolderName)
+		const extractPath = path.join(outputDir, pdfFolderName)
 
 		// Check if folder already exists with valid content - skip download if so
-		if (await this.isPdfFolderAlreadyProcessed(extractPath)) {
+		const tracker = this.getTracker(workspaceRoot)
+		if (await this.isPdfFolderAlreadyProcessed(pdfName, extractPath, workspaceRoot)) {
 			// Still try to extract metadata if info.json is missing or has placeholders
 			try {
 				if (onProgress) {
 					onProgress("metadata", `Extracting metadata for ${path.basename(pdfName)}...`)
 				}
+				// Get source hash from tracker to include in metadata
+				const sourceHash = await tracker.getSourceHash(pdfName)
+				const sourcePath = path.relative(workspaceRoot, pdfName)
 				const extracted = await this.metadataService.extractMetadataForFolder(
 					extractPath,
 					path.relative(outputDir, extractPath),
+					sourceHash,
+					sourcePath,
 				)
 				if (extracted && onProgress) {
 					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
@@ -462,9 +469,14 @@ export class PdfProcessingService {
 				if (onProgress) {
 					onProgress("metadata", `Extracting metadata for ${path.basename(pdfName)}...`)
 				}
+				// Get source hash to include in metadata
+				const sourceHash = await tracker.getSourceHash(pdfName)
+				const sourcePath = path.relative(workspaceRoot, pdfName)
 				const extracted = await this.metadataService.extractMetadataForFolder(
 					extractPath,
 					path.relative(outputDir, extractPath),
+					sourceHash,
+					sourcePath,
 				)
 				if (extracted && onProgress) {
 					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
@@ -492,12 +504,30 @@ export class PdfProcessingService {
 						// Don't fail the whole process for classification errors
 					}
 				}
+
+				// Mark as processed in tracker after successful extraction and metadata processing
+				if (extracted) {
+					await tracker.markProcessed(pdfName, extractPath, workspaceRoot, sourceHash)
+				}
 			} catch (metadataError) {
 				console.error(`Failed to extract metadata for ${pdfName}:`, metadataError)
 				if (onProgress) {
 					onProgress("error", `Metadata extraction failed for ${path.basename(pdfName)}`)
 				}
 				// Don't fail the whole process for metadata extraction errors
+				// Still mark as processed if folder has content (even if metadata extraction failed)
+				try {
+					const hasContent = await fs.promises
+						.readdir(extractPath)
+						.then((entries) => entries.some((f) => f.endsWith(".mmd") || f.endsWith(".md")))
+						.catch(() => false)
+					if (hasContent) {
+						const sourceHash = await tracker.getSourceHash(pdfName)
+						await tracker.markProcessed(pdfName, extractPath, workspaceRoot, sourceHash)
+					}
+				} catch (trackError) {
+					console.error(`Failed to mark PDF as processed: ${trackError}`)
+				}
 			}
 		} catch (error) {
 			// Clean up temp zip on error
@@ -707,10 +737,13 @@ export class PdfProcessingService {
 
 	/**
 	 * Main processing method - orchestrates the entire workflow
+	 * @param workspaceRoot Path to the workspace root (where PDFs are located)
+	 * @param submissionsFolder Path to the submissions folder (where processed documents are saved)
 	 * @param incremental If true, downloads PDF results as they become available. If false, waits for all PDFs and downloads single zip.
 	 */
 	async processPdfs(
 		workspaceRoot: string,
+		submissionsFolder: string,
 		onProgress?: (stage: string, details?: string) => void,
 		incremental: boolean = true,
 	): Promise<void> {
@@ -720,7 +753,7 @@ export class PdfProcessingService {
 		try {
 			if (signal.aborted) throw new Error("Operation cancelled")
 
-			// Stage 1: Find PDF files
+			// Stage 1: Find PDF files in workspace root
 			if (onProgress) {
 				onProgress("discovering", "Scanning workspace for PDF files...")
 			}
@@ -740,7 +773,8 @@ export class PdfProcessingService {
 			if (signal.aborted) throw new Error("Operation cancelled")
 
 			// Stage 1.5: Filter out already processed PDFs
-			const documentsPath = path.join(workspaceRoot, "documents")
+			// Save processed documents in submissions folder
+			const documentsPath = path.join(submissionsFolder, "documents")
 			await fs.promises.mkdir(documentsPath, { recursive: true })
 
 			if (onProgress) {
