@@ -1,4 +1,5 @@
 import { buildApiHandler } from "@core/api"
+import { showSystemNotification } from "@integrations/notifications"
 import * as fs from "fs"
 import * as path from "path"
 import { Controller } from "@/core/controller"
@@ -6,8 +7,10 @@ import { EAC_NMRA_TEMPLATE } from "@/core/ctd/templates/eac-nmra/definition"
 import { SECTION_PARENT_MAP } from "@/core/ctd/templates/eac-nmra/prompts"
 import type { CTDModuleDef, CTDSectionDef } from "@/core/ctd/types"
 import { StateManager } from "@/core/storage/StateManager"
-import { Task } from "@/core/task"
 import { tryAcquireTaskLockWithRetry } from "@/core/task/TaskLockUtils"
+// NOTE: TaskSectionCreation is imported dynamically to avoid circular dependency
+// task/index.ts -> slash-commands -> DossierGeneratorService -> TaskSectionCreation -> task/index.ts
+import type { TaskSectionCreation } from "@/core/task/TaskSectionCreation"
 import { detectWorkspaceRoots } from "@/core/workspace/detection"
 import { setupWorkspaceManager } from "@/core/workspace/setup"
 
@@ -494,6 +497,14 @@ Please write comprehensive regulatory content based on the information provided 
 
 	/**
 	 * Creates a comprehensive LaTeX prompt for subagent with standalone document requirements
+	 *
+	 * NOTE: This prompt is used for context/documentation. The actual processing is handled
+	 * by TaskSectionCreation's chunked processing flow which:
+	 * 1. Parses tags.md to get document list and drug name
+	 * 2. Processes documents in chunks
+	 * 3. Fetches pharma data via Function1-5 handlers
+	 * 4. Gets RAG guidelines for section writing
+	 * 5. Generates final LaTeX content
 	 */
 	private createSubagentLaTeXPrompt(
 		sectionId: string,
@@ -503,63 +514,53 @@ Please write comprehensive regulatory content based on the information provided 
 	): string {
 		const texFilePath = path.join(sectionFolderPath, "content.tex")
 
-		return `You are a regulatory affairs subagent with access to ALL tools (both PLAN and ACT mode tools).
+		return `Generate a COMPLETE STANDALONE LaTeX document for CTD Section ${sectionId}: ${section.title}.
 
-Your task is to generate a COMPLETE STANDALONE LaTeX document for CTD Section ${sectionId}: ${section.title}.
+## Section Information
+- Section ID: ${sectionId}
+- Section Title: ${section.title}
+- Section Folder: ${sectionFolderPath}
+- Tags File: ${tagsPath}
+- Output File: ${texFilePath}
 
-## Output File
-Write a complete, compilable LaTeX document to: ${texFilePath}
+## Processing Flow
+The TaskSectionCreation agent will:
+1. Parse the tags.md file to identify source documents and extract drug/API name
+2. Read and process all referenced documents in chunks to manage context
+3. Query pharmaceutical databases for supplemental drug information
+4. Retrieve ICH/regulatory writing guidelines from the RAG index
+5. Generate the final LaTeX document based on all collected context
 
-## CRITICAL: Document Requirements
-The LaTeX file MUST be a complete, standalone document that can be compiled independently.
+## LaTeX Output Requirements
 
-**MANDATORY: The document MUST start with \\documentclass[11pt,a4paper]{article} - DO NOT start from \\section or any other command.**
+The output MUST be a complete, standalone LaTeX document that compiles independently.
 
-The document must include in this EXACT order:
-1. Document class declaration: \\documentclass[11pt,a4paper]{article}
-2. ALL required packages (see list below)
-3. Package configurations (hyperref, fancyhdr, etc.)
-4. \\begin{document}
-5. Title, author, date, and \\maketitle
-6. Section content starting with \\section{...}
-7. All document content
-8. \\end{document}
-
-**DO NOT write a document that starts with \\section or any content before \\documentclass. The file must begin with \\documentclass[11pt,a4paper]{article} as the very first line.**
-
-## LaTeX Document Structure
-
-### Required Document Preamble
+### Required Structure
 \\documentclass[11pt,a4paper]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
 \\usepackage[english]{babel}
 \\usepackage{geometry}
 \\geometry{margin=2.5cm}
-\\usepackage{booktabs}        % For professional tables
-\\usepackage{longtable}       % For multi-page tables
-\\usepackage{graphicx}        % For figures
-\\usepackage{hyperref}        % For cross-references
-\\usepackage{amsmath}         % For mathematical equations
-\\usepackage{amsfonts}        % For mathematical fonts
-\\usepackage{siunitx}         % For proper unit formatting
-\\usepackage{enumitem}        % For better list formatting
-\\usepackage{xcolor}         % For colored text if needed
-\\usepackage{fancyhdr}       % For headers and footers
-\\usepackage{titlesec}       % For section formatting
+\\usepackage{booktabs}
+\\usepackage{longtable}
+\\usepackage{graphicx}
+\\usepackage{hyperref}
+\\usepackage{amsmath}
+\\usepackage{amsfonts}
+\\usepackage{siunitx}
+\\usepackage{enumitem}
+\\usepackage{xcolor}
+\\usepackage{fancyhdr}
+\\usepackage{titlesec}
 
-% Hyperref configuration
 \\hypersetup{
     colorlinks=true,
     linkcolor=blue,
-    filecolor=magenta,
-    urlcolor=cyan,
     pdftitle={CTD Section ${sectionId}: ${section.title}},
-    pdfauthor={Regulatory Affairs},
-    pdfsubject={Common Technical Document}
+    pdfauthor={Regulatory Affairs}
 }
 
-% Page style
 \\pagestyle{fancy}
 \\fancyhf{}
 \\fancyhead[C]{CTD Section ${sectionId}: ${section.title}}
@@ -572,269 +573,38 @@ The document must include in this EXACT order:
 \\date{\\today}
 \\maketitle
 
-## Section Formatting Guidelines
-
-### Section Hierarchy
-- Use \\section{${sectionId}: ${section.title}} for the main section
-- Use \\subsection{} for major subsections
-- Use \\subsubsection{} for minor subsections
-- Use \\paragraph{} for paragraph-level headings if needed
-
-### Text Formatting
-- Use \\textbf{} for bold text (e.g., drug names, important terms)
-- Use \\textit{} for italic text (e.g., Latin terms, emphasis)
-- Use \\emph{} for emphasis
-- Use \\texttt{} for code or technical identifiers
-- Avoid excessive formatting; maintain professional appearance
-
-### Tables
-- Use \\begin{table}...\\end{table} for tables with captions
-- Use booktabs package commands: \\toprule, \\midrule, \\bottomrule
-- Use \\begin{longtable} for tables that span multiple pages
-- Include table captions using \\caption{}
-- Use \\label{} for cross-referencing
-- Example structure:
-\\begin{table}[h]
-\\centering
-\\caption{Table Title}
-\\label{tab:label}
-\\begin{tabular}{ll}
-\\toprule
-Header 1 & Header 2 \\\\
-\\midrule
-Data 1 & Data 2 \\\\
-\\bottomrule
-\\end{tabular}
-\\end{table}
-
-### Lists
-- Use \\begin{itemize}...\\end{itemize} for bullet points
-- Use \\begin{enumerate}...\\end{enumerate} for numbered lists
-- Use \\begin{description}...\\end{description} for definition lists
-- Use enumitem package for better spacing: \\setlist{itemsep=0.5em}
-
-### Figures
-- Use \\begin{figure}...\\end{figure} for figures
-- Include \\includegraphics{} for images
-- Use \\caption{} for figure captions
-- Use \\label{} for cross-referencing
-- Example:
-\\begin{figure}[h]
-\\centering
-\\includegraphics[width=0.8\\textwidth]{figure.pdf}
-\\caption{Figure Title}
-\\label{fig:label}
-\\end{figure}
-
-### Mathematical Content
-- Use $...$ for inline math
-- Use \\[...\\] or \\begin{equation}...\\end{equation} for displayed equations
-- Use siunitx package for units: \\SI{25}{\\milli\\gram}
-- Use proper mathematical notation for statistical data
-
-### Cross-References
-- Use \\ref{} to reference sections, tables, figures
-- Use \\pageref{} to reference page numbers
-- Use \\autoref{} (with hyperref) for automatic reference types
-
-### Special Characters
-- Use proper LaTeX commands for special characters:
-  - \\% for percent sign
-  - \\& for ampersand
-  - \\# for hash
-  - \\$ for dollar sign
-  - \\textdegree{} for degree symbol
-  - \\textpm{} for plus-minus
-  - \\textsuperscript{} for superscripts
-
-### Regulatory-Specific Formatting
-- Use consistent terminology throughout
-- Format drug names consistently (consider using \\newcommand for repeated terms)
-- Use proper formatting for batch numbers, lot numbers, reference numbers
-- Format dates consistently (consider using datetime package)
-- Use proper formatting for regulatory references (e.g., FDA guidance, ICH guidelines)
-
-## Task Steps
-
-1. Read the tags.md file from: ${tagsPath}
-   - This file contains a list of documents tagged for this section
-   - Each entry has a PDF name and a path to the processed document folder
-
-2. **IMPORTANT: Reading Document Content**
-   - The paths in tags.md are RELATIVE PATHS from the section folder: ${sectionFolderPath}
-   - These paths point to FOLDERS (not PDF files) that contain processed document content
-   - Each folder contains:
-     - A .mmd file (markdown content extracted from the PDF) - the filename may vary (e.g., content.mmd, file-1.mmd, etc.)
-     - An info.json file (metadata and summary)
-
-   **Step-by-step process to read a document:**
-   a. Read tags.md to get the relative path (e.g., \`../../documents/FP/FP Spec_Levofloxacin Tab USP 500 mg\`)
-   b. Use path.join() or path.resolve() to combine: \`${sectionFolderPath}\` + relative path from tags.md
-     - Example: If section folder is \`/workspace/dossier/module-3/section-3.2.P.5\` and path is \`../../documents/FP/Report\`
-     - Result: \`/workspace/dossier/module-3/section-3.2.P.5/../../documents/FP/Report\` which resolves to \`/workspace/documents/FP/Report\`
-   c. **CRITICAL**: First, LIST the directory contents using list_directory tool to see what files exist
-   d. Find the .mmd file in that directory (it may be named anything ending in .mmd - do NOT assume a specific name)
-   e. Read the .mmd file you found
-   f. Read the \`info.json\` file from the same folder
-
-   **CRITICAL RULES:**
-   - **NEVER** construct absolute paths manually by concatenating workspace root + path from tags.md
-   - **ALWAYS** use path.join() or path.resolve() with the section folder path
-   - **ALWAYS** list the directory first to find the actual .mmd filename - do NOT guess the filename
-   - **DO NOT** try to read PDF files directly - only read .mmd and info.json files from the processed folders
-   - If a document folder doesn't exist or files are missing, note it and continue with available documents
-
-3. Use function1-5 tools if you need additional pharmaceutical information:
-   - function1: Drug information
-   - function2: Regulatory compliance information
-   - function3: Clinical trial data
-   - function4: Manufacturing and quality control information
-   - function5: Safety and pharmacovigilance data
-
-4. Generate comprehensive regulatory submission content following ICH M4(R4) guidelines
-   - Use all available document content from step 2
-   - If some documents couldn't be read, proceed with available content
-   - Include a note in the document if any expected documents were unavailable
-
-5. Write a COMPLETE STANDALONE LaTeX document to: ${texFilePath}
-
-   **CRITICAL REQUIREMENTS FOR THE OUTPUT FILE:**
-   - The file MUST start with: \\documentclass[11pt,a4paper]{article}
-   - Include ALL packages listed in the preamble section below
-   - Include ALL package configurations
-   - Include \\begin{document} before any content
-   - Include \\title{}, \\author{}, \\date{}, and \\maketitle
-   - Then include your section content starting with \\section{${sectionId}: ${section.title}}
-   - End with \\end{document}
-
-   **DO NOT:**
-   - Start the file with \\section or any other command
-   - Skip the document class declaration
-   - Skip any required packages
-   - Skip \\begin{document} or \\end{document}
-   - Write a partial document - it must be complete and compilable
-
-## ICH M4(R4) Writing Principles
-- **Clarity and Precision**: Use clear, precise language. Avoid ambiguity. Use standard regulatory terminology.
-- **Completeness**: Include all relevant information from source documents. Do not omit critical data, specifications, or findings.
-- **Objectivity**: Present data objectively. Use factual statements supported by evidence from source documents.
-- **Structure**: Follow ICH CTD structure with appropriate LaTeX sectioning commands
-- **Regulatory Tone**: Write in formal, professional regulatory language
-- **Data Presentation**: Present numerical data clearly with appropriate units using siunitx package
-- **Compliance**: Ensure content meets regulatory requirements for the specified CTD section
-
-## Document Reading Example
-
-If tags.md contains:
-\`\`\`
-## Placements
-- [Report.pdf](../../documents/M5-Clinical/Reports/Report)
-\`\`\`
-
-**Correct approach:**
-1. The path in tags.md is: \`../../documents/M5-Clinical/Reports/Report\` (relative to section folder)
-2. Section folder is: \`${sectionFolderPath}\`
-3. Resolve the full path using path.join(): \`path.join("${sectionFolderPath}", "../../documents/M5-Clinical/Reports/Report")\`
-   - This will correctly resolve to the document folder
-4. **FIRST**: Use list_directory tool on the resolved folder path to see what files exist
-5. Find the .mmd file in the directory listing (it may be named \`content.mmd\`, \`Report.mmd\`, \`file-1.mmd\`, or anything else ending in .mmd)
-6. Read the .mmd file you found (using the exact filename from the directory listing)
-7. Read \`info.json\` from the same folder for metadata and summary
-
-**Incorrect approach (DO NOT DO THIS):**
-- DO NOT try to read PDF files directly (e.g., \`Report.pdf\`)
-- DO NOT construct absolute paths by manually concatenating workspace root + path from tags.md
-  - WRONG: \`/Users/.../workspace/documents/FP/Report\` (manually constructed)
-  - CORRECT: Use path.join(sectionFolderPath, relativePathFromTags)
-- DO NOT assume paths are absolute - they are always relative to the section folder
-- DO NOT guess .mmd filenames - always list the directory first to find the actual filename
-- DO NOT try to read files like \`Report.mmd\` or \`file-1.mmd\` without first listing the directory
-- If a path looks like it ends with .pdf, it's still a folder name, not a file
-
-## Document References Section
-Include a section listing all supporting documents with their placement/reference status. Format as a table or list.
-
-## Example Document Structure
-**This is the EXACT structure your output file must follow. Copy this structure and fill in the content:**
-
-\\documentclass[11pt,a4paper]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[T1]{fontenc}
-\\usepackage[english]{babel}
-\\usepackage{geometry}
-\\geometry{margin=2.5cm}
-\\usepackage{booktabs}        % For professional tables
-\\usepackage{longtable}       % For multi-page tables
-\\usepackage{graphicx}        % For figures
-\\usepackage{hyperref}        % For cross-references
-\\usepackage{amsmath}         % For mathematical equations
-\\usepackage{amsfonts}        % For mathematical fonts
-\\usepackage{siunitx}         % For proper unit formatting
-\\usepackage{enumitem}        % For better list formatting
-\\usepackage{xcolor}         % For colored text if needed
-\\usepackage{fancyhdr}       % For headers and footers
-\\usepackage{titlesec}       % For section formatting
-
-% Hyperref configuration
-\\hypersetup{
-    colorlinks=true,
-    linkcolor=blue,
-    filecolor=magenta,
-    urlcolor=cyan,
-    pdftitle={CTD Section ${sectionId}: ${section.title}},
-    pdfauthor={Regulatory Affairs},
-    pdfsubject={Common Technical Document}
-}
-
-% Page style
-\\pagestyle{fancy}
-\\fancyhf{}
-\\fancyhead[C]{CTD Section ${sectionId}: ${section.title}}
-\\fancyfoot[C]{\\thepage}
-
-\\begin{document}
-
-\\title{CTD Section ${sectionId}: ${section.title}}
-\\author{Regulatory Affairs}
-\\date{\\today}
-\\maketitle
-
-\\section{${sectionId}: ${section.title}}
-
-\\subsection{Overview}
-[Content here]
-
-\\subsection{Detailed Information}
-[Content here]
-
-\\begin{table}[h]
-\\centering
-\\caption{Supporting Documents}
-\\label{tab:documents}
-\\begin{tabular}{ll}
-\\toprule
-Document Name & Status \\\\
-\\midrule
-[Document entries] & [Placement/Reference] \\\\
-\\bottomrule
-\\end{tabular}
-\\end{table}
-
-\\subsection{Document References}
-\\begin{itemize}
-\\item Document 1 (placed)
-\\item Document 2 (referenced)
-\\end{itemize}
+% Section content here
 
 \\end{document}
 
-**REMINDER: Your output file MUST start with \\documentclass[11pt,a4paper]{article} as the very first line. The document must be complete and standalone - it should compile independently without any additional files or preamble.**
+## ICH M4(R4) Writing Guidelines
 
-Work autonomously and complete the section generation using all available tools. Ensure the LaTeX code is valid, complete, and compilable as a standalone document. The file you write must begin with \\documentclass and end with \\end{document}.`
+1. **Clarity**: Use clear, precise regulatory language
+2. **Completeness**: Include all relevant information from source documents
+3. **Objectivity**: Present factual statements supported by evidence
+4. **Structure**: Follow ICH CTD section structure
+5. **Data Presentation**: Use tables for specifications, test results, and batch data
+
+## Content Requirements
+
+1. Include an Overview subsection
+2. Include detailed technical content based on source documents
+3. Present data in properly formatted tables using booktabs
+4. Include a Document References section listing all source documents
+5. Use proper LaTeX formatting throughout
+
+## Critical Requirements
+- Document MUST start with \\documentclass[11pt,a4paper]{article}
+- Document MUST include \\begin{document} and \\end{document}
+- All packages must be included in the preamble
+- Content must be factual and based on provided source documents
+- Use siunitx for proper unit formatting (e.g., \\SI{500}{\\mg})`
 	}
 
 	/**
-	 * Creates a subagent (Task instance) with access to both PLAN and ACT mode tools
+	 * Creates a TaskSectionCreation instance for dossier section generation
+	 * Uses dynamic import to avoid circular dependency:
+	 * task/index.ts -> slash-commands -> DossierGeneratorService -> TaskSectionCreation -> task/index.ts
 	 */
 	private async createSubagentTask(
 		sectionId: string,
@@ -843,7 +613,18 @@ Work autonomously and complete the section generation using all available tools.
 		tagsPath: string,
 		controller: Controller,
 		subagentPrompt: string,
-	): Promise<Task> {
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<TaskSectionCreation> {
+		console.log(`[DossierGenerator] Creating subagent task for ${sectionId}`)
+		showSystemNotification({
+			subtitle: `Creating Subagent`,
+			message: `Section ${sectionId}: ${section.title}`,
+		})
+
+		// Dynamic import to break circular dependency
+		const { TaskSectionCreation: TaskSectionCreationClass } = await import("@/core/task/TaskSectionCreation")
+		console.log(`[DossierGenerator] TaskSectionCreation class imported successfully`)
+
 		const stateManager = StateManager.get()
 		const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
 		const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
@@ -865,14 +646,13 @@ Work autonomously and complete the section generation using all available tools.
 		const lockResult = await tryAcquireTaskLockWithRetry(taskId)
 		const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
 
-		// Create Task instance in ACT mode (but with subagent flag in context)
-		const task = new Task({
+		// Expected output file path
+		const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+
+		// Create TaskSectionCreation instance
+		const task = new TaskSectionCreationClass({
 			controller,
 			mcpHub: controller.mcpHub,
-			updateTaskHistory: async () => [], // Subagents don't update main history
-			postStateToWebview: async () => {}, // Subagents don't update UI
-			reinitExistingTaskFromId: async () => {},
-			cancelTask: async () => {},
 			shellIntegrationTimeout,
 			terminalReuseEnabled: terminalReuseEnabled ?? true,
 			terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
@@ -883,11 +663,15 @@ Work autonomously and complete the section generation using all available tools.
 			stateManager,
 			workspaceManager,
 			task: subagentPrompt,
-			images: undefined,
-			files: undefined,
-			historyItem: undefined,
 			taskId,
 			taskLockAcquired,
+			// Section-specific parameters
+			sectionId,
+			sectionTitle: section.title,
+			sectionFolderPath,
+			expectedOutputFile,
+			tagsPath,
+			onProgress,
 		})
 
 		// Set mode to "act" and disable strict plan mode for subagents
@@ -900,160 +684,46 @@ Work autonomously and complete the section generation using all available tools.
 	}
 
 	/**
-	 * Runs a subagent task and waits for completion
+	 * Runs a TaskSectionCreation task and waits for completion
+	 * Uses the built-in completion detection from TaskSectionCreation
 	 */
 	private async runSubagentTask(
-		task: Task,
+		task: TaskSectionCreation,
 		sectionId: string,
 		subagentPrompt: string,
-		onProgress?: (sectionId: string, status: string) => void,
 	): Promise<{ success: boolean; error?: string }> {
-		return new Promise((resolve) => {
-			if (onProgress) {
-				onProgress(sectionId, `Subagent started`)
-			}
-
-			let lastStateCheck = Date.now()
-			let lastStateString = ""
-			let checkCount = 0
-			const maxStuckChecks = 150 // 5 minutes of no state change (150 * 2 seconds)
-			let resolved = false
-
-			// Helper to resolve once
-			const resolveOnce = (result: { success: boolean; error?: string }) => {
-				if (!resolved) {
-					resolved = true
-					resolve(result)
-				}
-			}
-
-			// Start the task with the subagent prompt
-			task.startTask(subagentPrompt, undefined, undefined).catch((error) => {
-				console.error(`Error starting subagent task for section ${sectionId}:`, error)
-				resolveOnce({
-					success: false,
-					error: `Failed to start subagent: ${error instanceof Error ? error.message : String(error)}`,
-				})
+		try {
+			showSystemNotification({
+				subtitle: `Subagent ${sectionId}`,
+				message: "Starting runAndWaitForCompletion...",
 			})
+			console.log(`[DossierGenerator] Starting runAndWaitForCompletion for ${sectionId}`)
 
-			// Get section folder path once
-			const sectionFolderPath = this.sectionToFolderPath(sectionId)
-			if (!sectionFolderPath) {
-				resolveOnce({ success: false, error: `Could not determine folder path for section ${sectionId}` })
-				return
+			// TaskSectionCreation handles completion detection, progress reporting, and timeout internally
+			const result = await task.runAndWaitForCompletion(subagentPrompt)
+
+			showSystemNotification({
+				subtitle: `Subagent ${sectionId}`,
+				message: result.success ? "✓ Completed successfully" : `✗ Failed: ${result.error?.substring(0, 50)}`,
+			})
+			console.log(`[DossierGenerator] runAndWaitForCompletion completed for ${sectionId}: success=${result.success}`)
+
+			return {
+				success: result.success,
+				error: result.error,
 			}
-			const contentPath = path.join(sectionFolderPath, "content.tex")
-
-			// Monitor task completion
-			const checkInterval = setInterval(async () => {
-				if (resolved) {
-					clearInterval(checkInterval)
-					return
-				}
-
-				checkCount++
-				const state = task.taskState
-				const currentStateString = JSON.stringify({
-					isStreaming: state.isStreaming,
-					didCompleteReadingStream: state.didCompleteReadingStream,
-					userMessageContentReady: state.userMessageContentReady,
-				})
-
-				// Check if state changed
-				if (currentStateString !== lastStateString) {
-					lastStateString = currentStateString
-					lastStateCheck = Date.now()
-					console.log(`[Dossier Subagent ${sectionId}] State changed: ${currentStateString}`)
-				}
-
-				// Check if task appears stuck (no state change for 5 minutes)
-				if (Date.now() - lastStateCheck > 5 * 60 * 1000) {
-					console.warn(`[Dossier Subagent ${sectionId}] Task appears stuck - no state change for 5 minutes`)
-					// Check if file exists anyway
-					try {
-						await fs.promises.access(contentPath, fs.constants.F_OK)
-						console.log(`[Dossier Subagent ${sectionId}] File exists despite stuck state, marking as complete`)
-						clearInterval(checkInterval)
-						if (onProgress) {
-							onProgress(sectionId, `Completed (file found despite stuck state)`)
-						}
-						resolveOnce({ success: true })
-						return
-					} catch {
-						// File doesn't exist, continue waiting
-					}
-				}
-
-				// Check if task is complete (not streaming and stream reading completed)
-				if (!state.isStreaming && state.didCompleteReadingStream && state.userMessageContentReady) {
-					clearInterval(checkInterval)
-
-					// Give it a moment for file writes to complete
-					await new Promise((resolve) => setTimeout(resolve, 2000))
-
-					// Verify content.tex was created
-					try {
-						await fs.promises.access(contentPath, fs.constants.F_OK)
-						if (onProgress) {
-							onProgress(sectionId, `Completed`)
-						}
-						resolveOnce({ success: true })
-					} catch {
-						// File doesn't exist yet, wait a bit more and check again
-						console.warn(
-							`[Dossier Subagent ${sectionId}] Task complete but file not found, waiting 5 more seconds...`,
-						)
-						await new Promise((resolve) => setTimeout(resolve, 5000))
-						try {
-							await fs.promises.access(contentPath, fs.constants.F_OK)
-							if (onProgress) {
-								onProgress(sectionId, `Completed`)
-							}
-							resolveOnce({ success: true })
-						} catch {
-							resolveOnce({ success: false, error: `Content file not created for section ${sectionId}` })
-						}
-					}
-				} else {
-					// Log state every 30 seconds for debugging
-					if (checkCount % 15 === 0) {
-						console.log(
-							`[Dossier Subagent ${sectionId}] Still running - isStreaming: ${state.isStreaming}, didCompleteReadingStream: ${state.didCompleteReadingStream}, userMessageContentReady: ${state.userMessageContentReady}`,
-						)
-					}
-
-					// Also check if file exists even if state doesn't indicate completion
-					// (sometimes the file is written but state flags aren't updated)
-					if (checkCount % 10 === 0) {
-						try {
-							await fs.promises.access(contentPath, fs.constants.F_OK)
-							console.log(`[Dossier Subagent ${sectionId}] File found before state completion, marking as complete`)
-							clearInterval(checkInterval)
-							if (onProgress) {
-								onProgress(sectionId, `Completed (file found)`)
-							}
-							resolveOnce({ success: true })
-							return
-						} catch {
-							// File doesn't exist yet, continue
-						}
-					}
-				}
-			}, 2000) // Check every 2 seconds
-
-			// Timeout after 30 minutes
-			setTimeout(
-				() => {
-					if (!resolved) {
-						clearInterval(checkInterval)
-						task.abortTask()
-						console.error(`[Dossier Subagent ${sectionId}] Timeout after 30 minutes`)
-						resolveOnce({ success: false, error: `Subagent timeout for section ${sectionId} after 30 minutes` })
-					}
-				},
-				30 * 60 * 1000,
-			)
-		})
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[TaskSectionCreation ${sectionId}] Error: ${errorMsg}`)
+			showSystemNotification({
+				subtitle: `Subagent ${sectionId}`,
+				message: `ERROR: ${errorMsg.substring(0, 80)}`,
+			})
+			return {
+				success: false,
+				error: errorMsg,
+			}
+		}
 	}
 
 	/**
@@ -1092,7 +762,7 @@ Work autonomously and complete the section generation using all available tools.
 			// Create subagent prompt with LaTeX guidelines
 			const subagentPrompt = this.createSubagentLaTeXPrompt(sectionId, section, sectionFolderPath, tagsPath)
 
-			// Create and run subagent task
+			// Create and run subagent task (onProgress is passed to createSubagentTask)
 			const task = await this.createSubagentTask(
 				sectionId,
 				section,
@@ -1100,8 +770,9 @@ Work autonomously and complete the section generation using all available tools.
 				tagsPath,
 				controller,
 				subagentPrompt,
+				onProgress,
 			)
-			const result = await this.runSubagentTask(task, sectionId, subagentPrompt, onProgress)
+			const result = await this.runSubagentTask(task, sectionId, subagentPrompt)
 
 			return { ...result, sectionId, moduleNum }
 		} catch (error) {
@@ -1305,20 +976,25 @@ Work autonomously and complete the section generation using all available tools.
 		const modules = this.getModulesInOrder()
 
 		// Collect all sections across all modules
-		const allSections: Array<{ sectionId: string; section: CTDSectionDef; moduleNum: number }> = []
-		for (const module of modules) {
-			if (onProgress) {
-				onProgress("processing", `Collecting sections for Module ${module.moduleNumber}: ${module.title}`)
-			}
+		// const allSections: Array<{ sectionId: string; section: CTDSectionDef; moduleNum: number }> = []
+		// for (const module of modules) {
+		// 	if (onProgress) {
+		// 		onProgress("processing", `Collecting sections for Module ${module.moduleNumber}: ${module.title}`)
+		// 	}
 
-			const leafSections = this.getLeafSections(module)
-			for (const sectionId of leafSections) {
-				const section = module.sections[sectionId]
-				if (section) {
-					allSections.push({ sectionId, section, moduleNum: module.moduleNumber })
-				}
-			}
-		}
+		// 	const leafSections = this.getLeafSections(module)
+		// 	for (const sectionId of leafSections) {
+		// 		const section = module.sections[sectionId]
+		// 		if (section) {
+		// 			allSections.push({ sectionId, section, moduleNum: module.moduleNumber })
+		// 		}
+		// 	}
+		// }
+
+		// hardcode allSections for testing
+		const allSections = [
+			{ sectionId: "5.3.1.4", section: modules[1].sections["5.3.1.4"] || modules[5].sections["5.3.1.4"], moduleNum: 5 },
+		]
 
 		if (onProgress) {
 			onProgress("processing", `Starting ${allSections.length} AI subagents in parallel...`)
