@@ -177,49 +177,20 @@ export function clearPendingFileDecorations(editor: vscode.TextEditor): void {
 /**
  * Notify markdown editor extension to apply decorations
  * This sends decoration data to the markdown editor webview if it's open
+ * @deprecated Markdown editor extension has been removed - this is now a no-op
  */
 export async function notifyMarkdownEditorDecorations(
 	absolutePath: string,
 	originalContent: string,
 	newContent: string,
 ): Promise<void> {
-	try {
-		// Compute diff to get line numbers
-		const diffResult = computeDiff(originalContent, newContent)
-
-		// Check if markdown editor extension is available and send command
-		// biome-ignore lint: VS Code command API needed for cross-extension communication
-		await vscode.commands.executeCommand("markdown-editor.applyDecorations", {
-			uri: vscode.Uri.file(absolutePath),
-			decorations: {
-				added: diffResult.added,
-				deleted: diffResult.deleted,
-				modified: diffResult.modified,
-			},
-		})
-
-		console.log(
-			`[PendingFileDecorations] Notified markdown editor of decorations: ${diffResult.added.length} added, ${diffResult.deleted.length} deleted, ${diffResult.modified.length} modified`,
-		)
-	} catch (error) {
-		// Markdown editor extension might not be installed or webview not open - this is okay
-		console.log(`[PendingFileDecorations] Could not notify markdown editor: ${error}`)
-	}
+	// Markdown editor extension has been removed - this function is kept for API compatibility
 }
 
 /**
  * Notify markdown editor extension to clear decorations
+ * @deprecated Markdown editor extension has been removed - this is now a no-op
  */
 export async function notifyMarkdownEditorClearDecorations(absolutePath: string): Promise<void> {
-	try {
-		// biome-ignore lint: VS Code command API needed for cross-extension communication
-		await vscode.commands.executeCommand("markdown-editor.clearDecorations", {
-			uri: vscode.Uri.file(absolutePath),
-		})
-
-		console.log(`[PendingFileDecorations] Notified markdown editor to clear decorations`)
-	} catch (error) {
-		// Markdown editor extension might not be installed or webview not open - this is okay
-		console.log(`[PendingFileDecorations] Could not notify markdown editor to clear: ${error}`)
-	}
+	// Markdown editor extension has been removed - this function is kept for API compatibility
 }

@@ -15,7 +15,7 @@ import { DiagnosticSeverity } from "@/shared/proto/index.cline"
 import { ClineDefaultTool } from "@/shared/tools"
 import type { FileOpsResult } from "./FileProviderOperations"
 import { PendingFileApprovalManager } from "./PendingFileApprovalManager"
-import { applyPendingFileDecorations, notifyMarkdownEditorDecorations } from "./PendingFileDecorations"
+import { applyPendingFileDecorations } from "./PendingFileDecorations"
 
 /**
  * Utility class for direct file operations that write files to disk
@@ -81,47 +81,20 @@ export class DirectFileOperations {
 			}
 		}
 
-		// Check if this is a markdown file and open in markdown editor if so
-		const isMarkdown = absolutePath.toLowerCase().endsWith(".md") || absolutePath.toLowerCase().endsWith(".markdown")
-
-		if (isMarkdown) {
-			console.log("[DirectFileOperations] Opening markdown file in markdown editor...")
-			try {
-				// biome-ignore lint: VS Code command API needed to open markdown editor
-				await vscode.commands.executeCommand("markdown-editor.openEditor", vscode.Uri.file(absolutePath))
-				console.log("[DirectFileOperations] Markdown editor opened")
-			} catch (error) {
-				console.log(`[DirectFileOperations] Failed to open markdown editor, falling back to default: ${error}`)
-				await openFile(absolutePath, false, false)
-			}
-		} else {
-			// Open file in regular editor
-			console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
-			await openFile(absolutePath, false, false)
-			console.log("[DirectFileOperations] File opened in editor")
-		}
+		// Open file in regular editor
+		console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
+		await openFile(absolutePath, false, false)
+		console.log("[DirectFileOperations] File opened in editor")
 
 		// Always apply visual decorations to show changes (for new files, all lines are additions)
 		// This allows users to see what changed even when auto-approved
 		if (content && taskId && toolName) {
-			if (isMarkdown) {
-				// For markdown files, wait for the markdown editor to be ready
+			const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+			if (editor) {
+				// Wait a bit for the editor to fully load before applying decorations
 				setTimeout(() => {
-					notifyMarkdownEditorDecorations(absolutePath, originalContent, content)
-					// Also apply to text editor if it's open
-					const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
-					if (editor) {
-						applyPendingFileDecorations(editor, originalContent, content)
-					}
-				}, 500) // Longer delay for markdown editor to initialize
-			} else {
-				const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
-				if (editor) {
-					// Wait a bit for the editor to fully load before applying decorations
-					setTimeout(() => {
-						applyPendingFileDecorations(editor, originalContent, content)
-					}, 100)
-				}
+					applyPendingFileDecorations(editor, originalContent, content)
+				}, 100)
 			}
 		}
 
@@ -219,47 +192,20 @@ export class DirectFileOperations {
 			}
 		}
 
-		// Check if this is a markdown file and open in markdown editor if so
-		const isMarkdown = absolutePath.toLowerCase().endsWith(".md") || absolutePath.toLowerCase().endsWith(".markdown")
-
-		if (isMarkdown) {
-			console.log("[DirectFileOperations] Opening markdown file in markdown editor...")
-			try {
-				// biome-ignore lint: VS Code command API needed to open markdown editor
-				await vscode.commands.executeCommand("markdown-editor.openEditor", vscode.Uri.file(absolutePath))
-				console.log("[DirectFileOperations] Markdown editor opened")
-			} catch (error) {
-				console.log(`[DirectFileOperations] Failed to open markdown editor, falling back to default: ${error}`)
-				await openFile(absolutePath, false, false)
-			}
-		} else {
-			// Open file in regular editor
-			console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
-			await openFile(absolutePath, false, false)
-			console.log("[DirectFileOperations] File opened in editor")
-		}
+		// Open file in regular editor
+		console.log("[DirectFileOperations] Opening file in regular editor (not diff view)...")
+		await openFile(absolutePath, false, false)
+		console.log("[DirectFileOperations] File opened in editor")
 
 		// Always apply visual decorations to show changes
 		// This allows users to see what changed even when auto-approved
 		if (originalContent !== content && taskId && toolName) {
-			if (isMarkdown) {
-				// For markdown files, wait for the markdown editor to be ready
+			const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
+			if (editor) {
+				// Wait a bit for the editor to fully load before applying decorations
 				setTimeout(() => {
-					notifyMarkdownEditorDecorations(absolutePath, originalContent, content)
-					// Also apply to text editor if it's open
-					const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
-					if (editor) {
-						applyPendingFileDecorations(editor, originalContent, content)
-					}
-				}, 500) // Longer delay for markdown editor to initialize
-			} else {
-				const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === absolutePath)
-				if (editor) {
-					// Wait a bit for the editor to fully load before applying decorations
-					setTimeout(() => {
-						applyPendingFileDecorations(editor, originalContent, content)
-					}, 100)
-				}
+					applyPendingFileDecorations(editor, originalContent, content)
+				}, 100)
 			}
 		}
 

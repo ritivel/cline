@@ -21,9 +21,11 @@ import { new_task_variants } from "./new_task"
 import { plan_mode_respond_variants } from "./plan_mode_respond"
 import { read_file_variants } from "./read_file"
 import { replace_in_file_variants } from "./replace_in_file"
+import { replace_in_tex_variants } from "./replace_in_tex"
 import { search_files_variants } from "./search_files"
 import { use_mcp_tool_variants } from "./use_mcp_tool"
 import { web_fetch_variants } from "./web_fetch"
+import { write_tex_variants } from "./write_tex"
 import { write_to_file_variants } from "./write_to_file"
 
 /**
@@ -58,6 +60,8 @@ export function registerClineToolSets(): void {
 		...use_mcp_tool_variants,
 		...web_fetch_variants,
 		...write_to_file_variants,
+		...write_tex_variants,
+		...replace_in_tex_variants,
 		...apply_patch_variants,
 	]
 
