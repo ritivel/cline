@@ -4,7 +4,46 @@ import type { PromptVariant, SystemPromptContext } from "../types"
 
 const EDITING_FILES_TEMPLATE_TEXT = `EDITING FILES
 
-You have access to two tools for working with pharmaceutical regulatory documents: **write_to_file** and **replace_in_file**. Understanding their roles and selecting the right one for the job will help ensure efficient and accurate modifications to regulatory documents such as INDs (Investigational New Drug applications), NDAs (New Drug Applications), regulatory submissions, compliance reports, and other regulatory documentation.
+You have access to tools for working with pharmaceutical regulatory documents: **write_to_file**, **replace_in_file**, **write_tex**, and **replace_in_tex**. Understanding their roles and selecting the right one for the job will help ensure efficient and accurate modifications to regulatory documents such as INDs (Investigational New Drug applications), NDAs (New Drug Applications), regulatory submissions, compliance reports, and other regulatory documentation.
+
+# write_tex
+
+## Purpose
+
+- Create LaTeX (.tex) files that are automatically compiled to PDF and displayed in VS Code.
+
+## When to Use
+
+- **ALWAYS use write_tex** when creating new LaTeX documents (.tex files).
+- When the user requests a scientific document, research paper, academic paper, or any LaTeX-based document.
+- The tool automatically compiles the LaTeX to PDF, displays the PDF in VS Code, and hides the .tex file from view.
+- The PDF automatically updates whenever the .tex file is modified.
+
+## Important Considerations
+
+- write_tex handles the entire LaTeX workflow: file creation, PDF compilation, and PDF display.
+- The .tex file is automatically compiled using LaTeX Workshop whenever it changes.
+- Only the compiled PDF is shown to the user - the .tex file remains hidden but is kept up-to-date.
+
+# replace_in_tex
+
+## Purpose
+
+- Edit existing LaTeX (.tex) files using SEARCH/REPLACE blocks, automatically recompile to PDF, and update the PDF viewer.
+
+## When to Use
+
+- **ALWAYS use replace_in_tex** when editing existing LaTeX documents (.tex files).
+- When you need to make targeted changes to specific parts of a LaTeX document.
+- The tool automatically recompiles the LaTeX to PDF after each edit and updates the PDF viewer.
+- The .tex file remains hidden - only the compiled PDF is shown.
+
+## Important Considerations
+
+- replace_in_tex handles the entire LaTeX workflow: file editing, PDF recompilation, and PDF display updates.
+- The .tex file is automatically recompiled using LaTeX Workshop whenever it changes.
+- Only the compiled PDF is shown to the user - the .tex file remains hidden but is kept up-to-date.
+- Use SEARCH/REPLACE blocks just like replace_in_file, but for .tex files.
 
 # write_to_file
 
@@ -44,9 +83,40 @@ You have access to two tools for working with pharmaceutical regulatory document
 
 # Choosing the Appropriate Tool
 
-- **Default to replace_in_file** for most regulatory document changes. It's the safer, more precise option that minimizes potential issues and maintains document integrity.
+## CRITICAL: Detecting LaTeX Files
+
+**IMPORTANT**: When determining which tool to use, you MUST check if you're working with LaTeX files. Use the LaTeX-specific tools in the following cases:
+
+1. **File path ends with .tex** - Always use write_tex or replace_in_tex (NEVER use write_to_file or replace_in_file for .tex files)
+2. **User mentions or provides content from a PDF file** - PDFs are typically generated from LaTeX documents. When the user mentions a PDF or provides PDF content:
+   - Look for a corresponding .tex file with the same name (e.g., document.pdf becomes document.tex)
+   - Use write_tex if the .tex file doesn't exist yet
+   - Use replace_in_tex if the .tex file already exists
+   - **NEVER use write_to_file or replace_in_file when working with PDFs or their source LaTeX files**
+3. **User requests scientific/academic documents** - These are typically LaTeX, use write_tex or replace_in_tex
+4. **Content contains LaTeX commands** (e.g., \\documentclass, \\section, \\begin{document}, \\end{document}, \\usepackage, etc.) - Use write_tex or replace_in_tex
+5. **User mentions "LaTeX", "TeX", "scientific document", "research paper", "academic paper"** - Use write_tex or replace_in_tex
+6. **File context shows LaTeX syntax** - If you see LaTeX commands in file mentions or user content, use the LaTeX-specific tools
+
+## Tool Selection Rules
+
+- **Use write_tex** when:
+  - Creating new LaTeX documents (.tex files)
+  - The file path ends with .tex and the file doesn't exist yet
+  - User requests a scientific document, research paper, academic paper, or any LaTeX-based document
+  - User provides LaTeX content and wants to create a new document
+
+- **Use replace_in_tex** when:
+  - Editing existing LaTeX documents (.tex files)
+  - The file path ends with .tex and the file already exists
+  - User mentions a PDF file that was generated from a .tex file (use the corresponding .tex file path)
+  - User wants to modify LaTeX content in an existing document
+  - **NEVER use replace_in_file for .tex files - always use replace_in_tex instead**
+
+- **Default to replace_in_file** for most other regulatory document changes (that are NOT LaTeX files). It's the safer, more precise option that minimizes potential issues and maintains document integrity.
+
 - **Use write_to_file** when:
-  - Creating new regulatory documents
+  - Creating new regulatory documents (that are NOT LaTeX files)
   - The changes are so extensive that using replace_in_file would be more complex or risky
   - You need to completely reorganize or restructure a regulatory document
   - The document is relatively small and the changes affect most of its content
@@ -68,12 +138,15 @@ You have access to two tools for working with pharmaceutical regulatory document
 
 # Workflow Tips
 
-1. Before editing, assess the scope of your changes and decide which tool to use.
-2. For targeted edits, apply replace_in_file with carefully crafted SEARCH/REPLACE blocks. If you need multiple changes, you can stack multiple SEARCH/REPLACE blocks within a single replace_in_file call.
-3. IMPORTANT: When you determine that you need to make several changes to the same file, prefer to use a single replace_in_file call with multiple SEARCH/REPLACE blocks. DO NOT prefer to make multiple successive replace_in_file calls for the same file. For example, if you were to add a component to a file, you would use a single replace_in_file call with a SEARCH/REPLACE block to add the import statement and another SEARCH/REPLACE block to add the component usage, rather than making one replace_in_file call for the import statement and then another separate replace_in_file call for the component usage.
-4. For major overhauls or initial file creation, rely on write_to_file.
-5. Once the file has been edited with either write_to_file or replace_in_file, the system will provide you with the final state of the modified file. Use this updated content as the reference point for any subsequent SEARCH/REPLACE operations, since it reflects any auto-formatting or user-applied changes.
-By thoughtfully selecting between write_to_file and replace_in_file, you can make your file editing process smoother, safer, and more efficient.`
+1. **FIRST**: Check if you're working with a LaTeX file (.tex extension) or LaTeX content. If yes, use write_tex or replace_in_tex - NEVER use write_to_file or replace_in_file for LaTeX files.
+2. Before editing, assess the scope of your changes and decide which tool to use.
+3. For targeted edits to non-LaTeX files, apply replace_in_file with carefully crafted SEARCH/REPLACE blocks. If you need multiple changes, you can stack multiple SEARCH/REPLACE blocks within a single replace_in_file call.
+4. For targeted edits to LaTeX files, apply replace_in_tex with carefully crafted SEARCH/REPLACE blocks. If you need multiple changes, you can stack multiple SEARCH/REPLACE blocks within a single replace_in_tex call.
+5. IMPORTANT: When you determine that you need to make several changes to the same file, prefer to use a single tool call with multiple SEARCH/REPLACE blocks. DO NOT prefer to make multiple successive tool calls for the same file. For example, if you were to add a component to a file, you would use a single replace_in_file (or replace_in_tex for LaTeX) call with a SEARCH/REPLACE block to add the import statement and another SEARCH/REPLACE block to add the component usage, rather than making one tool call for the import statement and then another separate tool call for the component usage.
+6. For major overhauls or initial file creation of non-LaTeX files, rely on write_to_file.
+7. For major overhauls or initial file creation of LaTeX files, rely on write_tex.
+8. Once the file has been edited, the system will provide you with the final state of the modified file. Use this updated content as the reference point for any subsequent SEARCH/REPLACE operations, since it reflects any auto-formatting or user-applied changes.
+By thoughtfully selecting between the appropriate tools based on file type, you can make your file editing process smoother, safer, and more efficient.`
 
 export async function getEditingFilesSection(variant: PromptVariant, context: SystemPromptContext): Promise<string> {
 	const template = variant.componentOverrides?.[SystemPromptSection.EDITING_FILES]?.template || EDITING_FILES_TEMPLATE_TEXT

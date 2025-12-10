@@ -40,11 +40,13 @@ import { LoadMcpDocumentationHandler } from "./tools/handlers/LoadMcpDocumentati
 import { NewTaskHandler } from "./tools/handlers/NewTaskHandler"
 import { PlanModeRespondHandler } from "./tools/handlers/PlanModeRespondHandler"
 import { ReadFileToolHandler } from "./tools/handlers/ReadFileToolHandler"
+import { ReplaceInTexToolHandler } from "./tools/handlers/ReplaceInTexToolHandler"
 import { ReportBugHandler } from "./tools/handlers/ReportBugHandler"
 import { SearchFilesToolHandler } from "./tools/handlers/SearchFilesToolHandler"
 import { SummarizeTaskHandler } from "./tools/handlers/SummarizeTaskHandler"
 import { UseMcpToolHandler } from "./tools/handlers/UseMcpToolHandler"
 import { WebFetchToolHandler } from "./tools/handlers/WebFetchToolHandler"
+import { WriteTexToolHandler } from "./tools/handlers/WriteTexToolHandler"
 import { WriteToFileToolHandler } from "./tools/handlers/WriteToFileToolHandler"
 import { IPartialBlockHandler, SharedToolHandler, ToolExecutorCoordinator } from "./tools/ToolExecutorCoordinator"
 import { ToolValidator } from "./tools/ToolValidator"
@@ -217,6 +219,12 @@ export class ToolExecutor {
 		this.coordinator.register(writeHandler) // registers as "write_to_file" (ClineDefaultTool.FILE_NEW)
 		this.coordinator.register(new SharedToolHandler(ClineDefaultTool.FILE_EDIT, writeHandler))
 		this.coordinator.register(new SharedToolHandler(ClineDefaultTool.NEW_RULE, writeHandler))
+
+		// Register WriteTexToolHandler for LaTeX document creation
+		this.coordinator.register(new WriteTexToolHandler(validator))
+
+		// Register ReplaceInTexToolHandler for LaTeX document editing
+		this.coordinator.register(new ReplaceInTexToolHandler(validator))
 
 		this.coordinator.register(new ListCodeDefinitionNamesToolHandler(validator))
 		this.coordinator.register(new SearchFilesToolHandler(validator))

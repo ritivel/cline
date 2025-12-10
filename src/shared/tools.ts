@@ -35,6 +35,8 @@ export enum ClineDefaultTool {
 	FUNCTION3 = "function3",
 	FUNCTION4 = "function4",
 	FUNCTION5 = "function5",
+	WRITE_TEX = "write_tex",
+	REPLACE_IN_TEX = "replace_in_tex",
 }
 
 // Array of all tool names for compatibility
