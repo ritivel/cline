@@ -1,3 +1,5 @@
+import { StateManager } from "@core/storage/StateManager"
+import type { RegulatoryProductConfig } from "@shared/storage/state-keys"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -49,6 +51,7 @@ export interface DocumentChunk {
 export class DocumentProcessingService {
 	private workspaceRoot: string
 	private documentsBasePath: string
+	private submissionsPath: string | undefined
 
 	// Token estimation: ~4 characters per token
 	private static readonly CHARS_PER_TOKEN = 4
@@ -58,6 +61,15 @@ export class DocumentProcessingService {
 	constructor(workspaceRoot: string) {
 		this.workspaceRoot = workspaceRoot
 		this.documentsBasePath = path.join(workspaceRoot, "documents")
+
+		// Get submissions path from SubmissionsPaneProvider
+		try {
+			const { SubmissionsPaneProvider } = require("@/hosts/vscode/SubmissionsPaneProvider")
+			const submissionsProvider = SubmissionsPaneProvider.getInstance()
+			this.submissionsPath = submissionsProvider?.getSubmissionsFolder()
+		} catch (error) {
+			console.warn(`[DocumentProcessingService] Failed to get submissions path: ${error}`)
+		}
 	}
 
 	/**
@@ -140,6 +152,25 @@ export class DocumentProcessingService {
 			result.drugName = this.extractDrugNameFromDocuments([...result.placements, ...result.references])
 		}
 
+		// Get drug name from RegulatoryProductConfig using StateManager
+		try {
+			const stateManager = StateManager.get()
+			const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as
+				| RegulatoryProductConfig
+				| undefined
+
+			if (currentProduct?.drugName) {
+				// Use the stored drug name for both drugName and apiName
+				result.drugName = currentProduct.drugName
+				result.apiName = currentProduct.drugName
+				console.log(
+					`[DocumentProcessingService] Using drug name from RegulatoryProductConfig: ${currentProduct.drugName}`,
+				)
+			}
+		} catch (error) {
+			console.warn(`[DocumentProcessingService] Failed to get drug name from RegulatoryProductConfig: ${error}`)
+		}
+
 		console.log(`[DocumentProcessingService] Parsed tags file:`)
 		console.log(`  Section: ${result.sectionId} - ${result.sectionTitle}`)
 		console.log(`  Drug: ${result.drugName}, API: ${result.apiName}`)
@@ -168,11 +199,14 @@ export class DocumentProcessingService {
 	 * Note: Paths in tags.md are relative to the workspace's documents folder
 	 */
 	async readDocumentContent(entry: DocumentEntry): Promise<DocumentContent | null> {
-		// The path in tags.md is relative to the workspace's documents folder
-		const documentFolderPath = path.join(this.documentsBasePath, entry.relativePath)
+		// Use submissions path if available, otherwise fall back to documents base path
+		const basePath = this.submissionsPath || this.documentsBasePath
+		const documentFolderPath = path.join(basePath, entry.relativePath)
 
 		console.log(`[DocumentProcessingService] Reading document: ${entry.pdfName}`)
+		console.log(`[DocumentProcessingService] Submissions path: ${this.submissionsPath}`)
 		console.log(`[DocumentProcessingService] Documents base path: ${this.documentsBasePath}`)
+		console.log(`[DocumentProcessingService] Using base path: ${basePath}`)
 		console.log(`[DocumentProcessingService] Relative path: ${entry.relativePath}`)
 		console.log(`[DocumentProcessingService] Full path: ${documentFolderPath}`)
 
