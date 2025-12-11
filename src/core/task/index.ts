@@ -364,6 +364,7 @@ export class Task {
 			taskState: this.taskState,
 			taskIsFavorited: this.taskIsFavorited,
 			updateTaskHistory: this.updateTaskHistory,
+			stateManager: this.stateManager,
 		})
 
 		// Initialize context trackers

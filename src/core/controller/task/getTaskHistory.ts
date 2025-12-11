@@ -15,6 +15,7 @@ export async function getTaskHistory(controller: Controller, request: GetTaskHis
 		// Get task history from global state
 		const taskHistory = controller.stateManager.getGlobalStateKey("taskHistory")
 		const workspacePath = await getWorkspacePath()
+		const currentProduct = controller.stateManager.getGlobalStateKey("currentRegulatoryProduct")
 
 		// Apply filters
 		let filteredTasks = taskHistory.filter((item) => {
@@ -27,6 +28,19 @@ export async function getTaskHistory(controller: Controller, request: GetTaskHis
 			// Apply favorites filter if requested
 			if (favoritesOnly && !item.isFavorited) {
 				return false
+			}
+
+			// Filter by product context if active product exists
+			if (currentProduct && item.regulatoryProduct) {
+				const matchesProduct =
+					item.regulatoryProduct.workspacePath === currentProduct.workspacePath &&
+					item.regulatoryProduct.submissionsPath === currentProduct.submissionsPath &&
+					item.regulatoryProduct.drugName === currentProduct.drugName &&
+					item.regulatoryProduct.marketName === currentProduct.marketName
+
+				if (!matchesProduct) {
+					return false
+				}
 			}
 
 			// Apply current workspace filter if requested

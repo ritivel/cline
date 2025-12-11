@@ -35,6 +35,9 @@ service WorkspaceService {
 
   // Executes a command in a new terminal
   rpc executeCommandInTerminal(ExecuteCommandInTerminalRequest) returns (ExecuteCommandInTerminalResponse);
+
+  // Opens a folder as a workspace in the IDE.
+  rpc openWorkspaceFolder(OpenWorkspaceFolderRequest) returns (OpenWorkspaceFolderResponse);
 }
 
 message GetWorkspacePathsRequest {
@@ -107,3 +110,9 @@ message ExecuteCommandInTerminalRequest {
 message ExecuteCommandInTerminalResponse {
   bool success = 1; // Whether the command was successfully sent to the terminal
 }
+
+message OpenWorkspaceFolderRequest {
+  string path = 1; // The path to the folder to open as workspace
+}
+
+message OpenWorkspaceFolderResponse {}

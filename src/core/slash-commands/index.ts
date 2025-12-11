@@ -5,7 +5,9 @@ import path from "path"
 import * as vscode from "vscode"
 import { WebviewProvider } from "@/core/webview"
 import { HostProvider } from "@/hosts/host-provider"
+import { SubmissionsPaneProvider } from "@/hosts/vscode/SubmissionsPaneProvider"
 import { ClineFileTracker } from "@/services/fileTracking/ClineFileTracker"
+import { CtdClassifierServiceV2 } from "@/services/pdf/CtdClassifierServiceV2"
 import { DossierGeneratorService } from "@/services/pdf/DossierGeneratorService"
 import { PdfProcessingService } from "@/services/pdf/PdfProcessingService"
 import { telemetryService } from "@/services/telemetry"
@@ -85,21 +87,21 @@ function buildFolderPaths(module: CTDModuleDef, moduleNum: number, sectionId: st
 /**
  * Creates dossier folder structure from CTD modules
  */
-async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef[]): Promise<string[]> {
+async function createDossierFolders(submissionsPath: string, modules: CTDModuleDef[]): Promise<string[]> {
 	const createdPaths: string[] = []
 	const fileTracker = ClineFileTracker.getInstance()
 
 	// Track the dossier folder itself (created by recursive mkdir)
-	const dossierPath = path.join(workspaceRoot, "dossier")
+	const dossierPath = path.join(submissionsPath, "dossier")
 	fileTracker.trackFile(dossierPath)
 
 	for (const module of modules) {
 		const moduleNum = module.moduleNumber
 
 		// Create module folder
-		const modulePath = path.join(workspaceRoot, "dossier", `module-${moduleNum}`)
+		const modulePath = path.join(submissionsPath, "dossier", `module-${moduleNum}`)
 		await fs.mkdir(modulePath, { recursive: true })
-		createdPaths.push(path.relative(workspaceRoot, modulePath))
+		createdPaths.push(path.relative(submissionsPath, modulePath))
 		fileTracker.trackFile(modulePath)
 
 		// Process all sections
@@ -110,9 +112,9 @@ async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef
 			if (isTopLevel) {
 				const sectionPaths = buildFolderPaths(module, moduleNum, sectionId, [])
 				for (const folderPath of sectionPaths) {
-					const fullPath = path.join(workspaceRoot, folderPath)
+					const fullPath = path.join(submissionsPath, folderPath)
 					await fs.mkdir(fullPath, { recursive: true })
-					createdPaths.push(folderPath)
+					createdPaths.push(path.relative(submissionsPath, folderPath))
 					fileTracker.trackFile(fullPath)
 				}
 			}
@@ -159,7 +161,7 @@ function startCloudPdfProcessing(workspaceRoot: string): void {
 
 			await service
 				.processPdfs(workspaceRoot, workspaceRoot, (stage, details) => {
-					// Note: For /create-dossier, we use workspaceRoot for both since submissions folder may not be set yet
+					// Note: For /create-dossier, we now use submissions folder path (must be set first)
 					console.log(`[PDF Processing ${stage}] ${details || ""}`)
 
 					// Update progress bar
@@ -210,36 +212,181 @@ function startCloudPdfProcessing(workspaceRoot: string): void {
 }
 
 /**
- * Executes the create-dossier command
+ * Classifies all documents in the documents folder that have info.json
+ */
+async function classifyAllDocuments(
+	documentsPath: string,
+	workspaceRoot: string,
+): Promise<{ classified: number; total: number; errors: string[] }> {
+	const classifier = new CtdClassifierServiceV2(workspaceRoot)
+
+	const errors: string[] = []
+	let classified = 0
+	let total = 0
+
+	try {
+		const entries = await fs.readdir(documentsPath, { withFileTypes: true })
+
+		for (const entry of entries) {
+			if (!entry.isDirectory()) {
+				continue
+			}
+
+			const folderPath = path.join(documentsPath, entry.name)
+			const infoJsonPath = path.join(folderPath, "info.json")
+
+			// Check if info.json exists
+			try {
+				await fs.access(infoJsonPath)
+				total++
+
+				// Classify this folder
+				const relativePath = path.relative(documentsPath, folderPath)
+				try {
+					const success = await classifier.classifyFolder(folderPath, relativePath, workspaceRoot)
+					if (success) {
+						classified++
+					}
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					errors.push(`Failed to classify ${entry.name}: ${errorMessage}`)
+					console.error(`Failed to classify ${folderPath}:`, error)
+				}
+			} catch {}
+		}
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		errors.push(`Failed to scan documents folder: ${errorMessage}`)
+		console.error(`Failed to scan documents folder ${documentsPath}:`, error)
+	}
+
+	return { classified, total, errors }
+}
+
+/**
+ * Starts dossier creation in the background
+ */
+function startDossierCreation(
+	submissionsPath: string,
+	templateName?: string,
+	onComplete?: (result: { success: boolean; message: string }) => void,
+): void {
+	vscode.window.withProgress(
+		{
+			location: vscode.ProgressLocation.Notification,
+			title: "Creating Dossier Structure",
+			cancellable: false,
+		},
+		async (progress) => {
+			try {
+				// Get the CTD template (default if not specified)
+				const template = getCTDTemplate(templateName)
+
+				// Create dossier folder structure in submissions path
+				progress.report({ message: "Creating folder structure..." })
+				const createdPaths = await createDossierFolders(submissionsPath, template.modules)
+
+				// Create documents folder only if it doesn't exist (in submissions path)
+				const documentsPath = path.join(submissionsPath, "documents")
+				const fileTracker = ClineFileTracker.getInstance()
+				try {
+					await fs.access(documentsPath)
+					// Documents folder already exists, skip creation
+				} catch {
+					// Documents folder doesn't exist, create it
+					await fs.mkdir(documentsPath, { recursive: true })
+					fileTracker.trackFile(documentsPath)
+				}
+
+				// Classify all documents that have info.json
+				progress.report({ message: "Classifying documents..." })
+				// Pass submissionsPath as the root for DossierTagsService (it expects dossier and documents to be relative to this path)
+				const classificationResult = await classifyAllDocuments(documentsPath, submissionsPath)
+
+				const templateInfo = templateName ? ` using template "${template.name}"` : ""
+				let message = `Successfully created dossier folder structure${templateInfo} in submissions folder with ${createdPaths.length} folders and documents folder.`
+
+				if (classificationResult.total > 0) {
+					message += ` Classified ${classificationResult.classified}/${classificationResult.total} document(s).`
+					if (classificationResult.errors.length > 0) {
+						message += ` ${classificationResult.errors.length} error(s) occurred during classification.`
+					}
+				}
+
+				const result = { success: true, message }
+				onComplete?.(result)
+
+				HostProvider.get().hostBridge.windowClient.showMessage({
+					message: result.message,
+					type: ShowMessageType.INFORMATION,
+				})
+
+				return result
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				const result = {
+					success: false,
+					message: `Failed to create dossier structure: ${errorMessage}`,
+				}
+				onComplete?.(result)
+
+				HostProvider.get().hostBridge.windowClient.showMessage({
+					message: result.message,
+					type: ShowMessageType.ERROR,
+				})
+
+				return result
+			}
+		},
+	)
+}
+
+/**
+ * Executes the create-dossier command (legacy synchronous version, kept for compatibility)
+ * @deprecated Use startDossierCreation for background processing
  */
 async function executeCreateDossier(
 	workspaceRoot: string,
 	templateName?: string,
 ): Promise<{ success: boolean; message: string }> {
+	// Get submissions folder path
+	const submissionsProvider = SubmissionsPaneProvider.getInstance()
+	const submissionsPath = submissionsProvider?.getSubmissionsFolder()
+
+	if (!submissionsPath) {
+		return {
+			success: false,
+			message: "No submissions folder set. Please set a submissions folder in the left pane before creating a dossier.",
+		}
+	}
+
+	// For synchronous execution, we still need to await the result
+	// This is a simplified version that doesn't show progress
 	try {
-		// Get the CTD template (default if not specified)
 		const template = getCTDTemplate(templateName)
+		const createdPaths = await createDossierFolders(submissionsPath, template.modules)
 
-		// Create dossier folder structure
-		const createdPaths = await createDossierFolders(workspaceRoot, template.modules)
-
-		// Create documents folder only if it doesn't exist
-		const documentsPath = path.join(workspaceRoot, "documents")
+		const documentsPath = path.join(submissionsPath, "documents")
 		const fileTracker = ClineFileTracker.getInstance()
 		try {
 			await fs.access(documentsPath)
-			// Documents folder already exists, skip creation
 		} catch {
-			// Documents folder doesn't exist, create it
 			await fs.mkdir(documentsPath, { recursive: true })
 			fileTracker.trackFile(documentsPath)
 		}
 
-		// PDF processing will be automatically started when submissions folder is selected
-		// via the PdfProcessingManager in SubmissionsPaneProvider
+		const classificationResult = await classifyAllDocuments(documentsPath, submissionsPath)
 
 		const templateInfo = templateName ? ` using template "${template.name}"` : ""
-		const message = `Successfully created dossier folder structure${templateInfo} with ${createdPaths.length} folders and documents folder. PDF processing will start automatically when you select a submissions folder.`
+		let message = `Successfully created dossier folder structure${templateInfo} in submissions folder with ${createdPaths.length} folders and documents folder.`
+
+		if (classificationResult.total > 0) {
+			message += ` Classified ${classificationResult.classified}/${classificationResult.total} document(s).`
+			if (classificationResult.errors.length > 0) {
+				message += ` ${classificationResult.errors.length} error(s) occurred during classification.`
+			}
+		}
+
 		return { success: true, message }
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
@@ -554,24 +701,35 @@ export async function parseSlashCommands(
 			// slashMatch[2] is the command name
 			const commandName = slashMatch[2] // casing matters
 
-			// Special handling for create-dossier: execute directly
+			// Special handling for create-dossier: start in background
 			if (commandName === "create-dossier") {
 				try {
-					// Get workspace root
-					const workspacePaths = await HostProvider.workspace.getWorkspacePaths({})
-					const workspaceRoot = workspacePaths.paths?.[0] || process.cwd()
+					// Get submissions folder path
+					const submissionsProvider = SubmissionsPaneProvider.getInstance()
+					const submissionsPath = submissionsProvider?.getSubmissionsFolder()
 
-					// Execute the command
-					const result = await executeCreateDossier(workspaceRoot)
+					if (!submissionsPath) {
+						const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+						const processedText = `<explicit_instructions type="create-dossier-result">
+The /create-dossier command requires a submissions folder to be set. Please set a submissions folder in the left pane before creating a dossier.
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+						return { processedText, needsClinerulesFileCheck: false }
+					}
+
+					// Start dossier creation in the background
+					startDossierCreation(submissionsPath, undefined, (result) => {
+						// Result is already shown via notification in startDossierCreation
+						console.log(`[create-dossier] ${result.success ? "Success" : "Error"}: ${result.message}`)
+					})
 
 					// Remove slash command from text
 					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
 
 					// Return message for AI to report to user
 					const processedText = `<explicit_instructions type="create-dossier-result">
-The /create-dossier command has been executed. ${result.message}
-
-Please inform the user about the result: ${result.success ? "Success" : "Error"} - ${result.message}
+The /create-dossier command has been started in the background. The dossier folder structure is being created in the submissions folder, and documents will be classified automatically. Progress notifications will appear as the process completes.
 </explicit_instructions>
 
 ${textWithoutSlashCommand}`
@@ -581,10 +739,10 @@ ${textWithoutSlashCommand}`
 
 					return { processedText, needsClinerulesFileCheck: false }
 				} catch (error) {
-					console.error(`Error executing create-dossier command: ${error}`)
+					console.error(`Error starting create-dossier command: ${error}`)
 					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
 					const processedText = `<explicit_instructions type="create-dossier-result">
-The /create-dossier command failed to execute. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
+The /create-dossier command failed to start. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
 </explicit_instructions>
 
 ${textWithoutSlashCommand}`

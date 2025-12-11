@@ -155,12 +155,19 @@ export class PdfProcessingManager {
 			if (this._pdfProcessingService) {
 				await this._pdfProcessingService
 					.processPdfs(workspaceRoot, submissionsFolder, (stage, details) => {
-						console.log(`[PDF Processing ${stage}] ${details || ""}`)
+						const message = details || stage
+						console.log(`[PDF Processing ${stage}] ${message}`)
 
 						// Report progress to UI
 						if (this._progressReporter) {
-							const message = details || stage
-							this._progressReporter.report({ message })
+							try {
+								this._progressReporter.report({ message })
+							} catch (error) {
+								console.error("Error reporting progress:", error)
+							}
+						} else {
+							// If no progress reporter, at least log it
+							console.log(`Progress: ${message}`)
 						}
 					})
 					.catch((error) => {
@@ -218,7 +225,20 @@ export class PdfProcessingManager {
 
 				// If no progress reporter is set, start progress UI for new file
 				if (!this._progressReporter && this._startProgressUI) {
-					this._progressReporter = await this._startProgressUI()
+					console.log("Starting progress UI for new file processing...")
+					try {
+						const reporter = await this._startProgressUI()
+						if (reporter) {
+							this._progressReporter = reporter
+							console.log("Progress UI started, reporter is ready")
+							// Give the UI a moment to appear
+							await new Promise((resolve) => setTimeout(resolve, 100))
+						} else {
+							console.warn("Progress UI starter returned undefined reporter")
+						}
+					} catch (error) {
+						console.error("Failed to start progress UI:", error)
+					}
 				}
 
 				await this._processAllPdfs(workspaceRoot, this._currentSubmissionsFolder)

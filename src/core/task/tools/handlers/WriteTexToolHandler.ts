@@ -306,12 +306,12 @@ ${preamble}
 
 % Header: Logo on left, title on right
 \\fancyhead[L]{${logoExists ? `\\includegraphics[height=0.8cm]{${relativeLogoPath}}` : ""}}
-\\fancyhead[R]{Levofloxacin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
+\\fancyhead[R]{Aspirin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
 
 % Footer: Confidential on left, page number in center, company name on right
 \\fancyfoot[L]{Confidential}
 \\fancyfoot[C]{\\thepage}
-\\fancyfoot[R]{Acme Lifetech LLP}
+\\fancyfoot[R]{ABC ltd.}
 
 % Apply the same style to the first page (plain style)
 \\fancypagestyle{plain}{%
@@ -319,10 +319,10 @@ ${preamble}
   \\renewcommand{\\headrulewidth}{0.4pt}
   \\renewcommand{\\footrulewidth}{0.4pt}
   \\fancyhead[L]{${logoExists ? `\\includegraphics[height=0.8cm]{${relativeLogoPath}}` : ""}}
-  \\fancyhead[R]{Levofloxacin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
+  \\fancyhead[R]{Aspirin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
   \\fancyfoot[L]{Confidential}
   \\fancyfoot[C]{\\thepage}
-  \\fancyfoot[R]{Acme Lifetech LLP}
+  \\fancyfoot[R]{ABC ltd.}
 }
 
 \\begin{document}

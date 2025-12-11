@@ -25,8 +25,17 @@ export class SubmissionsTreeDataProvider implements vscode.TreeDataProvider<File
 	}
 
 	setSubmissionsFolder(folderPath: string) {
-		this.submissionsFolder = folderPath
-		this.setupWatcher()
+		if (folderPath === "") {
+			// Clear the folder
+			this.submissionsFolder = undefined
+			if (this._folderWatcher) {
+				this._folderWatcher.dispose()
+				this._folderWatcher = undefined
+			}
+		} else {
+			this.submissionsFolder = folderPath
+			this.setupWatcher()
+		}
 		this.refresh()
 	}
 

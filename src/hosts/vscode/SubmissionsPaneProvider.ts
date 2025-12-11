@@ -32,12 +32,26 @@ export class SubmissionsPaneProvider {
 			this._suggestSubmissionsFolder()
 		})
 
+		// Don't show explorer by default when a new window opens
+		// this._ensureViewVisible()
+
 		// Initialize with current workspace
 		this._initializeView()
 	}
 
 	public static getInstance(): SubmissionsPaneProvider | undefined {
 		return SubmissionsPaneProvider._instance
+	}
+
+	private async _ensureViewVisible() {
+		// Ensure the Explorer viewlet is open (which contains the Submissions view)
+		// This ensures the Submissions view is visible and accessible
+		try {
+			await vscode.commands.executeCommand("workbench.view.explorer")
+		} catch (error) {
+			// Ignore errors if command doesn't exist or view is already visible
+			console.log("Could not ensure view visibility:", error)
+		}
 	}
 
 	private async _initializeView() {
@@ -108,9 +122,10 @@ export class SubmissionsPaneProvider {
 		pdfManager.setProgressUIStarter(async () => {
 			// This will be called when processing starts from a new file
 			// We'll show progress UI and return the reporter
-			return new Promise<{ report: (value: { message?: string; increment?: number }) => void }>((resolve) => {
-				// Start progress UI (non-blocking, but we need to return the reporter)
-				vscode.window.withProgress(
+			return new Promise<{ report: (value: { message?: string; increment?: number }) => void }>((resolve, reject) => {
+				// Start progress UI - the callback will be invoked asynchronously
+				// We need to resolve the promise when the progress callback is actually called
+				const progressPromise = vscode.window.withProgress(
 					{
 						location: vscode.ProgressLocation.Notification,
 						title: "PDF Processing (New File)",
@@ -121,19 +136,36 @@ export class SubmissionsPaneProvider {
 							pdfManager.cancel()
 						})
 
-						// Create and return the progress reporter immediately
+						// Create the progress reporter
 						const progressReporter = {
-							report: (value: { message?: string; increment?: number }) => progress.report(value),
+							report: (value: { message?: string; increment?: number }) => {
+								try {
+									progress.report(value)
+								} catch (error) {
+									console.error("Error reporting progress:", error)
+								}
+							},
 						}
 
-						// Resolve the promise with the reporter
+						// Resolve the outer promise with the reporter
+						// This happens when the progress UI is actually shown
 						resolve(progressReporter)
 
-						// Wait indefinitely to keep the progress UI open
-						// The progress UI will close when processing completes
-						await new Promise<never>(() => {
-							// Never resolve - keep progress UI open until processing completes
+						// Keep the progress UI open by waiting indefinitely
+						// The UI will stay open until processing completes
+						await new Promise<void>(() => {
+							// Never resolve - keeps progress UI open during processing
 						})
+					},
+				)
+
+				// Handle any errors from withProgress
+				progressPromise.then(
+					() => {
+						// Progress completed normally
+					},
+					(error: unknown) => {
+						reject(error)
 					},
 				)
 			})
@@ -165,6 +197,7 @@ export class SubmissionsPaneProvider {
 
 	/**
 	 * Hides the submissions folder from the VS Code explorer by updating files.exclude setting
+	 * Also hides items/folders starting with "."
 	 */
 	private async _hideSubmissionsFolderFromExplorer(submissionsFolderPath: string, workspaceRoot: string): Promise<void> {
 		try {
@@ -177,22 +210,27 @@ export class SubmissionsPaneProvider {
 			}
 
 			// Normalize path separators for the pattern (use forward slashes for glob patterns)
-			const folderName = path.basename(relativePath) || relativePath
-			const excludePattern = folderName === relativePath ? `**/${folderName}/**` : relativePath.replace(/\\/g, "/") + "/**"
+			const excludePattern = relativePath.replace(/\\/g, "/") + "/**"
 
 			// Get current files.exclude configuration
 			const config = vscode.workspace.getConfiguration("files")
 			const currentExclude: Record<string, boolean> = config.get("exclude") || {}
 
 			// Add submissions folder to exclude if not already excluded
-			if (!currentExclude[excludePattern] && !currentExclude[folderName]) {
-				// Try the most specific pattern first
-				const patternToUse = excludePattern
-				currentExclude[patternToUse] = true
-
-				// Update the workspace configuration
-				await config.update("exclude", currentExclude, vscode.ConfigurationTarget.Workspace)
+			if (!currentExclude[excludePattern]) {
+				currentExclude[excludePattern] = true
 			}
+
+			// Also hide items/folders starting with "."
+			if (!currentExclude["**/.*"]) {
+				currentExclude["**/.*"] = true
+			}
+			if (!currentExclude["**/.*/**"]) {
+				currentExclude["**/.*/**"] = true
+			}
+
+			// Update the workspace configuration
+			await config.update("exclude", currentExclude, vscode.ConfigurationTarget.Workspace)
 		} catch (error) {
 			// Silently fail - hiding from explorer is not critical
 			console.error("Failed to hide submissions folder from explorer:", error)
@@ -404,11 +442,45 @@ export class SubmissionsPaneProvider {
 	}
 
 	public getSubmissionsFolder(): string | undefined {
-		return this._treeDataProvider.getSubmissionsFolder()
+		// First try to get from tree data provider
+		const folder = this._treeDataProvider.getSubmissionsFolder()
+		if (folder) {
+			return folder
+		}
+
+		// Fallback: Try to get from saved config
+		return this._getSavedConfigSync()
+	}
+
+	private _getSavedConfigSync(): string | undefined {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+		if (!workspaceFolder) {
+			return undefined
+		}
+
+		const configKey = `submissions.config.${workspaceFolder.uri.fsPath}`
+		const config = this._context.workspaceState.get<SubmissionsFolderConfig>(configKey)
+		return config?.submissionsPath
 	}
 
 	public async setSubmissionsFolder(folderPath: string) {
 		await this._setSubmissionsFolder(folderPath)
+	}
+
+	public async clearSubmissionsFolder() {
+		// Clear the folder from the tree data provider
+		this._treeDataProvider.setSubmissionsFolder("")
+		this._treeDataProvider.refresh()
+
+		// Clear the saved config
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+		if (workspaceFolder) {
+			const configKey = `submissions.config.${workspaceFolder.uri.fsPath}`
+			await this._context.workspaceState.update(configKey, undefined)
+		}
+
+		// Show welcome message
+		this._updateTreeMessage("No submissions folder set. Use the folder icon to select or create one.")
 	}
 
 	dispose() {

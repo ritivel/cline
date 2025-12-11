@@ -53,7 +53,12 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		userInfo,
 		currentFocusChainChecklist,
 		hooksEnabled,
+		currentRegulatoryProduct,
 	} = useExtensionState()
+
+	// Don't show navbar when there's no active product (tabs header will be shown instead in App.tsx)
+	const hasActiveProduct = !!currentRegulatoryProduct
+	const shouldShowNavbar = showNavbar && hasActiveProduct
 	const isProdHostedApp = userInfo?.apiBaseUrl === "https://app.cline.bot"
 	const shouldShowQuickWins = isProdHostedApp && (!taskHistory || taskHistory.length < QUICK_WINS_HISTORY_THRESHOLD)
 
@@ -376,7 +381,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 	return (
 		<ChatLayout isHidden={isHidden}>
 			<div className="flex flex-col flex-1 overflow-hidden">
-				{showNavbar && <Navbar />}
+				{shouldShowNavbar && <Navbar />}
 				{task ? (
 					<TaskSection
 						apiMetrics={apiMetrics}

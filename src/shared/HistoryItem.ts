@@ -1,3 +1,5 @@
+import { RegulatoryProductConfig } from "./storage/state-keys"
+
 export type HistoryItem = {
 	id: string
 	ulid?: string // ULID for better tracking and metrics
@@ -17,4 +19,5 @@ export type HistoryItem = {
 	checkpointManagerErrorMessage?: string
 
 	modelId?: string
+	regulatoryProduct?: RegulatoryProductConfig
 }

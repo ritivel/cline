@@ -10,6 +10,7 @@ import { HistoryItem } from "@/shared/HistoryItem"
 import { ClineStorageMessage } from "@/shared/messages/content"
 import { getCwd, getDesktopDir } from "@/utils/path"
 import { ensureTaskDirectoryExists, saveApiConversationHistory, saveClineMessages } from "../storage/disk"
+import { StateManager } from "../storage/StateManager"
 import { TaskState } from "./TaskState"
 
 interface MessageStateHandlerParams {
@@ -18,6 +19,7 @@ interface MessageStateHandlerParams {
 	taskIsFavorited?: boolean
 	updateTaskHistory: (historyItem: HistoryItem) => Promise<HistoryItem[]>
 	taskState: TaskState
+	stateManager: StateManager
 	checkpointManagerErrorMessage?: string
 }
 
@@ -30,6 +32,7 @@ export class MessageStateHandler {
 	private taskId: string
 	private ulid: string
 	private taskState: TaskState
+	private stateManager: StateManager
 
 	// Mutex to prevent concurrent state modifications (RC-4)
 	// Protects against data loss from race conditions when multiple
@@ -43,6 +46,7 @@ export class MessageStateHandler {
 		this.taskState = params.taskState
 		this.taskIsFavorited = params.taskIsFavorited ?? false
 		this.updateTaskHistory = params.updateTaskHistory
+		this.stateManager = params.stateManager
 	}
 
 	setCheckpointTracker(tracker: CheckpointTracker | undefined) {
@@ -104,6 +108,7 @@ export class MessageStateHandler {
 				console.error("Failed to get task directory size:", taskDir, error)
 			}
 			const cwd = await getCwd(getDesktopDir())
+			const currentProduct = this.stateManager.getGlobalStateKey("currentRegulatoryProduct")
 			await this.updateTaskHistory({
 				id: this.taskId,
 				ulid: this.ulid,
@@ -121,6 +126,7 @@ export class MessageStateHandler {
 				isFavorited: this.taskIsFavorited,
 				checkpointManagerErrorMessage: this.taskState.checkpointManagerErrorMessage,
 				modelId: lastModelInfo?.modelInfo?.modelId,
+				regulatoryProduct: currentProduct,
 			})
 		} catch (error) {
 			console.error("Failed to save cline messages:", error)

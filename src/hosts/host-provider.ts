@@ -42,6 +42,9 @@ export class HostProvider {
 	// The absolute file system path where the extension can store global state.
 	globalStorageFsPath: string
 
+	// Sets a context value for the host (used for conditional UI in VS Code)
+	setContext: SetContext
+
 	// Private constructor to enforce singleton pattern
 	private constructor(
 		createWebviewProvider: WebviewProviderCreator,
@@ -53,6 +56,7 @@ export class HostProvider {
 		getBinaryLocation: (name: string) => Promise<string>,
 		extensionFsPath: string,
 		globalStorageFsPath: string,
+		setContext: SetContext,
 	) {
 		this.createWebviewProvider = createWebviewProvider
 		this.createDiffViewProvider = createDiffViewProvider
@@ -63,6 +67,7 @@ export class HostProvider {
 		this.getBinaryLocation = getBinaryLocation
 		this.extensionFsPath = extensionFsPath
 		this.globalStorageFsPath = globalStorageFsPath
+		this.setContext = setContext
 	}
 
 	public static initialize(
@@ -75,6 +80,7 @@ export class HostProvider {
 		getBinaryLocation: (name: string) => Promise<string>,
 		extensionFsPath: string,
 		globalStorageFsPath: string,
+		setContext: SetContext = () => {},
 	): HostProvider {
 		if (HostProvider.instance) {
 			throw new Error("Host provider has already been initialized.")
@@ -89,6 +95,7 @@ export class HostProvider {
 			getBinaryLocation,
 			extensionFsPath,
 			globalStorageFsPath,
+			setContext,
 		)
 		return HostProvider.instance
 	}
@@ -148,3 +155,5 @@ export type DiffViewProviderCreator = () => DiffViewProvider
 export type CommentReviewControllerCreator = () => CommentReviewController
 
 export type LogToChannel = (message: string) => void
+
+export type SetContext = (key: string, value: any) => void
