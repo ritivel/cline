@@ -4,8 +4,6 @@ import fs from "fs"
 import path from "path"
 import { Readable } from "stream"
 import { fetch, getAxiosSettings } from "@/shared/net"
-// Use the new template-driven classifier with pre-generated prompts
-import { CtdClassifierServiceV2 as CtdClassifierService } from "./CtdClassifierServiceV2"
 import { PdfMetadataService } from "./PdfMetadataService"
 import { PdfProcessingTracker } from "./PdfProcessingTracker"
 
@@ -49,7 +47,6 @@ export class PdfProcessingService {
 	private readonly maxConcurrentDownloads: number
 	private abortController: AbortController | null = null
 	private readonly metadataService: PdfMetadataService
-	private readonly ctdClassifierService: CtdClassifierService
 	private trackerCache: Map<string, PdfProcessingTracker> = new Map()
 
 	constructor(
@@ -63,7 +60,6 @@ export class PdfProcessingService {
 		this.maxConcurrentUploads = maxConcurrentUploads
 		this.maxConcurrentDownloads = maxConcurrentDownloads
 		this.metadataService = new PdfMetadataService()
-		this.ctdClassifierService = new CtdClassifierService()
 	}
 
 	/**
@@ -92,10 +88,14 @@ export class PdfProcessingService {
 
 	/**
 	 * Recursively finds all PDF files in the workspace
+	 * Excludes PDFs within the submissions folder
 	 */
-	private async findPdfFiles(workspaceRoot: string): Promise<string[]> {
+	private async findPdfFiles(workspaceRoot: string, submissionsFolder?: string): Promise<string[]> {
 		const pdfFiles: string[] = []
-		const excludedDirs = new Set(["dossier", "documents", ".git", "node_modules", "submissions"])
+		const excludedDirs = new Set([".git", "node_modules"])
+
+		// Normalize and resolve paths for comparison (ensure absolute paths)
+		const normalizedSubmissionsFolder = submissionsFolder ? path.resolve(path.normalize(submissionsFolder)) : undefined
 
 		async function traverse(currentPath: string): Promise<void> {
 			let entries
@@ -107,6 +107,16 @@ export class PdfProcessingService {
 
 			for (const entry of entries) {
 				const fullPath = path.join(currentPath, entry.name)
+				const normalizedFullPath = path.resolve(path.normalize(fullPath))
+
+				// Skip if this path is within or equals the submissions folder
+				if (
+					normalizedSubmissionsFolder &&
+					(normalizedFullPath === normalizedSubmissionsFolder ||
+						normalizedFullPath.startsWith(normalizedSubmissionsFolder + path.sep))
+				) {
+					continue
+				}
 
 				if (entry.isDirectory()) {
 					if (!excludedDirs.has(entry.name)) {
@@ -316,21 +326,13 @@ export class PdfProcessingService {
 
 			if (alreadyProcessed) {
 				skippedCount++
-				// Still run metadata and classification for existing folders (in case they need updates)
+				// Still run metadata extraction for existing folders (in case they need updates)
 				try {
 					const relativePath = path.relative(outputDir, expectedOutputPath)
 					// Get source hash from tracker to include in metadata
 					const sourceHash = await tracker.getSourceHash(pdfPath)
 					const sourcePath = path.relative(workspaceRoot, pdfPath)
-					const extracted = await this.metadataService.extractMetadataForFolder(
-						expectedOutputPath,
-						relativePath,
-						sourceHash,
-						sourcePath,
-					)
-					if (extracted) {
-						await this.ctdClassifierService.classifyFolder(expectedOutputPath, relativePath, workspaceRoot)
-					}
+					await this.metadataService.extractMetadataForFolder(expectedOutputPath, relativePath, sourceHash, sourcePath)
 				} catch (error) {
 					console.error(`Error processing existing folder for ${pdfPath}:`, error)
 				}
@@ -383,28 +385,6 @@ export class PdfProcessingService {
 				)
 				if (extracted && onProgress) {
 					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
-				}
-
-				// Run CTD classification after metadata extraction (for existing folders)
-				if (extracted) {
-					try {
-						if (onProgress) {
-							onProgress("classification", `Classifying ${path.basename(pdfName)} into CTD modules...`)
-						}
-						const classified = await this.ctdClassifierService.classifyFolder(
-							extractPath,
-							path.relative(outputDir, extractPath),
-							workspaceRoot,
-						)
-						if (classified && onProgress) {
-							onProgress("classification", `CTD classification complete for ${path.basename(pdfName)}`)
-						}
-					} catch (classificationError) {
-						console.error(`Failed to classify ${pdfName}:`, classificationError)
-						if (onProgress) {
-							onProgress("error", `CTD classification failed for ${path.basename(pdfName)}`)
-						}
-					}
 				}
 			} catch (metadataError) {
 				console.error(`Failed to extract metadata for existing folder ${pdfName}:`, metadataError)
@@ -480,29 +460,6 @@ export class PdfProcessingService {
 				)
 				if (extracted && onProgress) {
 					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
-				}
-
-				// Run CTD classification after metadata extraction
-				if (extracted) {
-					try {
-						if (onProgress) {
-							onProgress("classification", `Classifying ${path.basename(pdfName)} into CTD modules...`)
-						}
-						const classified = await this.ctdClassifierService.classifyFolder(
-							extractPath,
-							path.relative(outputDir, extractPath),
-							workspaceRoot,
-						)
-						if (classified && onProgress) {
-							onProgress("classification", `CTD classification complete for ${path.basename(pdfName)}`)
-						}
-					} catch (classificationError) {
-						console.error(`Failed to classify ${pdfName}:`, classificationError)
-						if (onProgress) {
-							onProgress("error", `CTD classification failed for ${path.basename(pdfName)}`)
-						}
-						// Don't fail the whole process for classification errors
-					}
 				}
 
 				// Mark as processed in tracker after successful extraction and metadata processing
@@ -753,11 +710,11 @@ export class PdfProcessingService {
 		try {
 			if (signal.aborted) throw new Error("Operation cancelled")
 
-			// Stage 1: Find PDF files in workspace root
+			// Stage 1: Find PDF files in workspace root (excluding submissions folder)
 			if (onProgress) {
 				onProgress("discovering", "Scanning workspace for PDF files...")
 			}
-			const allPdfFiles = await this.findPdfFiles(workspaceRoot)
+			const allPdfFiles = await this.findPdfFiles(workspaceRoot, submissionsFolder)
 
 			if (allPdfFiles.length === 0) {
 				if (onProgress) {

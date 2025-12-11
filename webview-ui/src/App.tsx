@@ -4,7 +4,9 @@ import AccountView from "./components/account/AccountView"
 import ChatView from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import McpView from "./components/mcp/configuration/McpConfigurationView"
+import NoProductTabsView from "./components/no-product/NoProductTabsView"
 import OnboardingView from "./components/onboarding/OnboardingView"
+import ProductsView from "./components/products/ProductsView"
 import SettingsView from "./components/settings/SettingsView"
 import WelcomeView from "./components/welcome/WelcomeView"
 import { useClineAuth } from "./context/ClineAuthContext"
@@ -22,15 +24,20 @@ const AppContent = () => {
 		showSettings,
 		settingsTargetSection,
 		showHistory,
+		showProducts,
 		showAccount,
 		showAnnouncement,
 		onboardingModels,
+		showRegulatoryOnboarding,
+		currentRegulatoryProduct,
+		noProductInitialTab,
 		setShowAnnouncement,
 		setShouldShowAnnouncement,
 		closeMcpView,
 		navigateToHistory,
 		hideSettings,
 		hideHistory,
+		hideProducts,
 		hideAccount,
 		hideAnnouncement,
 	} = useExtensionState()
@@ -60,10 +67,19 @@ const AppContent = () => {
 		return onboardingModels ? <OnboardingView onboardingModels={onboardingModels} /> : <WelcomeView />
 	}
 
+	// Check if there's an active product
+	const hasActiveProduct = !!currentRegulatoryProduct
+
+	// If no product is active and no other views are shown, show the three-tab interface
+	// Include showRegulatoryOnboarding case - when true, show tabs with "create" tab active
+	const shouldShowNoProductTabs =
+		!hasActiveProduct && !showSettings && !showHistory && !showProducts && !showMcp && !showAccount
+
 	return (
 		<div className="flex h-screen w-full flex-col">
 			{showSettings && <SettingsView onDone={hideSettings} targetSection={settingsTargetSection} />}
 			{showHistory && <HistoryView onDone={hideHistory} />}
+			{showProducts && <ProductsView onDone={hideProducts} />}
 			{showMcp && <McpView initialTab={mcpTab} onDone={closeMcpView} />}
 			{showAccount && (
 				<AccountView
@@ -73,10 +89,21 @@ const AppContent = () => {
 					organizations={organizations}
 				/>
 			)}
+			{shouldShowNoProductTabs && (
+				<NoProductTabsView initialTab={showRegulatoryOnboarding ? "create" : noProductInitialTab} />
+			)}
 			{/* Do not conditionally load ChatView, it's expensive and there's state we don't want to lose (user input, disableInput, askResponse promise, etc.) */}
 			<ChatView
 				hideAnnouncement={hideAnnouncement}
-				isHidden={showSettings || showHistory || showMcp || showAccount}
+				isHidden={
+					showSettings ||
+					showHistory ||
+					showProducts ||
+					showMcp ||
+					showAccount ||
+					showRegulatoryOnboarding ||
+					shouldShowNoProductTabs
+				}
 				showAnnouncement={showAnnouncement}
 				showHistoryView={navigateToHistory}
 			/>

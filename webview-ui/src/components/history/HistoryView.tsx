@@ -1,12 +1,13 @@
 import { BooleanRequest, EmptyRequest, StringArrayRequest, StringRequest } from "@shared/proto/cline/common"
 import { GetTaskHistoryRequest, TaskFavoriteRequest } from "@shared/proto/cline/task"
+import type { RegulatoryProductConfig } from "@shared/storage/state-keys"
 import { VSCodeButton, VSCodeCheckbox, VSCodeRadio, VSCodeRadioGroup, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import Fuse, { FuseResult } from "fuse.js"
 import { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { Virtuoso } from "react-virtuoso"
 import DangerButton from "@/components/common/DangerButton"
 import { useExtensionState } from "@/context/ExtensionStateContext"
-import { TaskServiceClient } from "@/services/grpc-client"
+import { TaskServiceClient, UiServiceClient } from "@/services/grpc-client"
 import { getEnvironmentColor } from "@/utils/environmentColors"
 import { formatLargeNumber, formatSize } from "@/utils/format"
 
@@ -61,6 +62,49 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 
 	// Load filtered task history with gRPC
 	const [tasks, setTasks] = useState<any[]>([])
+
+	// Products state
+	const [products, setProducts] = useState<RegulatoryProductConfig[]>([])
+	const [showProductSelector, setShowProductSelector] = useState(false)
+
+	// Load products on mount
+	useEffect(() => {
+		const loadProducts = async () => {
+			try {
+				console.log("[DEBUG] Loading regulatory products...")
+				const response = await UiServiceClient.getRegulatoryProducts(EmptyRequest.create({}))
+				console.log("[DEBUG] getRegulatoryProducts response:", response.value)
+				if (response.value) {
+					const parsedProducts = JSON.parse(response.value) as RegulatoryProductConfig[]
+					console.log("[DEBUG] Parsed products:", parsedProducts)
+					setProducts(parsedProducts)
+					if (parsedProducts.length > 0) {
+						console.log("[DEBUG] Found products, showing product selector")
+						setShowProductSelector(true)
+					} else {
+						console.log("[DEBUG] No products found")
+					}
+				} else {
+					console.log("[DEBUG] No response value from getRegulatoryProducts")
+				}
+			} catch (error) {
+				console.error("[DEBUG] Error loading regulatory products:", error)
+			}
+		}
+		loadProducts()
+	}, [])
+
+	// Handle product selection
+	const handleProductSelect = useCallback(async (product: RegulatoryProductConfig) => {
+		try {
+			await UiServiceClient.openRegulatoryProduct(StringRequest.create({ value: JSON.stringify(product) }))
+			// Reload the webview to ensure explorer and submissions panes are updated
+			// The workspace folder change will trigger a reload, but we ensure it happens
+			window.location.reload()
+		} catch (error) {
+			console.error("Error opening regulatory product:", error)
+		}
+	}, [])
 
 	// Load and refresh task history
 	const loadTaskHistory = useCallback(async () => {
@@ -277,15 +321,49 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	)
 
 	return (
-		<>
-			<style>
-				{`
-					.history-item:hover {
-						background-color: var(--vscode-list-hoverBackground);
-					}
-					.delete-button, .export-button {
-						opacity: 0;
-						pointer-events: none;
+		<div className="flex flex-col h-full">
+			{/* Products Section - Show at top if products exist */}
+			{showProductSelector && products.length > 0 && (
+				<div className="border-b border-panel-border p-4 flex-shrink-0">
+					<h3 className="text-sm font-semibold mb-3">Select a Product</h3>
+					<div className="grid grid-cols-1 gap-2 mb-3">
+						{products.map((product, index) => (
+							<button
+								className="text-left p-3 rounded border border-panel-border hover:bg-list-hoverBackground transition-colors"
+								key={index}
+								onClick={() => handleProductSelect(product)}>
+								<div className="font-medium">{product.drugName}</div>
+								<div className="text-sm text-descriptionForeground">{product.marketName}</div>
+								<div className="text-xs text-descriptionForeground mt-1 truncate">{product.workspacePath}</div>
+							</button>
+						))}
+					</div>
+					<VSCodeButton appearance="secondary" onClick={() => setShowProductSelector(false)}>
+						Show Task History Instead
+					</VSCodeButton>
+				</div>
+			)}
+
+			{/* Show button to view products if they exist but selector is hidden */}
+			{!showProductSelector && products.length > 0 && (
+				<div className="border-b border-panel-border p-4 flex-shrink-0">
+					<VSCodeButton appearance="secondary" className="w-full" onClick={() => setShowProductSelector(true)}>
+						View Products ({products.length})
+					</VSCodeButton>
+				</div>
+			)}
+
+			{/* Existing task history section */}
+			{!showProductSelector && (
+				<>
+					<style>
+						{`
+							.history-item:hover {
+								background-color: var(--vscode-list-hoverBackground);
+							}
+							.delete-button, .export-button {
+								opacity: 0;
+								pointer-events: none;
 					}
 					.history-item:hover .delete-button,
 					.history-item:hover .export-button {
@@ -297,413 +375,423 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						color: inherit;
 					}
 				`}
-			</style>
-			<div className="fixed overflow-hidden inset-0 flex flex-col">
-				<div
-					style={{
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						padding: "10px 17px 10px 20px",
-					}}>
-					<h3
-						style={{
-							color: getEnvironmentColor(environment),
-							margin: 0,
-						}}>
-						History
-					</h3>
-					<VSCodeButton onClick={() => onDone()}>Done</VSCodeButton>
-				</div>
-				<div style={{ padding: "5px 17px 6px 17px" }}>
-					<div className="flex flex-col gap-3">
-						<VSCodeTextField
-							onInput={(e) => {
-								const newValue = (e.target as HTMLInputElement)?.value
-								setSearchQuery(newValue)
-								if (newValue && !searchQuery && sortOption !== "mostRelevant") {
-									setLastNonRelevantSort(sortOption)
-									setSortOption("mostRelevant")
-								}
-							}}
-							placeholder="Fuzzy search history..."
-							style={{ width: "100%" }}
-							value={searchQuery}>
-							<div
-								className="codicon codicon-search"
-								slot="start"
+					</style>
+					<div className="fixed overflow-hidden inset-0 flex flex-col">
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								padding: "10px 17px 10px 20px",
+							}}>
+							<h3
 								style={{
-									fontSize: 13,
-									marginTop: 2.5,
-									opacity: 0.8,
-								}}></div>
-							{searchQuery && (
-								<div
-									aria-label="Clear search"
-									className="input-icon-button codicon codicon-close"
-									onClick={() => setSearchQuery("")}
-									slot="end"
-									style={{
-										display: "flex",
-										justifyContent: "center",
-										alignItems: "center",
-										height: "100%",
-									}}
-								/>
-							)}
-						</VSCodeTextField>
-						<VSCodeRadioGroup
-							className="flex flex-wrap"
-							onChange={(e) => setSortOption((e.target as HTMLInputElement).value as SortOption)}
-							value={sortOption}>
-							<VSCodeRadio value="newest">Newest</VSCodeRadio>
-							<VSCodeRadio value="oldest">Oldest</VSCodeRadio>
-							<VSCodeRadio value="mostExpensive">Most Expensive</VSCodeRadio>
-							<VSCodeRadio value="mostTokens">Most Tokens</VSCodeRadio>
-							<VSCodeRadio disabled={!searchQuery} style={{ opacity: searchQuery ? 1 : 0.5 }} value="mostRelevant">
-								Most Relevant
-							</VSCodeRadio>
-							<CustomFilterRadio
-								checked={showCurrentWorkspaceOnly}
-								icon="workspace"
-								label="Workspace"
-								onChange={() => setShowCurrentWorkspaceOnly(!showCurrentWorkspaceOnly)}
-							/>
-							<CustomFilterRadio
-								checked={showFavoritesOnly}
-								icon="star-full"
-								label="Favorites"
-								onChange={() => setShowFavoritesOnly(!showFavoritesOnly)}
-							/>
-						</VSCodeRadioGroup>
-
-						<div className="flex justify-end gap-2.5">
-							<VSCodeButton onClick={() => handleBatchHistorySelect(true)}>Select All</VSCodeButton>
-							<VSCodeButton onClick={() => handleBatchHistorySelect(false)}>Select None</VSCodeButton>
-						</div>
-					</div>
-				</div>
-				<div style={{ flexGrow: 1, overflowY: "auto", margin: 0 }}>
-					<Virtuoso
-						data={taskHistorySearchResults}
-						itemContent={(index, item) => (
-							<div
-								className="history-item"
-								key={item.id}
-								style={{
-									cursor: "pointer",
-									borderBottom:
-										index < taskHistory.length - 1 ? "1px solid var(--vscode-panel-border)" : "none",
-									display: "flex",
+									color: getEnvironmentColor(environment),
+									margin: 0,
 								}}>
-								<VSCodeCheckbox
-									checked={selectedItems.includes(item.id)}
-									className="pl-3 pr-1 py-auto"
-									onClick={(e) => {
-										const checked = (e.target as HTMLInputElement).checked
-										handleHistorySelect(item.id, checked)
-										e.stopPropagation()
+								History
+							</h3>
+							<VSCodeButton onClick={() => onDone()}>Done</VSCodeButton>
+						</div>
+						<div style={{ padding: "5px 17px 6px 17px" }}>
+							<div className="flex flex-col gap-3">
+								<VSCodeTextField
+									onInput={(e) => {
+										const newValue = (e.target as HTMLInputElement)?.value
+										setSearchQuery(newValue)
+										if (newValue && !searchQuery && sortOption !== "mostRelevant") {
+											setLastNonRelevantSort(sortOption)
+											setSortOption("mostRelevant")
+										}
 									}}
-								/>
-								<div
-									onClick={() => handleShowTaskWithId(item.id)}
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "8px",
-										padding: "12px 20px",
-										paddingLeft: "16px",
-										position: "relative",
-										flexGrow: 1,
-									}}>
+									placeholder="Fuzzy search history..."
+									style={{ width: "100%" }}
+									value={searchQuery}>
 									<div
+										className="codicon codicon-search"
+										slot="start"
 										style={{
-											display: "flex",
-											justifyContent: "space-between",
-											alignItems: "center",
-										}}>
-										<span
-											style={{
-												color: "var(--vscode-descriptionForeground)",
-												fontWeight: 500,
-												fontSize: "0.85em",
-												textTransform: "uppercase",
-											}}>
-											{formatDate(item.ts)}
-										</span>
-										<div style={{ display: "flex", gap: "4px" }}>
-											{/* only show delete button if task not favorited */}
-											{!(pendingFavoriteToggles[item.id] ?? item.isFavorited) && (
-												<VSCodeButton
-													appearance="icon"
-													aria-label="Delete"
-													className="delete-button"
-													onClick={(e) => {
-														e.stopPropagation()
-														handleDeleteHistoryItem(item.id)
-													}}
-													style={{ padding: "0px 0px" }}>
-													<div
-														style={{
-															display: "flex",
-															alignItems: "center",
-															gap: "3px",
-															fontSize: "11px",
-														}}>
-														<span className="codicon codicon-trash"></span>
-														{formatSize(item.size)}
-													</div>
-												</VSCodeButton>
-											)}
-											<VSCodeButton
-												appearance="icon"
-												aria-label={item.isFavorited ? "Remove from favorites" : "Add to favorites"}
-												onClick={(e) => {
-													e.stopPropagation()
-													toggleFavorite(item.id, item.isFavorited || false)
-												}}
-												style={{ padding: "0px" }}>
-												<div
-													className={`codicon ${
-														pendingFavoriteToggles[item.id] !== undefined
-															? pendingFavoriteToggles[item.id]
-																? "codicon-star-full"
-																: "codicon-star-empty"
-															: item.isFavorited
-																? "codicon-star-full"
-																: "codicon-star-empty"
-													}`}
-													style={{
-														color:
-															(pendingFavoriteToggles[item.id] ?? item.isFavorited)
-																? "var(--vscode-button-background)"
-																: "inherit",
-														opacity: (pendingFavoriteToggles[item.id] ?? item.isFavorited) ? 1 : 0.7,
-														display:
-															(pendingFavoriteToggles[item.id] ?? item.isFavorited)
-																? "block"
-																: undefined,
-													}}
-												/>
-											</VSCodeButton>
-										</div>
-									</div>
-
-									<div style={{ marginBottom: "8px", position: "relative" }}>
+											fontSize: 13,
+											marginTop: 2.5,
+											opacity: 0.8,
+										}}></div>
+									{searchQuery && (
 										<div
-											style={{
-												fontSize: "var(--vscode-font-size)",
-												color: "var(--vscode-foreground)",
-												display: "-webkit-box",
-												WebkitLineClamp: 3,
-												WebkitBoxOrient: "vertical",
-												overflow: "hidden",
-												whiteSpace: "pre-wrap",
-												wordBreak: "break-word",
-												overflowWrap: "anywhere",
-											}}>
-											<span
-												className="ph-no-capture"
-												dangerouslySetInnerHTML={{
-													__html: item.task,
-												}}
-											/>
-										</div>
-									</div>
-									<div
-										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: "4px",
-										}}>
-										<div
+											aria-label="Clear search"
+											className="input-icon-button codicon codicon-close"
+											onClick={() => setSearchQuery("")}
+											slot="end"
 											style={{
 												display: "flex",
-												justifyContent: "space-between",
+												justifyContent: "center",
 												alignItems: "center",
-											}}>
-											<div
-												style={{
-													display: "flex",
-													alignItems: "center",
-													gap: "4px",
-													flexWrap: "wrap",
-												}}>
-												<span
-													style={{
-														fontWeight: 500,
-														color: "var(--vscode-descriptionForeground)",
-													}}>
-													Tokens:
-												</span>
-												<span
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "3px",
-														color: "var(--vscode-descriptionForeground)",
-													}}>
-													<i
-														className="codicon codicon-arrow-up"
-														style={{
-															fontSize: "12px",
-															fontWeight: "bold",
-															marginBottom: "-2px",
-														}}
-													/>
-													{formatLargeNumber(item.tokensIn || 0)}
-												</span>
-												<span
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "3px",
-														color: "var(--vscode-descriptionForeground)",
-													}}>
-													<i
-														className="codicon codicon-arrow-down"
-														style={{
-															fontSize: "12px",
-															fontWeight: "bold",
-															marginBottom: "-2px",
-														}}
-													/>
-													{formatLargeNumber(item.tokensOut || 0)}
-												</span>
-											</div>
-											{!item.totalCost && <ExportButton itemId={item.id} />}
-										</div>
+												height: "100%",
+											}}
+										/>
+									)}
+								</VSCodeTextField>
+								<VSCodeRadioGroup
+									className="flex flex-wrap"
+									onChange={(e) => setSortOption((e.target as HTMLInputElement).value as SortOption)}
+									value={sortOption}>
+									<VSCodeRadio value="newest">Newest</VSCodeRadio>
+									<VSCodeRadio value="oldest">Oldest</VSCodeRadio>
+									<VSCodeRadio value="mostExpensive">Most Expensive</VSCodeRadio>
+									<VSCodeRadio value="mostTokens">Most Tokens</VSCodeRadio>
+									<VSCodeRadio
+										disabled={!searchQuery}
+										style={{ opacity: searchQuery ? 1 : 0.5 }}
+										value="mostRelevant">
+										Most Relevant
+									</VSCodeRadio>
+									<CustomFilterRadio
+										checked={showCurrentWorkspaceOnly}
+										icon="workspace"
+										label="Workspace"
+										onChange={() => setShowCurrentWorkspaceOnly(!showCurrentWorkspaceOnly)}
+									/>
+									<CustomFilterRadio
+										checked={showFavoritesOnly}
+										icon="star-full"
+										label="Favorites"
+										onChange={() => setShowFavoritesOnly(!showFavoritesOnly)}
+									/>
+								</VSCodeRadioGroup>
 
-										{!!(item.cacheWrites || item.cacheReads) && (
-											<div
-												style={{
-													display: "flex",
-													alignItems: "center",
-													gap: "4px",
-													flexWrap: "wrap",
-												}}>
-												<span
-													style={{
-														fontWeight: 500,
-														color: "var(--vscode-descriptionForeground)",
-													}}>
-													Cache:
-												</span>
-												{item.cacheWrites > 0 && (
-													<span
-														style={{
-															display: "flex",
-															alignItems: "center",
-															gap: "3px",
-															color: "var(--vscode-descriptionForeground)",
-														}}>
-														<i
-															className="codicon codicon-arrow-right"
-															style={{
-																fontSize: "12px",
-																fontWeight: "bold",
-																marginBottom: "-1px",
-															}}
-														/>
-														{formatLargeNumber(item.cacheWrites)}
-													</span>
-												)}
-												{item.cacheReads > 0 && (
-													<span
-														style={{
-															display: "flex",
-															alignItems: "center",
-															gap: "3px",
-															color: "var(--vscode-descriptionForeground)",
-														}}>
-														<i
-															className="codicon codicon-arrow-left"
-															style={{
-																fontSize: "12px",
-																fontWeight: "bold",
-																marginBottom: 0,
-															}}
-														/>
-														{formatLargeNumber(item.cacheReads)}
-													</span>
-												)}
-											</div>
-										)}
-										{item.modelId && <div className="text-description">Model: {item.modelId}</div>}
-										{!!item.totalCost && (
+								<div className="flex justify-end gap-2.5">
+									<VSCodeButton onClick={() => handleBatchHistorySelect(true)}>Select All</VSCodeButton>
+									<VSCodeButton onClick={() => handleBatchHistorySelect(false)}>Select None</VSCodeButton>
+								</div>
+							</div>
+						</div>
+						<div style={{ flexGrow: 1, overflowY: "auto", margin: 0 }}>
+							<Virtuoso
+								data={taskHistorySearchResults}
+								itemContent={(index, item) => (
+									<div
+										className="history-item"
+										key={item.id}
+										style={{
+											cursor: "pointer",
+											borderBottom:
+												index < taskHistory.length - 1 ? "1px solid var(--vscode-panel-border)" : "none",
+											display: "flex",
+										}}>
+										<VSCodeCheckbox
+											checked={selectedItems.includes(item.id)}
+											className="pl-3 pr-1 py-auto"
+											onClick={(e) => {
+												const checked = (e.target as HTMLInputElement).checked
+												handleHistorySelect(item.id, checked)
+												e.stopPropagation()
+											}}
+										/>
+										<div
+											onClick={() => handleShowTaskWithId(item.id)}
+											style={{
+												display: "flex",
+												flexDirection: "column",
+												gap: "8px",
+												padding: "12px 20px",
+												paddingLeft: "16px",
+												position: "relative",
+												flexGrow: 1,
+											}}>
 											<div
 												style={{
 													display: "flex",
 													justifyContent: "space-between",
 													alignItems: "center",
-													marginTop: -2,
+												}}>
+												<span
+													style={{
+														color: "var(--vscode-descriptionForeground)",
+														fontWeight: 500,
+														fontSize: "0.85em",
+														textTransform: "uppercase",
+													}}>
+													{formatDate(item.ts)}
+												</span>
+												<div style={{ display: "flex", gap: "4px" }}>
+													{/* only show delete button if task not favorited */}
+													{!(pendingFavoriteToggles[item.id] ?? item.isFavorited) && (
+														<VSCodeButton
+															appearance="icon"
+															aria-label="Delete"
+															className="delete-button"
+															onClick={(e) => {
+																e.stopPropagation()
+																handleDeleteHistoryItem(item.id)
+															}}
+															style={{ padding: "0px 0px" }}>
+															<div
+																style={{
+																	display: "flex",
+																	alignItems: "center",
+																	gap: "3px",
+																	fontSize: "11px",
+																}}>
+																<span className="codicon codicon-trash"></span>
+																{formatSize(item.size)}
+															</div>
+														</VSCodeButton>
+													)}
+													<VSCodeButton
+														appearance="icon"
+														aria-label={
+															item.isFavorited ? "Remove from favorites" : "Add to favorites"
+														}
+														onClick={(e) => {
+															e.stopPropagation()
+															toggleFavorite(item.id, item.isFavorited || false)
+														}}
+														style={{ padding: "0px" }}>
+														<div
+															className={`codicon ${
+																pendingFavoriteToggles[item.id] !== undefined
+																	? pendingFavoriteToggles[item.id]
+																		? "codicon-star-full"
+																		: "codicon-star-empty"
+																	: item.isFavorited
+																		? "codicon-star-full"
+																		: "codicon-star-empty"
+															}`}
+															style={{
+																color:
+																	(pendingFavoriteToggles[item.id] ?? item.isFavorited)
+																		? "var(--vscode-button-background)"
+																		: "inherit",
+																opacity:
+																	(pendingFavoriteToggles[item.id] ?? item.isFavorited)
+																		? 1
+																		: 0.7,
+																display:
+																	(pendingFavoriteToggles[item.id] ?? item.isFavorited)
+																		? "block"
+																		: undefined,
+															}}
+														/>
+													</VSCodeButton>
+												</div>
+											</div>
+
+											<div style={{ marginBottom: "8px", position: "relative" }}>
+												<div
+													style={{
+														fontSize: "var(--vscode-font-size)",
+														color: "var(--vscode-foreground)",
+														display: "-webkit-box",
+														WebkitLineClamp: 3,
+														WebkitBoxOrient: "vertical",
+														overflow: "hidden",
+														whiteSpace: "pre-wrap",
+														wordBreak: "break-word",
+														overflowWrap: "anywhere",
+													}}>
+													<span
+														className="ph-no-capture"
+														dangerouslySetInnerHTML={{
+															__html: item.task,
+														}}
+													/>
+												</div>
+											</div>
+											<div
+												style={{
+													display: "flex",
+													flexDirection: "column",
+													gap: "4px",
 												}}>
 												<div
 													style={{
 														display: "flex",
+														justifyContent: "space-between",
 														alignItems: "center",
-														gap: "4px",
 													}}>
-													<span
+													<div
 														style={{
-															fontWeight: 500,
-															color: "var(--vscode-descriptionForeground)",
+															display: "flex",
+															alignItems: "center",
+															gap: "4px",
+															flexWrap: "wrap",
 														}}>
-														API Cost:
-													</span>
-													<span
-														style={{
-															color: "var(--vscode-descriptionForeground)",
-														}}>
-														${item.totalCost?.toFixed(4)}
-													</span>
+														<span
+															style={{
+																fontWeight: 500,
+																color: "var(--vscode-descriptionForeground)",
+															}}>
+															Tokens:
+														</span>
+														<span
+															style={{
+																display: "flex",
+																alignItems: "center",
+																gap: "3px",
+																color: "var(--vscode-descriptionForeground)",
+															}}>
+															<i
+																className="codicon codicon-arrow-up"
+																style={{
+																	fontSize: "12px",
+																	fontWeight: "bold",
+																	marginBottom: "-2px",
+																}}
+															/>
+															{formatLargeNumber(item.tokensIn || 0)}
+														</span>
+														<span
+															style={{
+																display: "flex",
+																alignItems: "center",
+																gap: "3px",
+																color: "var(--vscode-descriptionForeground)",
+															}}>
+															<i
+																className="codicon codicon-arrow-down"
+																style={{
+																	fontSize: "12px",
+																	fontWeight: "bold",
+																	marginBottom: "-2px",
+																}}
+															/>
+															{formatLargeNumber(item.tokensOut || 0)}
+														</span>
+													</div>
+													{!item.totalCost && <ExportButton itemId={item.id} />}
 												</div>
-												<ExportButton itemId={item.id} />
+
+												{!!(item.cacheWrites || item.cacheReads) && (
+													<div
+														style={{
+															display: "flex",
+															alignItems: "center",
+															gap: "4px",
+															flexWrap: "wrap",
+														}}>
+														<span
+															style={{
+																fontWeight: 500,
+																color: "var(--vscode-descriptionForeground)",
+															}}>
+															Cache:
+														</span>
+														{item.cacheWrites > 0 && (
+															<span
+																style={{
+																	display: "flex",
+																	alignItems: "center",
+																	gap: "3px",
+																	color: "var(--vscode-descriptionForeground)",
+																}}>
+																<i
+																	className="codicon codicon-arrow-right"
+																	style={{
+																		fontSize: "12px",
+																		fontWeight: "bold",
+																		marginBottom: "-1px",
+																	}}
+																/>
+																{formatLargeNumber(item.cacheWrites)}
+															</span>
+														)}
+														{item.cacheReads > 0 && (
+															<span
+																style={{
+																	display: "flex",
+																	alignItems: "center",
+																	gap: "3px",
+																	color: "var(--vscode-descriptionForeground)",
+																}}>
+																<i
+																	className="codicon codicon-arrow-left"
+																	style={{
+																		fontSize: "12px",
+																		fontWeight: "bold",
+																		marginBottom: 0,
+																	}}
+																/>
+																{formatLargeNumber(item.cacheReads)}
+															</span>
+														)}
+													</div>
+												)}
+												{item.modelId && <div className="text-description">Model: {item.modelId}</div>}
+												{!!item.totalCost && (
+													<div
+														style={{
+															display: "flex",
+															justifyContent: "space-between",
+															alignItems: "center",
+															marginTop: -2,
+														}}>
+														<div
+															style={{
+																display: "flex",
+																alignItems: "center",
+																gap: "4px",
+															}}>
+															<span
+																style={{
+																	fontWeight: 500,
+																	color: "var(--vscode-descriptionForeground)",
+																}}>
+																API Cost:
+															</span>
+															<span
+																style={{
+																	color: "var(--vscode-descriptionForeground)",
+																}}>
+																${item.totalCost?.toFixed(4)}
+															</span>
+														</div>
+														<ExportButton itemId={item.id} />
+													</div>
+												)}
 											</div>
-										)}
+										</div>
 									</div>
-								</div>
-							</div>
-						)}
-						style={{
-							flexGrow: 1,
-							overflowY: "scroll",
-						}}
-					/>
-				</div>
-				<div
-					style={{
-						padding: "10px 10px",
-						borderTop: "1px solid var(--vscode-panel-border)",
-					}}>
-					{selectedItems.length > 0 ? (
-						<DangerButton
-							aria-label="Delete selected items"
-							onClick={() => {
-								handleDeleteSelectedHistoryItems(selectedItems)
-							}}
-							style={{ width: "100%" }}>
-							Delete {selectedItems.length > 1 ? selectedItems.length : ""} Selected
-							{selectedItemsSize > 0 ? ` (${formatSize(selectedItemsSize)})` : ""}
-						</DangerButton>
-					) : (
-						<DangerButton
-							aria-label="Delete all history"
-							disabled={deleteAllDisabled || taskHistory.length === 0}
-							onClick={() => {
-								setDeleteAllDisabled(true)
-								TaskServiceClient.deleteAllTaskHistory(BooleanRequest.create({}))
-									.then(() => fetchTotalTasksSize())
-									.catch((error) => console.error("Error deleting task history:", error))
-									.finally(() => setDeleteAllDisabled(false))
-							}}
-							style={{ width: "100%" }}>
-							Delete All History{totalTasksSize !== null ? ` (${formatSize(totalTasksSize)})` : ""}
-						</DangerButton>
-					)}
-				</div>
-			</div>
-		</>
+								)}
+								style={{
+									flexGrow: 1,
+									overflowY: "scroll",
+								}}
+							/>
+						</div>
+						<div
+							style={{
+								padding: "10px 10px",
+								borderTop: "1px solid var(--vscode-panel-border)",
+							}}>
+							{selectedItems.length > 0 ? (
+								<DangerButton
+									aria-label="Delete selected items"
+									onClick={() => {
+										handleDeleteSelectedHistoryItems(selectedItems)
+									}}
+									style={{ width: "100%" }}>
+									Delete {selectedItems.length > 1 ? selectedItems.length : ""} Selected
+									{selectedItemsSize > 0 ? ` (${formatSize(selectedItemsSize)})` : ""}
+								</DangerButton>
+							) : (
+								<DangerButton
+									aria-label="Delete all history"
+									disabled={deleteAllDisabled || taskHistory.length === 0}
+									onClick={() => {
+										setDeleteAllDisabled(true)
+										TaskServiceClient.deleteAllTaskHistory(BooleanRequest.create({}))
+											.then(() => fetchTotalTasksSize())
+											.catch((error) => console.error("Error deleting task history:", error))
+											.finally(() => setDeleteAllDisabled(false))
+									}}
+									style={{ width: "100%" }}>
+									Delete All History{totalTasksSize !== null ? ` (${formatSize(totalTasksSize)})` : ""}
+								</DangerButton>
+							)}
+						</div>
+					</div>
+				</>
+			)}
+		</div>
 	)
 }
 

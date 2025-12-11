@@ -5,7 +5,6 @@ import assert from "node:assert"
 import { DIFF_VIEW_URI_SCHEME } from "@hosts/vscode/VscodeDiffViewProvider"
 import * as vscode from "vscode"
 import { sendAccountButtonClickedEvent } from "./core/controller/ui/subscribeToAccountButtonClicked"
-import { sendChatButtonClickedEvent } from "./core/controller/ui/subscribeToChatButtonClicked"
 import { sendHistoryButtonClickedEvent } from "./core/controller/ui/subscribeToHistoryButtonClicked"
 import { sendMcpButtonClickedEvent } from "./core/controller/ui/subscribeToMcpButtonClicked"
 import { sendSettingsButtonClickedEvent } from "./core/controller/ui/subscribeToSettingsButtonClicked"
@@ -97,6 +96,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	vscode.commands.executeCommand("setContext", "cline.isDevMode", IS_DEV && IS_DEV === "true")
 
+	// Set initial context for hasActiveProduct based on current state
+	const currentRegulatoryProduct = context.globalState.get("currentRegulatoryProduct")
+	vscode.commands.executeCommand("setContext", "cline.hasActiveProduct", !!currentRegulatoryProduct)
+
 	// Register file decoration provider for "ai" badge on Cline-created files
 	const decorationProvider = new ClineFileDecorationProvider()
 	context.subscriptions.push(vscode.window.registerFileDecorationProvider(decorationProvider))
@@ -137,14 +140,65 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	// Handler for creating a new regulatory product
+	async function showRegulatoryProductOnboarding() {
+		const sidebarInstance = WebviewProvider.getInstance() as VscodeWebviewProvider
+
+		console.log("[DEBUG] createRegulatoryProduct - Show onboarding")
+
+		// Clear current product state
+		await sidebarInstance.controller.stateManager.setGlobalState("currentRegulatoryProduct", undefined)
+
+		// Set context to hide navbar icons
+		vscode.commands.executeCommand("setContext", "cline.hasActiveProduct", false)
+
+		// Clear the current task
+		await sidebarInstance.controller.clearTask()
+
+		// Reset submissions pane - clear the saved folder
+		const submissionsProvider = SubmissionsPaneProvider.getInstance()
+		if (submissionsProvider) {
+			await submissionsProvider.clearSubmissionsFolder()
+		}
+
+		// Close all editors to reset the explorer pane
+		await vscode.commands.executeCommand("workbench.action.closeAllEditors")
+
+		// Open the sidebar panel using workspace service (same as open chat)
+		await HostProvider.get().hostBridge.workspaceClient.openClineSidebarPanel({})
+
+		// Show the webview sidebar panel
+		const webviewView = sidebarInstance.getWebview()
+		if (webviewView) {
+			webviewView.show()
+		}
+
+		// Set flag to show regulatory onboarding
+		await sidebarInstance.controller.stateManager.setGlobalState("showRegulatoryOnboarding", true)
+
+		// Show explorer pane
+		await vscode.commands.executeCommand("workbench.files.action.focusFilesExplorer")
+
+		// Post state to webview to trigger UI update
+		await sidebarInstance.controller.postStateToWebview()
+	}
+
 	context.subscriptions.push(
 		vscode.commands.registerCommand(commands.PlusButton, async () => {
-			console.log("[DEBUG] plusButtonClicked")
+			const sidebarInstance = WebviewProvider.getInstance() as VscodeWebviewProvider
 
-			const sidebarInstance = WebviewProvider.getInstance()
+			// Start a new chat
 			await sidebarInstance.controller.clearTask()
 			await sidebarInstance.controller.postStateToWebview()
+			const { sendChatButtonClickedEvent } = await import("./core/controller/ui/subscribeToChatButtonClicked")
 			await sendChatButtonClickedEvent()
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.CreateRegulatoryProduct, async () => {
+			// Always show onboarding when explicitly creating a product
+			await showRegulatoryProductOnboarding()
 		}),
 	)
 
@@ -164,6 +218,77 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(commands.HistoryButton, async () => {
 			// Send event to all subscribers using the gRPC streaming method
 			await sendHistoryButtonClickedEvent()
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.ProductsButton, async () => {
+			const sidebarInstance = WebviewProvider.getInstance() as VscodeWebviewProvider
+
+			// Open the sidebar panel using workspace service (same as open chat)
+			await HostProvider.get().hostBridge.workspaceClient.openClineSidebarPanel({})
+
+			// Show the webview sidebar panel
+			const webviewView = sidebarInstance.getWebview()
+			if (webviewView) {
+				webviewView.show()
+			}
+
+			// Wait for the webview to initialize and subscribe to events
+			// Retry up to 10 times (1 second total) to ensure subscription is ready
+			const { sendProductsButtonClickedEvent, hasActiveSubscriptions } = await import(
+				"./core/controller/ui/subscribeToProductsButtonClicked"
+			)
+			const maxRetries = 10
+			const retryDelay = 100
+
+			for (let i = 0; i < maxRetries; i++) {
+				await new Promise((resolve) => setTimeout(resolve, retryDelay))
+
+				// Check if there are active subscriptions before sending
+				if (hasActiveSubscriptions()) {
+					await sendProductsButtonClickedEvent()
+					return
+				}
+			}
+
+			// If no subscriptions after retries, try sending anyway (might work if timing is just off)
+			console.warn("No active subscriptions found after waiting, attempting to send event anyway")
+			await sendProductsButtonClickedEvent()
+		}),
+	)
+
+	// Register command to get regulatory products (for welcome page)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.getRegulatoryProducts", async () => {
+			const sidebarInstance = WebviewProvider.getInstance() as VscodeWebviewProvider
+			if (sidebarInstance?.controller) {
+				const { getRegulatoryProducts } = await import("./core/controller/ui/getRegulatoryProducts")
+				const { EmptyRequest } = await import("@shared/proto/cline/common")
+				const response = await getRegulatoryProducts(sidebarInstance.controller, EmptyRequest.create())
+				return response.value
+			}
+			return "[]"
+		}),
+	)
+
+	// Register command to open regulatory product (for welcome page)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline.openRegulatoryProduct", async (productJson: string) => {
+			const sidebarInstance = WebviewProvider.getInstance() as VscodeWebviewProvider
+			if (sidebarInstance?.controller) {
+				const { openRegulatoryProduct } = await import("./core/controller/ui/openRegulatoryProduct")
+				const { StringRequest } = await import("@shared/proto/cline/common")
+				await openRegulatoryProduct(sidebarInstance.controller, StringRequest.create({ value: productJson }))
+
+				// Open the sidebar and navigate to chat
+				await HostProvider.get().hostBridge.workspaceClient.openClineSidebarPanel({})
+				const webviewView = sidebarInstance.getWebview()
+				if (webviewView) {
+					webviewView.show()
+				}
+				await sidebarInstance.controller.postStateToWebview()
+			}
 		}),
 	)
 
@@ -635,6 +760,7 @@ function setupHostProvider(context: ExtensionContext) {
 		getBinaryLocation,
 		context.extensionUri.fsPath,
 		context.globalStorageUri.fsPath,
+		(key, value) => vscode.commands.executeCommand("setContext", key, value),
 	)
 }
 

@@ -35,11 +35,20 @@ describe("Tool Executor Hooks", () => {
 	 */
 	function createTestHandler(): MessageStateHandler {
 		const taskState = new TaskState()
+		const mockStateManager = {
+			getGlobalStateKey: (key: string) => {
+				if (key === "currentRegulatoryProduct") {
+					return undefined
+				}
+				return undefined
+			},
+		} as unknown as StateManager
 		return new MessageStateHandler({
 			taskId: "test-task-id",
 			ulid: "test-ulid",
 			taskState,
 			updateTaskHistory: async () => [],
+			stateManager: mockStateManager,
 		})
 	}
 

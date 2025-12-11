@@ -1,5 +1,6 @@
 import { describe, it } from "mocha"
 import "should"
+import { StateManager } from "../core/storage/StateManager"
 import { MessageStateHandler } from "../core/task/message-state"
 import { TaskState } from "../core/task/TaskState"
 import { ClineMessage } from "../shared/ExtensionMessage"
@@ -15,11 +16,20 @@ describe("MessageStateHandler Mutex Protection", () => {
 	 */
 	function createTestHandler(): MessageStateHandler {
 		const taskState = new TaskState()
+		const mockStateManager = {
+			getGlobalStateKey: (key: string) => {
+				if (key === "currentRegulatoryProduct") {
+					return undefined
+				}
+				return undefined
+			},
+		} as unknown as StateManager
 		return new MessageStateHandler({
 			taskId: "test-task-id",
 			ulid: "test-ulid",
 			taskState,
 			updateTaskHistory: async () => [],
+			stateManager: mockStateManager,
 		})
 	}
 

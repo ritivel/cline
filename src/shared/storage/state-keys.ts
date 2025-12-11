@@ -33,6 +33,13 @@ export interface RemoteConfigExtraFields {
 
 export type RemoteConfigFields = GlobalStateAndSettings & RemoteConfigExtraFields
 
+export interface RegulatoryProductConfig {
+	workspacePath: string
+	submissionsPath: string
+	drugName: string
+	marketName: string
+}
+
 export interface GlobalState {
 	lastShownAnnouncementId: string | undefined
 	taskHistory: HistoryItem[]
@@ -57,6 +64,9 @@ export interface GlobalState {
 	remoteRulesToggles: ClineRulesToggles
 	remoteWorkflowToggles: ClineRulesToggles
 	dismissedBanners: Array<{ bannerId: string; dismissedAt: number }>
+	showRegulatoryOnboarding: boolean | undefined
+	currentRegulatoryProduct: RegulatoryProductConfig | undefined
+	regulatoryProducts: RegulatoryProductConfig[]
 }
 
 export interface Settings {

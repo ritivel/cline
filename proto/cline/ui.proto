@@ -240,6 +240,9 @@ service UiService {
   // Subscribe to history button click events
   rpc subscribeToHistoryButtonClicked(EmptyRequest) returns (stream Empty);
 
+  // Subscribe to products button click events
+  rpc subscribeToProductsButtonClicked(EmptyRequest) returns (stream Empty);
+
   // Subscribe to chat button clicked events (when the chat button is clicked in VSCode)
   rpc subscribeToChatButtonClicked(EmptyRequest) returns (stream Empty);
 
@@ -272,4 +275,28 @@ service UiService {
 
   // Opens the Cline walkthrough
   rpc openWalkthrough(EmptyRequest) returns (Empty);
+
+  // Selects a workspace folder for regulatory product setup
+  rpc selectWorkspaceFolder(EmptyRequest) returns (String);
+
+  // Selects a submissions folder for regulatory product setup
+  rpc selectSubmissionsFolder(EmptyRequest) returns (String);
+
+  // Creates a new regulatory product with the provided configuration
+  rpc createRegulatoryProduct(StringRequest) returns (Empty);
+
+  // Gets the list of existing regulatory products
+  rpc getRegulatoryProducts(EmptyRequest) returns (String);
+
+  // Opens an existing regulatory product
+  rpc openRegulatoryProduct(StringRequest) returns (Empty);
+
+  // Deletes a regulatory product from the stored list
+  rpc deleteRegulatoryProduct(StringRequest) returns (Empty);
+
+  // Gets the current workspace folder from the left pane
+  rpc getCurrentWorkspaceFolder(EmptyRequest) returns (String);
+
+  // Gets the current submissions folder from the left pane
+  rpc getCurrentSubmissionsFolder(EmptyRequest) returns (String);
 }

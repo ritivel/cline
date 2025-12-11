@@ -887,6 +887,8 @@ export class Controller {
 		const isNewUser = this.stateManager.getGlobalStateKey("isNewUser")
 		// Can be undefined but is set to either true or false by the migration that runs on extension launch in extension.ts
 		const welcomeViewCompleted = !!this.stateManager.getGlobalStateKey("welcomeViewCompleted")
+		const showRegulatoryOnboarding = !!this.stateManager.getGlobalStateKey("showRegulatoryOnboarding")
+		const currentRegulatoryProduct = this.stateManager.getGlobalStateKey("currentRegulatoryProduct")
 
 		const customPrompt = this.stateManager.getGlobalSettingsKey("customPrompt")
 		const mcpResponsesCollapsed = this.stateManager.getGlobalStateKey("mcpResponsesCollapsed")
@@ -999,7 +1001,9 @@ export class Controller {
 			lastDismissedCliBannerVersion,
 			subagentsEnabled,
 			nativeToolCallSetting: this.stateManager.getGlobalStateKey("nativeToolCallEnabled"),
-		}
+			showRegulatoryOnboarding,
+			currentRegulatoryProduct,
+		} as any // Type assertion needed since ExtensionState interface doesn't include this field yet
 	}
 
 	async clearTask() {

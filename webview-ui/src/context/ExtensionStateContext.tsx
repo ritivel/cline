@@ -56,10 +56,13 @@ export interface ExtensionStateContextType extends ExtensionState {
 	showSettings: boolean
 	settingsTargetSection?: string
 	showHistory: boolean
+	showProducts: boolean
 	showAccount: boolean
+	noProductInitialTab: "create" | "products"
 	showAnnouncement: boolean
 	showChatModelSelector: boolean
 	expandTaskHeader: boolean
+	showRegulatoryOnboarding: boolean
 
 	// Setters
 	setDictationSettings: (value: DictationSettings) => void
@@ -85,6 +88,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setExpandTaskHeader: (value: boolean) => void
 	setShowWelcome: (value: boolean) => void
 	setOnboardingModels: (value: OnboardingModelGroup | undefined) => void
+	setShowRegulatoryOnboarding: (value: boolean) => void
+	setNoProductInitialTab: (value: "create" | "products") => void
 
 	// Refresh functions
 	refreshOpenRouterModels: () => void
@@ -100,12 +105,14 @@ export interface ExtensionStateContextType extends ExtensionState {
 	navigateToMcp: (tab?: McpViewTab) => void
 	navigateToSettings: (targetSection?: string) => void
 	navigateToHistory: () => void
+	navigateToProducts: () => void
 	navigateToAccount: () => void
 	navigateToChat: () => void
 
 	// Hide functions
 	hideSettings: () => void
 	hideHistory: () => void
+	hideProducts: () => void
 	hideAccount: () => void
 	hideAnnouncement: () => void
 	hideChatModelSelector: () => void
@@ -126,9 +133,12 @@ export const ExtensionStateContextProvider: React.FC<{
 	const [showSettings, setShowSettings] = useState(false)
 	const [settingsTargetSection, setSettingsTargetSection] = useState<string | undefined>(undefined)
 	const [showHistory, setShowHistory] = useState(false)
+	const [showProducts, setShowProducts] = useState(false)
 	const [showAccount, setShowAccount] = useState(false)
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 	const [showChatModelSelector, setShowChatModelSelector] = useState(false)
+	const [showRegulatoryOnboarding, setShowRegulatoryOnboarding] = useState(false)
+	const [noProductInitialTab, setNoProductInitialTab] = useState<"create" | "products">("create")
 
 	// Helper for MCP view
 	const closeMcpView = useCallback(() => {
@@ -142,6 +152,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		setSettingsTargetSection(undefined)
 	}, [])
 	const hideHistory = useCallback(() => setShowHistory(false), [setShowHistory])
+	const hideProducts = useCallback(() => setShowProducts(false), [setShowProducts])
 	const hideAccount = useCallback(() => setShowAccount(false), [setShowAccount])
 	const hideAnnouncement = useCallback(() => setShowAnnouncement(false), [setShowAnnouncement])
 	const hideChatModelSelector = useCallback(() => setShowChatModelSelector(false), [setShowChatModelSelector])
@@ -175,8 +186,18 @@ export const ExtensionStateContextProvider: React.FC<{
 		setShowSettings(false)
 		closeMcpView()
 		setShowAccount(false)
+		setShowProducts(false)
 		setShowHistory(true)
-	}, [setShowSettings, closeMcpView, setShowAccount, setShowHistory])
+	}, [setShowSettings, closeMcpView, setShowAccount, setShowProducts, setShowHistory])
+
+	const navigateToProducts = useCallback(() => {
+		setShowSettings(false)
+		closeMcpView()
+		setShowAccount(false)
+		setShowHistory(false)
+		setShowProducts(false) // Keep false so NoProductTabsView shows
+		setNoProductInitialTab("products") // Show Products tab in the three-tab view
+	}, [setShowSettings, closeMcpView, setShowAccount, setShowHistory, setShowProducts, setNoProductInitialTab])
 
 	const navigateToAccount = useCallback(() => {
 		setShowSettings(false)
@@ -189,8 +210,10 @@ export const ExtensionStateContextProvider: React.FC<{
 		setShowSettings(false)
 		closeMcpView()
 		setShowHistory(false)
+		setShowProducts(false)
 		setShowAccount(false)
-	}, [setShowSettings, closeMcpView, setShowHistory, setShowAccount])
+		setShowRegulatoryOnboarding(false)
+	}, [setShowSettings, closeMcpView, setShowHistory, setShowProducts, setShowAccount])
 
 	const [state, setState] = useState<ExtensionState>({
 		version: "",
@@ -286,6 +309,7 @@ export const ExtensionStateContextProvider: React.FC<{
 	const focusChatInputUnsubscribeRef = useRef<(() => void) | null>(null)
 	const mcpButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const historyButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
+	const productsButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
 	const chatButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const accountButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
 	const settingsButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
@@ -345,6 +369,17 @@ export const ExtensionStateContextProvider: React.FC<{
 								setOnboardingModels(undefined)
 							}
 
+							// Check for regulatory onboarding flag (stored in global state)
+							// This is a temporary flag that gets cleared after showing the view
+							const shouldShowRegulatoryOnboarding = (newState as any).showRegulatoryOnboarding === true
+							if (shouldShowRegulatoryOnboarding && !showRegulatoryOnboarding) {
+								setShowRegulatoryOnboarding(true)
+								setNoProductInitialTab("create") // Ensure Create Product tab is active
+							} else if (!shouldShowRegulatoryOnboarding && showRegulatoryOnboarding) {
+								// Clear the flag if it's false in state but true locally
+								setShowRegulatoryOnboarding(false)
+							}
+
 							setDidHydrateState(true)
 
 							return newState
@@ -395,6 +430,24 @@ export const ExtensionStateContextProvider: React.FC<{
 				},
 				onComplete: () => {
 					console.log("History button clicked subscription completed")
+				},
+			},
+		)
+
+		// Set up products button clicked subscription with webview type
+		productsButtonClickedSubscriptionRef.current = UiServiceClient.subscribeToProductsButtonClicked(
+			{},
+			{
+				onResponse: () => {
+					// When products button is clicked, navigate to products view
+					console.log("[DEBUG] Received products button clicked event from gRPC stream")
+					navigateToProducts()
+				},
+				onError: (error) => {
+					console.error("Error in products button clicked subscription:", error)
+				},
+				onComplete: () => {
+					console.log("Products button clicked subscription completed")
 				},
 			},
 		)
@@ -611,6 +664,10 @@ export const ExtensionStateContextProvider: React.FC<{
 				historyButtonClickedSubscriptionRef.current()
 				historyButtonClickedSubscriptionRef.current = null
 			}
+			if (productsButtonClickedSubscriptionRef.current) {
+				productsButtonClickedSubscriptionRef.current()
+				productsButtonClickedSubscriptionRef.current = null
+			}
 			if (chatButtonUnsubscribeRef.current) {
 				chatButtonUnsubscribeRef.current()
 				chatButtonUnsubscribeRef.current = null
@@ -716,9 +773,12 @@ export const ExtensionStateContextProvider: React.FC<{
 		showSettings,
 		settingsTargetSection,
 		showHistory,
+		showProducts,
 		showAccount,
 		showAnnouncement,
 		showChatModelSelector,
+		showRegulatoryOnboarding,
+		noProductInitialTab,
 		globalClineRulesToggles: state.globalClineRulesToggles || {},
 		localClineRulesToggles: state.localClineRulesToggles || {},
 		localCursorRulesToggles: state.localCursorRulesToggles || {},
@@ -735,18 +795,22 @@ export const ExtensionStateContextProvider: React.FC<{
 		navigateToMcp,
 		navigateToSettings,
 		navigateToHistory,
+		navigateToProducts,
 		navigateToAccount,
 		navigateToChat,
 
 		// Hide functions
 		hideSettings,
 		hideHistory,
+		hideProducts,
 		hideAccount,
 		hideAnnouncement,
 		setShowAnnouncement,
 		hideChatModelSelector,
 		setShowWelcome,
 		setOnboardingModels,
+		setShowRegulatoryOnboarding,
+		setNoProductInitialTab,
 		setShowChatModelSelector,
 		setShouldShowAnnouncement: (value) =>
 			setState((prevState) => ({

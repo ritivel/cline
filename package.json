@@ -142,6 +142,11 @@
 				"icon": "$(add)"
 			},
 			{
+				"command": "cline.createRegulatoryProduct",
+				"title": "Create Regulatory Product",
+				"icon": "$(rocket)"
+			},
+			{
 				"command": "cline.mcpButtonClicked",
 				"title": "MCP Servers",
 				"icon": "$(server)"
@@ -298,27 +303,27 @@
 				{
 					"command": "cline.plusButtonClicked",
 					"group": "navigation@1",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{
 					"command": "cline.mcpButtonClicked",
 					"group": "navigation@2",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{
 					"command": "cline.historyButtonClicked",
 					"group": "navigation@3",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{
 					"command": "cline.accountButtonClicked",
 					"group": "navigation@5",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{
 					"command": "cline.settingsButtonClicked",
 					"group": "navigation@6",
-					"when": "view == claude-dev.SidebarProvider"
+					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{
 					"command": "cline.submissions.createFolder",
@@ -392,7 +397,40 @@
 		},
 		"configuration": {
 			"title": "Ritivel",
-			"properties": {}
+			"properties": {
+				"cline.regulatoryProducts": {
+					"type": "array",
+					"default": [],
+					"description": "List of regulatory products (workspace path, submissions path, drug name, market name). This is stored globally and visible across all workspaces.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"workspacePath": {
+								"type": "string",
+								"description": "Path to the workspace folder"
+							},
+							"submissionsPath": {
+								"type": "string",
+								"description": "Path to the submissions folder"
+							},
+							"drugName": {
+								"type": "string",
+								"description": "Name of the drug"
+							},
+							"marketName": {
+								"type": "string",
+								"description": "Name of the market"
+							}
+						},
+						"required": [
+							"workspacePath",
+							"submissionsPath",
+							"drugName",
+							"marketName"
+						]
+					}
+				}
+			}
 		}
 	},
 	"scripts": {
