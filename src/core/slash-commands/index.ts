@@ -127,6 +127,7 @@ async function createDossierFolders(workspaceRoot: string, modules: CTDModuleDef
  */
 let pdfProcessingService: PdfProcessingService | null = null
 let dossierGeneratorService: DossierGeneratorService | null = null
+let dossierSectionGeneratorService: DossierGeneratorService | null = null
 
 /**
  * Starts cloud-based PDF processing in the background
@@ -352,70 +353,90 @@ async function executeGenerateDossier(workspaceRoot: string): Promise<{ success:
 }
 
 /**
+ * Starts dossier section generation in the background
+ */
+function startDossierSectionGeneration(workspaceRoot: string, sectionNameOrId: string): void {
+	// Get controller from webview provider for subagents
+	const webview = WebviewProvider.getVisibleInstance()
+	const controller = webview?.controller
+
+	if (!controller) {
+		console.error("Cannot start section generation: No controller available")
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message: "Cannot start section generation: No controller available. Please ensure Cline is properly initialized.",
+			type: ShowMessageType.ERROR,
+		})
+		return
+	}
+
+	const service = new DossierGeneratorService(workspaceRoot, controller)
+	dossierSectionGeneratorService = service
+
+	vscode.window.withProgress(
+		{
+			location: vscode.ProgressLocation.Notification,
+			title: `Generating Section: ${sectionNameOrId}`,
+			cancellable: true,
+		},
+		async (progress, token) => {
+			token.onCancellationRequested(() => {
+				// Note: DossierGeneratorService doesn't have cancel yet, but we can set it to null
+				dossierSectionGeneratorService = null
+			})
+
+			await service
+				.generateSectionByName(sectionNameOrId, (status) => {
+					console.log(`[Section Generation ${sectionNameOrId}] ${status}`)
+
+					// Update progress bar
+					progress.report({ message: status })
+
+					// Show notification for progress updates
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Section Generation (${sectionNameOrId}): ${status}`,
+						type: ShowMessageType.INFORMATION,
+					})
+				})
+				.then((result) => {
+					if (result.success) {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Section generation completed: ${sectionNameOrId}`,
+							type: ShowMessageType.INFORMATION,
+						})
+					} else {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Section generation failed for ${sectionNameOrId}: ${result.error || "Unknown error"}`,
+							type: ShowMessageType.ERROR,
+						})
+					}
+				})
+				.catch((error) => {
+					const errorMessage = error instanceof Error ? error.message : String(error)
+					console.error(`Error generating section ${sectionNameOrId}:`, error)
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Section Generation Error (${sectionNameOrId}): ${errorMessage}`,
+						type: ShowMessageType.ERROR,
+					})
+				})
+				.finally(() => {
+					if (dossierSectionGeneratorService === service) {
+						dossierSectionGeneratorService = null
+					}
+				})
+		},
+	)
+}
+
+/**
  * Executes the generate-section command
  */
-async function executeGenerateSection(
+async function executeGenerateDossierSection(
 	workspaceRoot: string,
 	sectionNameOrId: string,
 ): Promise<{ success: boolean; message: string }> {
 	try {
-		// Get controller from webview provider for subagents
-		const webview = WebviewProvider.getVisibleInstance()
-		const controller = webview?.controller
-
-		if (!controller) {
-			return {
-				success: false,
-				message: "Cannot start section generation: No controller available. Please ensure Cline is properly initialized.",
-			}
-		}
-
-		const service = new DossierGeneratorService(workspaceRoot, controller)
-
 		// Start section generation in the background
-		vscode.window.withProgress(
-			{
-				location: vscode.ProgressLocation.Notification,
-				title: `Generating Section: ${sectionNameOrId}`,
-				cancellable: true,
-			},
-			async (progress, token) => {
-				token.onCancellationRequested(() => {
-					// Note: DossierGeneratorService doesn't have cancel yet
-				})
-
-				await service
-					.generateSectionByName(sectionNameOrId, (status) => {
-						console.log(`[Section Generation ${sectionNameOrId}] ${status}`)
-						progress.report({ message: status })
-						HostProvider.get().hostBridge.windowClient.showMessage({
-							message: `Section Generation (${sectionNameOrId}): ${status}`,
-							type: ShowMessageType.INFORMATION,
-						})
-					})
-					.then((result) => {
-						if (result.success) {
-							HostProvider.get().hostBridge.windowClient.showMessage({
-								message: `Section generation completed: ${sectionNameOrId}`,
-								type: ShowMessageType.INFORMATION,
-							})
-						} else {
-							HostProvider.get().hostBridge.windowClient.showMessage({
-								message: `Section generation failed for ${sectionNameOrId}: ${result.error || "Unknown error"}`,
-								type: ShowMessageType.ERROR,
-							})
-						}
-					})
-					.catch((error) => {
-						const errorMessage = error instanceof Error ? error.message : String(error)
-						console.error(`Error generating section ${sectionNameOrId}:`, error)
-						HostProvider.get().hostBridge.windowClient.showMessage({
-							message: `Section Generation Error (${sectionNameOrId}): ${errorMessage}`,
-							type: ShowMessageType.ERROR,
-						})
-					})
-			},
-		)
+		startDossierSectionGeneration(workspaceRoot, sectionNameOrId)
 
 		const message = `Section generation for "${sectionNameOrId}" has been started in the background. An AI subagent will generate a standalone LaTeX document for this section. Progress notifications will appear as the section is generated.`
 		return { success: true, message }
@@ -648,7 +669,7 @@ ${textWithoutSlashCommand}`
 					const workspaceRoot = workspacePaths.paths?.[0] || process.cwd()
 
 					// Execute the command
-					const result = await executeGenerateSection(workspaceRoot, sectionName)
+					const result = await executeGenerateDossierSection(workspaceRoot, sectionName)
 
 					// Remove slash command from text
 					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)

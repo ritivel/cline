@@ -347,3 +347,4 @@ const { TaskSectionCreation: TaskSectionCreationClass } =
 - `src/core/task/tools/handlers/Function5Handler.ts` - Safety data handler
 - `src/core/ctd/templates/eac-nmra/definition.ts` - CTD template definitions
 
+

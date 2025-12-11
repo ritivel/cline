@@ -976,25 +976,25 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 		const modules = this.getModulesInOrder()
 
 		// Collect all sections across all modules
-		// const allSections: Array<{ sectionId: string; section: CTDSectionDef; moduleNum: number }> = []
-		// for (const module of modules) {
-		// 	if (onProgress) {
-		// 		onProgress("processing", `Collecting sections for Module ${module.moduleNumber}: ${module.title}`)
-		// 	}
+		const allSections: Array<{ sectionId: string; section: CTDSectionDef; moduleNum: number }> = []
+		for (const module of modules) {
+			if (onProgress) {
+				onProgress("processing", `Collecting sections for Module ${module.moduleNumber}: ${module.title}`)
+			}
 
-		// 	const leafSections = this.getLeafSections(module)
-		// 	for (const sectionId of leafSections) {
-		// 		const section = module.sections[sectionId]
-		// 		if (section) {
-		// 			allSections.push({ sectionId, section, moduleNum: module.moduleNumber })
-		// 		}
-		// 	}
-		// }
+			const leafSections = this.getLeafSections(module)
+			for (const sectionId of leafSections) {
+				const section = module.sections[sectionId]
+				if (section) {
+					allSections.push({ sectionId, section, moduleNum: module.moduleNumber })
+				}
+			}
+		}
 
 		// hardcode allSections for testing
-		const allSections = [
-			{ sectionId: "5.3.1.4", section: modules[1].sections["5.3.1.4"] || modules[5].sections["5.3.1.4"], moduleNum: 5 },
-		]
+		// const allSections = [
+		// 	{ sectionId: "5.3.1.4", section: modules[1].sections["5.3.1.4"] || modules[5].sections["5.3.1.4"], moduleNum: 5 },
+		// ]
 
 		if (onProgress) {
 			onProgress("processing", `Starting ${allSections.length} AI subagents in parallel...`)
