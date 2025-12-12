@@ -169,6 +169,31 @@ export class PdfProcessingManager {
 							// If no progress reporter, at least log it
 							console.log(`Progress: ${message}`)
 						}
+
+						// Show VS Code notification for all stages except "uploading"
+						if (stage === "uploading") {
+							// Skip notifications for uploading stage
+							return
+						}
+
+						const notificationMessage = details ? `PDF Processing: ${details}` : `PDF Processing: ${stage}`
+						if (stage === "error") {
+							HostProvider.get().hostBridge.windowClient.showMessage({
+								message: notificationMessage,
+								type: ShowMessageType.ERROR,
+							})
+						} else if (stage === "completed") {
+							HostProvider.get().hostBridge.windowClient.showMessage({
+								message: notificationMessage,
+								type: ShowMessageType.INFORMATION,
+							})
+						} else {
+							// Show information notification for all other stages
+							HostProvider.get().hostBridge.windowClient.showMessage({
+								message: notificationMessage,
+								type: ShowMessageType.INFORMATION,
+							})
+						}
 					})
 					.catch((error) => {
 						const errorMessage = error instanceof Error ? error.message : String(error)
@@ -214,6 +239,13 @@ export class PdfProcessingManager {
 			console.log(`PDF already processed: ${pdfPath}`)
 			return
 		}
+
+		// Show notification for new file detected
+		const fileName = path.basename(pdfPath)
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message: `New PDF detected: ${fileName}. Starting processing...`,
+			type: ShowMessageType.INFORMATION,
+		})
 
 		this._processingQueue.add(pdfPath)
 

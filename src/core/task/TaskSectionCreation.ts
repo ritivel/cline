@@ -1,11 +1,15 @@
 import { buildApiHandler } from "@core/api"
+import type { ToolUse } from "@core/assistant-message"
+import { resolveWorkspacePath } from "@core/workspace"
 import { WorkspaceRootManager } from "@core/workspace/WorkspaceRootManager"
 import { showSystemNotification } from "@integrations/notifications"
 import { McpHub } from "@services/mcp/McpHub"
 import { ClineSay } from "@shared/ExtensionMessage"
 import { ClineContent } from "@shared/messages/content"
+import { getCwd } from "@utils/path"
 import * as fs from "fs"
 import * as path from "path"
+import { ClineDefaultTool } from "@/shared/tools"
 import { Controller } from "../controller"
 import { StateManager } from "../storage/StateManager"
 import { Task } from "./index"
@@ -13,6 +17,11 @@ import { DocumentChunk, DocumentContent, DocumentProcessingService, ParsedTagsFi
 import { ErrorHandlerService } from "./services/ErrorHandlerService"
 import { PharmaDataResult, PharmaDataService } from "./services/PharmaDataService"
 import { RAGGuidelinesResult, RAGGuidelinesService } from "./services/RAGGuidelinesService"
+import { AutoApprove } from "./tools/autoApprove"
+import { WriteTexToolHandler } from "./tools/handlers/WriteTexToolHandler"
+import { ToolExecutorCoordinator } from "./tools/ToolExecutorCoordinator"
+import { ToolValidator } from "./tools/ToolValidator"
+import type { TaskConfig } from "./tools/types/TaskConfig"
 
 /**
  * Parameters for creating a TaskSectionCreation instance
@@ -519,15 +528,164 @@ export class TaskSectionCreation extends Task {
 	}
 
 	/**
-	 * Writes the final content to the output file
+	 * Strips markdown code block markers from content
+	 * Removes ```latex or ``` at the beginning and ``` at the end
+	 */
+	private stripMarkdownCodeBlocks(content: string): string {
+		let stripped = content.trim()
+
+		// Remove opening code block (```latex, ```latex\n, or ```)
+		const lines = stripped.split("\n")
+		if (lines.length > 0 && lines[0].trim().startsWith("```")) {
+			lines.shift() // Remove the opening line (e.g., "```latex" or "```")
+			stripped = lines.join("\n")
+		}
+
+		// Remove closing code block (```)
+		if (stripped.trim().endsWith("```")) {
+			const remainingLines = stripped.split("\n")
+			if (remainingLines.length > 0 && remainingLines[remainingLines.length - 1].trim() === "```") {
+				remainingLines.pop() // Remove the closing line
+				stripped = remainingLines.join("\n")
+			}
+		}
+
+		return stripped.trim()
+	}
+
+	/**
+	 * Writes the final content to the output file using write_tex tool
 	 */
 	private async writeOutputFile(content: string): Promise<void> {
-		// Ensure directory exists
-		const dir = path.dirname(this.expectedOutputFile)
-		await fs.promises.mkdir(dir, { recursive: true })
+		try {
+			// Strip markdown code block markers if present
+			const cleanedContent = this.stripMarkdownCodeBlocks(content)
 
-		// Write content
-		await fs.promises.writeFile(this.expectedOutputFile, content, "utf-8")
+			// Create tool validator
+			const validator = new ToolValidator(this.clineIgnoreController)
+
+			// Create write_tex handler
+			const handler = new WriteTexToolHandler(validator)
+
+			// Get relative path from cwd
+			const cwd = await getCwd()
+			const pathResult = resolveWorkspacePath(cwd, this.expectedOutputFile, "TaskSectionCreation.writeOutputFile")
+			const resolvedPath =
+				typeof pathResult === "string" ? path.relative(cwd, this.expectedOutputFile) : pathResult.resolvedPath
+
+			// Create ToolUse block
+			const toolUse: ToolUse = {
+				type: "tool_use",
+				name: ClineDefaultTool.WRITE_TEX,
+				params: {
+					path: resolvedPath,
+					content: cleanedContent,
+				},
+				partial: false,
+			}
+
+			// Create TaskConfig
+			const config = this.createTaskConfigForTool()
+
+			// Execute the handler
+			await handler.execute(config, toolUse)
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			throw new Error(`Failed to write output file using write_tex: ${errorMessage}`)
+		}
+	}
+
+	/**
+	 * Creates a TaskConfig for tool execution
+	 * This constructs the config using available properties from Task base class
+	 */
+	private createTaskConfigForTool(): TaskConfig {
+		// Create coordinator
+		const coordinator = new ToolExecutorCoordinator()
+
+		// Register the write_tex handler
+		const validator = new ToolValidator(this.clineIgnoreController)
+		const writeTexHandler = new WriteTexToolHandler(validator)
+		coordinator.register(writeTexHandler)
+
+		// Create config using protected properties from Task base class
+		const config: TaskConfig = {
+			taskId: this.taskId,
+			ulid: this.ulid,
+			cwd: this.cwd,
+			mode: this.stateManager.getGlobalSettingsKey("mode"),
+			strictPlanModeEnabled: this.stateManager.getGlobalSettingsKey("strictPlanModeEnabled"),
+			yoloModeToggled: this.stateManager.getGlobalSettingsKey("yoloModeToggled"),
+			vscodeTerminalExecutionMode: this.terminalExecutionMode,
+			context: this.controller.context,
+			workspaceManager: this.workspaceManager,
+			isMultiRootEnabled: this.workspaceManager !== undefined,
+			taskState: this.taskState,
+			messageState: this.messageStateHandler,
+			api: this.api,
+			autoApprovalSettings: this.stateManager.getGlobalSettingsKey("autoApprovalSettings"),
+			autoApprover: new AutoApprove(this.stateManager),
+			browserSettings: this.stateManager.getGlobalSettingsKey("browserSettings"),
+			focusChainSettings: this.stateManager.getGlobalSettingsKey("focusChainSettings"),
+			services: {
+				mcpHub: this.mcpHub,
+				browserSession: this.browserSession,
+				urlContentFetcher: this.urlContentFetcher,
+				diffViewProvider: this.diffViewProvider,
+				fileContextTracker: this.fileContextTracker,
+				clineIgnoreController: this.clineIgnoreController,
+				contextManager: this.contextManager,
+				stateManager: this.stateManager,
+			},
+			callbacks: {
+				say: async (type, text, images, files, partial) => {
+					return await this.say(type, text, images, files, partial)
+				},
+				ask: async (type, text, partial) => {
+					// For write_tex, we'll auto-approve
+					return { response: "approved" as any }
+				},
+				saveCheckpoint: async () => {},
+				sayAndCreateMissingParamError: async (toolName, paramName) => {
+					throw new Error(`Missing parameter ${paramName} for tool ${toolName}`)
+				},
+				removeLastPartialMessageIfExistsWithType: async () => {},
+				executeCommandTool: async () => [false, ""],
+				doesLatestTaskCompletionHaveNewChanges: async () => false,
+				updateFCListFromToolResponse: async () => {},
+				switchToActMode: async () => false,
+				cancelTask: async () => {},
+				shouldAutoApproveTool: (toolName) => {
+					const autoApprover = new AutoApprove(this.stateManager)
+					return autoApprover.shouldAutoApproveTool(toolName)
+				},
+				shouldAutoApproveToolWithPath: async (toolName, path) => {
+					const autoApprover = new AutoApprove(this.stateManager)
+					return await autoApprover.shouldAutoApproveToolWithPath(toolName, path)
+				},
+				postStateToWebview: async () => {},
+				reinitExistingTaskFromId: async () => {},
+				updateTaskHistory: async () => [],
+				applyLatestBrowserSettings: async () => {
+					return this.browserSession
+				},
+				setActiveHookExecution: async (hookExecution) => {
+					return await this.setActiveHookExecution(hookExecution)
+				},
+				clearActiveHookExecution: async () => {
+					return await this.clearActiveHookExecution()
+				},
+				getActiveHookExecution: async () => {
+					return await this.getActiveHookExecution()
+				},
+				runUserPromptSubmitHook: async () => {
+					return { cancel: false }
+				},
+			},
+			coordinator: coordinator,
+		}
+
+		return config
 	}
 
 	// =========================================================================

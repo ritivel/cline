@@ -882,13 +882,13 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 			if (!stat.isDirectory()) {
 				return {
 					success: false,
-					error: `Dossier folder does not exist: ${this.dossierPath}. Run /create-dossier first.`,
+					error: `Dossier folder does not exist: ${this.dossierPath}. Dossier folder structure will be created automatically when you create a product.`,
 				}
 			}
 		} catch {
 			return {
 				success: false,
-				error: `Dossier folder does not exist: ${this.dossierPath}. Run /create-dossier first.`,
+				error: `Dossier folder does not exist: ${this.dossierPath}. Dossier folder structure will be created automatically when you create a product.`,
 			}
 		}
 
@@ -978,7 +978,9 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 			return {
 				success: false,
 				sectionsGenerated: 0,
-				errors: [`Dossier folder does not exist: ${this.dossierPath}. Run /create-dossier first.`],
+				errors: [
+					`Dossier folder does not exist: ${this.dossierPath}. Dossier folder structure will be created automatically when you create a product.`,
+				],
 			}
 		}
 

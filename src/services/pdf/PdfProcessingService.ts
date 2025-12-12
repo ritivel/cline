@@ -4,6 +4,7 @@ import fs from "fs"
 import path from "path"
 import { Readable } from "stream"
 import { fetch, getAxiosSettings } from "@/shared/net"
+import { CtdClassifierServiceV2 } from "./CtdClassifierServiceV2"
 import { PdfMetadataService } from "./PdfMetadataService"
 import { PdfProcessingTracker } from "./PdfProcessingTracker"
 
@@ -359,6 +360,7 @@ export class PdfProcessingService {
 		pdfName: string,
 		outputDir: string,
 		workspaceRoot: string,
+		submissionsFolder: string,
 		onProgress?: (stage: string, details?: string) => void,
 	): Promise<void> {
 		// Calculate extraction path first to check if already processed
@@ -385,6 +387,34 @@ export class PdfProcessingService {
 				)
 				if (extracted && onProgress) {
 					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
+				}
+
+				// Classify the document if info.json exists
+				const infoJsonPath = path.join(extractPath, "info.json")
+				try {
+					await fs.promises.access(infoJsonPath)
+					// info.json exists, classify the document
+					if (onProgress) {
+						onProgress("classifying", `Classifying ${path.basename(pdfName)}...`)
+					}
+
+					const relativePath = path.relative(outputDir, extractPath)
+					const classifier = new CtdClassifierServiceV2(submissionsFolder)
+					try {
+						const success = await classifier.classifyFolder(extractPath, relativePath, submissionsFolder)
+						if (success && onProgress) {
+							onProgress("classified", `Classified ${path.basename(pdfName)}`)
+						}
+					} catch (classificationError) {
+						// Log error but don't fail the process
+						console.error(`Failed to classify ${pdfName}:`, classificationError)
+						if (onProgress) {
+							onProgress("error", `Classification failed for ${path.basename(pdfName)}`)
+						}
+					}
+				} catch {
+					// info.json doesn't exist, skip classification
+					// This is expected for some documents, so we silently skip
 				}
 			} catch (metadataError) {
 				console.error(`Failed to extract metadata for existing folder ${pdfName}:`, metadataError)
@@ -466,6 +496,34 @@ export class PdfProcessingService {
 				if (extracted) {
 					await tracker.markProcessed(pdfName, extractPath, workspaceRoot, sourceHash)
 				}
+
+				// Classify the document if info.json exists
+				const infoJsonPath = path.join(extractPath, "info.json")
+				try {
+					await fs.promises.access(infoJsonPath)
+					// info.json exists, classify the document
+					if (onProgress) {
+						onProgress("classifying", `Classifying ${path.basename(pdfName)}...`)
+					}
+
+					const relativePath = path.relative(outputDir, extractPath)
+					const classifier = new CtdClassifierServiceV2(submissionsFolder)
+					try {
+						const success = await classifier.classifyFolder(extractPath, relativePath, submissionsFolder)
+						if (success && onProgress) {
+							onProgress("classified", `Classified ${path.basename(pdfName)}`)
+						}
+					} catch (classificationError) {
+						// Log error but don't fail the download/extraction
+						console.error(`Failed to classify ${pdfName}:`, classificationError)
+						if (onProgress) {
+							onProgress("error", `Classification failed for ${path.basename(pdfName)}`)
+						}
+					}
+				} catch {
+					// info.json doesn't exist, skip classification
+					// This is expected for some documents, so we silently skip
+				}
 			} catch (metadataError) {
 				console.error(`Failed to extract metadata for ${pdfName}:`, metadataError)
 				if (onProgress) {
@@ -507,6 +565,7 @@ export class PdfProcessingService {
 		pdfFiles: string[],
 		outputDir: string,
 		workspaceRoot: string,
+		submissionsFolder: string,
 		onProgress?: (stage: string, details?: string) => void,
 	): Promise<void> {
 		const pollInterval = 10000 // 10 seconds
@@ -533,6 +592,7 @@ export class PdfProcessingService {
 					pdfName,
 					outputDir,
 					workspaceRoot,
+					submissionsFolder,
 					onProgress,
 				)
 
@@ -800,7 +860,14 @@ export class PdfProcessingService {
 				if (onProgress) {
 					onProgress("processing", "Processing PDFs on server...")
 				}
-				await this.pollAndDownloadIncremental(jobId, pdfFiles, documentsPath, workspaceRoot, onProgress)
+				await this.pollAndDownloadIncremental(
+					jobId,
+					pdfFiles,
+					documentsPath,
+					workspaceRoot,
+					submissionsFolder,
+					onProgress,
+				)
 			} else {
 				// Legacy: Wait for all, then download single zip
 				if (onProgress) {

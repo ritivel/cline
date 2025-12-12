@@ -59,7 +59,7 @@ import type { CTDModuleDef, CTDSectionDef } from "@/core/ctd/types"
  * Gets a CTD template by name, or returns the default template
  * Uses the SINGLE SOURCE OF TRUTH from @/core/ctd/templates/
  */
-function getCTDTemplate(templateName?: string): typeof EAC_NMRA_TEMPLATE {
+export function getCTDTemplate(templateName?: string): typeof EAC_NMRA_TEMPLATE {
 	// Currently only EAC_NMRA_TEMPLATE is available
 	// Add more templates to @/core/ctd/templates/ and import them here
 	return EAC_NMRA_TEMPLATE
@@ -87,7 +87,7 @@ function buildFolderPaths(module: CTDModuleDef, moduleNum: number, sectionId: st
 /**
  * Creates dossier folder structure from CTD modules
  */
-async function createDossierFolders(submissionsPath: string, modules: CTDModuleDef[]): Promise<string[]> {
+export async function createDossierFolders(submissionsPath: string, modules: CTDModuleDef[]): Promise<string[]> {
 	const createdPaths: string[] = []
 	const fileTracker = ClineFileTracker.getInstance()
 
@@ -214,7 +214,7 @@ function startCloudPdfProcessing(workspaceRoot: string): void {
 /**
  * Classifies all documents in the documents folder that have info.json
  */
-async function classifyAllDocuments(
+export async function classifyAllDocuments(
 	documentsPath: string,
 	workspaceRoot: string,
 ): Promise<{ classified: number; total: number; errors: string[] }> {
@@ -897,7 +897,6 @@ export async function parseSlashCommands(
 		"deep-planning",
 		"subagent",
 		"explain-changes",
-		"create-dossier",
 		"generate-dossier",
 		"generate-section",
 		"update-checklist",
@@ -980,55 +979,6 @@ export async function parseSlashCommands(
 			// slashMatch[1] is the whitespace or empty string before the slash
 			// slashMatch[2] is the command name
 			const commandName = slashMatch[2] // casing matters
-
-			// Special handling for create-dossier: start in background
-			if (commandName === "create-dossier") {
-				try {
-					// Get submissions folder path
-					const submissionsProvider = SubmissionsPaneProvider.getInstance()
-					const submissionsPath = submissionsProvider?.getSubmissionsFolder()
-
-					if (!submissionsPath) {
-						const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
-						const processedText = `<explicit_instructions type="create-dossier-result">
-The /create-dossier command requires a submissions folder to be set. Please set a submissions folder in the left pane before creating a dossier.
-</explicit_instructions>
-
-${textWithoutSlashCommand}`
-						return { processedText, needsClinerulesFileCheck: false }
-					}
-
-					// Start dossier creation in the background
-					startDossierCreation(submissionsPath, undefined, (result) => {
-						// Result is already shown via notification in startDossierCreation
-						console.log(`[create-dossier] ${result.success ? "Success" : "Error"}: ${result.message}`)
-					})
-
-					// Remove slash command from text
-					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
-
-					// Return message for AI to report to user
-					const processedText = `<explicit_instructions type="create-dossier-result">
-The /create-dossier command has been started in the background. The dossier folder structure is being created in the submissions folder, and documents will be classified automatically. Progress notifications will appear as the process completes.
-</explicit_instructions>
-
-${textWithoutSlashCommand}`
-
-					// Track telemetry for builtin slash command usage
-					telemetryService.captureSlashCommandUsed(ulid, commandName, "builtin")
-
-					return { processedText, needsClinerulesFileCheck: false }
-				} catch (error) {
-					console.error(`Error starting create-dossier command: ${error}`)
-					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
-					const processedText = `<explicit_instructions type="create-dossier-result">
-The /create-dossier command failed to start. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
-</explicit_instructions>
-
-${textWithoutSlashCommand}`
-					return { processedText, needsClinerulesFileCheck: false }
-				}
-			}
 
 			// Special handling for generate-dossier: execute directly
 			if (commandName === "generate-dossier") {

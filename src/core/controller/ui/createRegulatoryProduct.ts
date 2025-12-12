@@ -2,8 +2,11 @@ import { Empty, StringRequest } from "@shared/proto/cline/common"
 import { OpenInFileExplorerPanelRequest } from "@shared/proto/host/workspace"
 import type { RegulatoryProductConfig } from "@shared/storage/state-keys"
 import * as fs from "fs/promises"
+import * as path from "path"
+import { createDossierFolders, getCTDTemplate } from "@/core/slash-commands/index"
 import { HostProvider } from "@/hosts/host-provider"
 import { SubmissionsPaneProvider } from "@/hosts/vscode/SubmissionsPaneProvider"
+import { ClineFileTracker } from "@/services/fileTracking/ClineFileTracker"
 import type { Controller } from "../index"
 
 /**
@@ -74,6 +77,41 @@ export async function createRegulatoryProduct(_controller: Controller, request: 
 		const submissionsProvider = SubmissionsPaneProvider.getInstance()
 		if (submissionsProvider) {
 			await submissionsProvider.setSubmissionsFolder(config.submissionsPath)
+		}
+
+		// Create CTD dossier folder structure automatically
+		try {
+			const template = getCTDTemplate()
+			const dossierPath = path.join(config.submissionsPath, "dossier")
+
+			// Check if dossier folder already exists (backward compatibility)
+			try {
+				await fs.access(dossierPath)
+				console.log("[createRegulatoryProduct] Dossier folder already exists, skipping creation")
+			} catch {
+				// Dossier folder doesn't exist, create it
+				console.log("[createRegulatoryProduct] Creating CTD dossier folder structure...")
+				const createdPaths = await createDossierFolders(config.submissionsPath, template.modules)
+				console.log(
+					`[createRegulatoryProduct] Successfully created dossier folder structure with ${createdPaths.length} folders`,
+				)
+			}
+
+			// Create documents folder if it doesn't exist
+			const documentsPath = path.join(config.submissionsPath, "documents")
+			const fileTracker = ClineFileTracker.getInstance()
+			try {
+				await fs.access(documentsPath)
+				// Documents folder already exists, skip creation
+			} catch {
+				// Documents folder doesn't exist, create it
+				await fs.mkdir(documentsPath, { recursive: true })
+				fileTracker.trackFile(documentsPath)
+				console.log("[createRegulatoryProduct] Created documents folder")
+			}
+		} catch (error) {
+			// Log error but don't fail product creation
+			console.error("[createRegulatoryProduct] Failed to create dossier folder structure:", error)
 		}
 
 		// Clear the regulatory onboarding flag in global state

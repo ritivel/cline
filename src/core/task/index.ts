@@ -145,7 +145,7 @@ export class Task {
 	readonly taskId: string
 	readonly ulid: string
 	private taskIsFavorited?: boolean
-	private cwd: string
+	protected cwd: string
 	private taskInitializationStartTime: number
 
 	taskState: TaskState
@@ -195,18 +195,18 @@ export class Task {
 	}
 
 	// Core dependencies
-	private controller: Controller
-	private mcpHub: McpHub
+	protected controller: Controller
+	protected mcpHub: McpHub
 
 	// Service handlers
 	api: ApiHandler
 	terminalManager: TerminalManager
-	private urlContentFetcher: UrlContentFetcher
+	protected urlContentFetcher: UrlContentFetcher
 	browserSession: BrowserSession
 	contextManager: ContextManager
-	private diffViewProvider: DiffViewProvider
+	protected diffViewProvider: DiffViewProvider
 	public checkpointManager?: ICheckpointManager
-	private clineIgnoreController: ClineIgnoreController
+	protected clineIgnoreController: ClineIgnoreController
 	private toolExecutor: ToolExecutor
 	/**
 	 * Whether the task is using native tool calls.
@@ -217,7 +217,7 @@ export class Task {
 	private useNativeToolCalls: boolean = false
 	private streamHandler: StreamResponseHandler
 
-	private terminalExecutionMode: "vscodeTerminal" | "backgroundExec"
+	protected terminalExecutionMode: "vscodeTerminal" | "backgroundExec"
 	private activeBackgroundCommand?: {
 		process: TerminalProcessResultPromise & {
 			terminate?: () => void
@@ -227,7 +227,7 @@ export class Task {
 	}
 
 	// Metadata tracking
-	private fileContextTracker: FileContextTracker
+	protected fileContextTracker: FileContextTracker
 	private modelContextTracker: ModelContextTracker
 	private environmentContextTracker: EnvironmentContextTracker
 
@@ -241,7 +241,7 @@ export class Task {
 	private cancelTask: () => Promise<void>
 
 	// Cache service
-	private stateManager: StateManager
+	protected stateManager: StateManager
 
 	// Message and conversation state
 	messageStateHandler: MessageStateHandler

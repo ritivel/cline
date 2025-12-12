@@ -214,7 +214,7 @@ export class DossierTagsService {
 		if (!folderExists) {
 			console.log(
 				`Dossier folder does not exist for section ${section} (expected path: ${sectionFolderPath}), skipping tag for ${pdfName}. ` +
-					`Run /create-dossier first to create the folder structure.`,
+					`Dossier folder structure will be created automatically when you create a product.`,
 			)
 			return false
 		}
