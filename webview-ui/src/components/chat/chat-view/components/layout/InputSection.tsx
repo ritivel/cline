@@ -41,9 +41,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
 	const { isAtBottom, scrollToBottomAuto } = scrollBehavior
 
 	return (
-		<>
+		<div className="px-4 pb-4">
 			{activeQuote && (
-				<div style={{ marginBottom: "-12px", marginTop: "10px" }}>
+				<div className="mb-2 mt-2">
 					<QuotedMessagePreview
 						isFocused={isTextAreaFocused}
 						onDismiss={() => setActiveQuote(null)}
@@ -73,6 +73,6 @@ export const InputSection: React.FC<InputSectionProps> = ({
 				setSelectedImages={setSelectedImages}
 				shouldDisableFilesAndImages={shouldDisableFilesAndImages}
 			/>
-		</>
+		</div>
 	)
 }

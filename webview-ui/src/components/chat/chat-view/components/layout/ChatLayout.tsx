@@ -30,6 +30,8 @@ const ChatLayoutContainer = styled.div.withConfig({
 	height: 100%;
 	min-height: 100vh;
 	position: relative;
+	background: var(--background);
+	transition: background 0.2s ease;
 `
 
 const MainContent = styled.div`
@@ -37,4 +39,6 @@ const MainContent = styled.div`
 	flex-direction: column;
 	overflow: hidden;
 	grid-row: 1;
+	/* Generous spacing for minimal design */
+	padding: 0;
 `

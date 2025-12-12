@@ -34,18 +34,20 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 	lastProgressMessageText,
 }) => {
 	return (
-		<TaskHeader
-			cacheReads={apiMetrics.totalCacheReads}
-			cacheWrites={apiMetrics.totalCacheWrites}
-			doesModelSupportPromptCache={selectedModelInfo.supportsPromptCache}
-			lastApiReqTotalTokens={lastApiReqTotalTokens}
-			lastProgressMessageText={lastProgressMessageText}
-			onClose={messageHandlers.handleTaskCloseButtonClick}
-			onSendMessage={messageHandlers.handleSendMessage}
-			task={task}
-			tokensIn={apiMetrics.totalTokensIn}
-			tokensOut={apiMetrics.totalTokensOut}
-			totalCost={apiMetrics.totalCost}
-		/>
+		<div className="border-b border-border/50 bg-background">
+			<TaskHeader
+				cacheReads={apiMetrics.totalCacheReads}
+				cacheWrites={apiMetrics.totalCacheWrites}
+				doesModelSupportPromptCache={selectedModelInfo.supportsPromptCache}
+				lastApiReqTotalTokens={lastApiReqTotalTokens}
+				lastProgressMessageText={lastProgressMessageText}
+				onClose={messageHandlers.handleTaskCloseButtonClick}
+				onSendMessage={messageHandlers.handleSendMessage}
+				task={task}
+				tokensIn={apiMetrics.totalTokensIn}
+				tokensOut={apiMetrics.totalTokensOut}
+				totalCost={apiMetrics.totalCost}
+			/>
+		</div>
 	)
 }

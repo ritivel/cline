@@ -56,6 +56,61 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
 	const isLastMessageGroup = isNextCheckpoint && index === groupedMessages.length - 2
 	const isLast = index === groupedMessages.length - 1 || isLastMessageGroup
 
+	// Get checkpoint message if it's the next message (for inline display with API request)
+	// Only show checkpoint inline if the current message is an API request
+	const nextCheckpointMessage =
+		messageOrGroup.say === "api_req_started" &&
+		isNextCheckpoint &&
+		!Array.isArray(nextMessage) &&
+		nextMessage?.say === "checkpoint_created"
+			? nextMessage
+			: undefined
+
+	// Check if this API request resulted in tool calls by looking at subsequent messages
+	// Also extract the tool names for display
+	const { hasToolCalls, toolNames } = React.useMemo(() => {
+		if (messageOrGroup.say !== "api_req_started") {
+			return { hasToolCalls: false, toolNames: [] }
+		}
+		// Find the index of this message in modifiedMessages
+		const currentIndex = modifiedMessages.findIndex((m) => m.ts === messageOrGroup.ts)
+		if (currentIndex === -1) {
+			return { hasToolCalls: false, toolNames: [] }
+		}
+
+		const toolNamesSet = new Set<string>()
+		// Check if there are any tool messages after this API request (within next 10 messages to avoid checking too far)
+		for (let i = currentIndex + 1; i < Math.min(currentIndex + 11, modifiedMessages.length); i++) {
+			const msg = modifiedMessages[i]
+			// Stop checking if we hit another API request
+			if (msg.say === "api_req_started") {
+				break
+			}
+			// Check if this is a tool message and extract tool name
+			if (msg.ask === "tool" || msg.say === "tool") {
+				try {
+					const tool = JSON.parse(msg.text || "{}") as { tool?: string }
+					if (tool.tool) {
+						toolNamesSet.add(tool.tool)
+					}
+				} catch {
+					// Ignore parse errors
+				}
+			} else if (msg.ask === "command") {
+				toolNamesSet.add("command")
+			} else if (msg.ask === "use_mcp_server") {
+				toolNamesSet.add("use_mcp_server")
+			} else if (msg.ask === "browser_action_launch") {
+				toolNamesSet.add("browser_action_launch")
+			}
+		}
+
+		return {
+			hasToolCalls: toolNamesSet.size > 0,
+			toolNames: Array.from(toolNamesSet),
+		}
+	}, [messageOrGroup, modifiedMessages])
+
 	// Regular message
 	return (
 		<div
@@ -64,17 +119,20 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
 			})}
 			data-message-ts={messageOrGroup.ts}>
 			<ChatRow
+				hasToolCalls={hasToolCalls}
 				inputValue={inputValue}
 				isExpanded={expandedRows[messageOrGroup.ts] || false}
 				isLast={isLast}
 				key={messageOrGroup.ts}
 				lastModifiedMessage={modifiedMessages.at(-1)}
 				message={messageOrGroup}
+				nextCheckpointMessage={nextCheckpointMessage}
 				onCancelCommand={() => messageHandlers.executeButtonAction("cancel")}
 				onHeightChange={onHeightChange}
 				onSetQuote={onSetQuote}
 				onToggleExpand={onToggleExpand}
 				sendMessageFromChatRow={messageHandlers.handleSendMessage}
+				toolNames={toolNames}
 			/>
 		</div>
 	)

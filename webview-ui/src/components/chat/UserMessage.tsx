@@ -89,12 +89,12 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 
 	return (
 		<div
-			className="py-2 px-2.5"
+			className="py-3 px-4 rounded-md transition-all duration-150"
 			onClick={handleClick}
 			style={{
-				backgroundColor: isEditing ? "unset" : "var(--vscode-badge-background)",
-				color: "var(--vscode-badge-foreground)",
-				borderRadius: "3px",
+				backgroundColor: isEditing ? "transparent" : "var(--primary)/10",
+				border: isEditing ? "1px solid var(--border)" : "1px solid var(--primary)/20",
+				color: "var(--foreground)",
 				whiteSpace: "pre-line",
 				wordWrap: "break-word",
 			}}>
@@ -102,30 +102,22 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 				<>
 					<DynamicTextArea
 						autoFocus
+						className="w-full rounded-md border border-border bg-input text-foreground p-3 font-sans resize-none transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
 						onBlur={(e) => handleBlur(e)}
 						onChange={(e) => setEditedText(e.target.value)}
 						onKeyDown={handleKeyDown}
 						ref={textAreaRef}
 						style={{
-							width: "100%",
-							backgroundColor: "var(--vscode-input-background)",
-							color: "var(--vscode-input-foreground)",
-							borderColor: "var(--vscode-input-border)",
-							border: "1px solid",
-							borderRadius: "2px",
-							padding: "6px",
-							fontFamily: "inherit",
 							fontSize: "inherit",
-							lineHeight: "inherit",
+							lineHeight: "1.6",
 							boxSizing: "border-box",
-							resize: "none",
 							overflowX: "hidden",
 							overflowY: "scroll",
 							scrollbarWidth: "none",
 						}}
 						value={editedText}
 					/>
-					<div style={{ display: "flex", gap: "8px", marginTop: "8px", justifyContent: "flex-end" }}>
+					<div className="flex gap-2 mt-3 justify-end">
 						{!checkpointManagerErrorMessage && (
 							<RestoreButton
 								isPrimary={false}
@@ -147,12 +139,12 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 					</div>
 				</>
 			) : (
-				<span className="ph-no-capture text-sm" style={{ display: "block" }}>
+				<span className="ph-no-capture text-md font-medium leading-relaxed" style={{ display: "block" }}>
 					{highlightedText}
 				</span>
 			)}
 			{((images && images.length > 0) || (files && files.length > 0)) && (
-				<Thumbnails files={files ?? []} images={images ?? []} style={{ marginTop: "8px" }} />
+				<Thumbnails files={files ?? []} images={images ?? []} style={{ marginTop: "12px" }} />
 			)}
 		</div>
 	)
@@ -175,21 +167,13 @@ const RestoreButton = forwardRef<HTMLButtonElement, RestoreButtonProps>(({ type,
 
 	return (
 		<button
+			className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] ${
+				isPrimary
+					? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+					: "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+			}`}
 			onClick={handleClick}
 			ref={ref}
-			style={{
-				backgroundColor: isPrimary
-					? "var(--vscode-button-background)"
-					: "var(--vscode-button-secondaryBackground, var(--vscode-descriptionForeground))",
-				color: isPrimary
-					? "var(--vscode-button-foreground)"
-					: "var(--vscode-button-secondaryForeground, var(--vscode-foreground))",
-				border: "none",
-				padding: "4px 8px",
-				borderRadius: "2px",
-				fontSize: "9px",
-				cursor: "pointer",
-			}}
 			title={title}>
 			{label}
 		</button>

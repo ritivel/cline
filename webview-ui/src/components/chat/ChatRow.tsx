@@ -10,7 +10,7 @@ import {
 	COMPLETION_RESULT_CHANGES_FLAG,
 } from "@shared/ExtensionMessage"
 import { BooleanRequest, Int64Request, StringRequest } from "@shared/proto/cline/common"
-import { VSCodeBadge, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import deepEqual from "fast-deep-equal"
 import { FoldVerticalIcon } from "lucide-react"
 import React, { MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -33,7 +33,6 @@ import McpResourceRow from "@/components/mcp/configuration/tabs/installed/server
 import McpToolRow from "@/components/mcp/configuration/tabs/installed/server-row/McpToolRow"
 import { PLATFORM_CONFIG, PlatformType } from "@/config/platform.config"
 import { useExtensionState } from "@/context/ExtensionStateContext"
-import { cn } from "@/lib/utils"
 import { FileServiceClient, TaskServiceClient, UiServiceClient } from "@/services/grpc-client"
 import { findMatchingResourceOrTemplate, getMcpServerDisplayName } from "@/utils/mcp"
 import CodeAccordian, { cleanPathPrefix } from "../common/CodeAccordian"
@@ -52,8 +51,9 @@ const successColor = "var(--vscode-charts-green)"
 const _cancelledColor = "var(--vscode-descriptionForeground)"
 
 const ChatRowContainer = styled.div`
-	padding: 10px 6px 10px 15px;
+	padding: 12px 16px;
 	position: relative;
+	transition: background-color 0.15s ease;
 
 	&:hover ${CheckpointControls} {
 		opacity: 1;
@@ -61,13 +61,13 @@ const ChatRowContainer = styled.div`
 
 	/* Fade-in animation for hook messages being inserted */
 	&.hook-message-animate {
-		animation: hookFadeSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+		animation: hookFadeSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
 	@keyframes hookFadeSlideIn {
 		from {
 			opacity: 0;
-			transform: translateY(-12px);
+			transform: translateY(-8px);
 		}
 		to {
 			opacity: 1;
@@ -87,6 +87,9 @@ interface ChatRowProps {
 	sendMessageFromChatRow?: (text: string, images: string[], files: string[]) => void
 	onSetQuote: (text: string) => void
 	onCancelCommand?: () => void
+	hasToolCalls?: boolean
+	toolNames?: string[]
+	nextCheckpointMessage?: ClineMessage
 }
 
 interface QuoteButtonState {
@@ -275,6 +278,9 @@ export const ChatRowContent = memo(
 		sendMessageFromChatRow,
 		onSetQuote,
 		onCancelCommand,
+		hasToolCalls = false,
+		toolNames = [],
+		nextCheckpointMessage,
 	}: ChatRowContentProps) => {
 		const { mcpServers, mcpMarketplaceCatalog, onRelinquishControl, vscodeTerminalExecutionMode } = useExtensionState()
 		const [seeNewChangesDisabled, setSeeNewChangesDisabled] = useState(false)
@@ -472,6 +478,8 @@ export const ChatRowContent = memo(
 						apiReqCancelReason,
 						apiRequestFailedMessage,
 						retryStatus,
+						hasToolCalls,
+						toolNames,
 					})
 				case "followup":
 					return [
@@ -495,6 +503,8 @@ export const ChatRowContent = memo(
 			apiReqCancelReason,
 			isMcpServerResponding,
 			message.text,
+			hasToolCalls,
+			toolNames,
 		])
 
 		const headerStyle: React.CSSProperties = {
@@ -1272,22 +1282,20 @@ export const ChatRowContent = memo(
 											display: "flex",
 											alignItems: "center",
 											gap: "10px",
+											flex: 1,
 										}}>
 										{icon}
 										{title}
-										{/* Need to render this every time since it affects height of row by 2px */}
-										<VSCodeBadge
-											className={cn("text-sm", {
-												"opacity-100": cost != null && cost > 0,
-												"opacity-0": cost == null || cost <= 0,
-											})}
-											style={{
-												opacity: cost != null && cost > 0 ? 1 : 0,
-											}}>
-											{cost != null && Number(cost || 0) > 0 ? `$${Number(cost || 0).toFixed(4)}` : ""}
-										</VSCodeBadge>
 									</div>
-									<span className={`codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
+									<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+										{nextCheckpointMessage && (
+											<CheckmarkControl
+												isCheckpointCheckedOut={nextCheckpointMessage.isCheckpointCheckedOut}
+												messageTs={nextCheckpointMessage.ts}
+											/>
+										)}
+										<span className={`codicon codicon-chevron-${isExpanded ? "up" : "down"}`}></span>
+									</div>
 								</div>
 								{((cost == null && apiRequestFailedMessage) || apiReqStreamingFailedMessage) && (
 									<ErrorRow
@@ -1453,7 +1461,10 @@ export const ChatRowContent = memo(
 					case "clineignore_error":
 						return <ErrorRow errorType="clineignore_error" message={message} />
 					case "checkpoint_created":
-						return <CheckmarkControl isCheckpointCheckedOut={message.isCheckpointCheckedOut} messageTs={message.ts} />
+						// Don't render checkpoint as separate row if it's being shown inline with API request
+						// Check if this checkpoint immediately follows an API request by checking if it was passed as nextCheckpointMessage
+						// If it's shown inline, return null to hide this separate row
+						return null
 					case "load_mcp_documentation":
 						return (
 							<div

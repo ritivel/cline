@@ -16,7 +16,7 @@ export const CHAT_ROW_COLLAPSED_BG_COLOR = "var(--vscode-sideBar-background)"
 /*
 overflowX: auto + inner div with padding results in an issue where the top/left/bottom padding renders but the right padding inside does not count as overflow as the width of the element is not exceeded. Once the inner div is outside the boundaries of the parent it counts as overflow.
 https://stackoverflow.com/questions/60778406/why-is-padding-right-clipped-with-overflowscroll/77292459#77292459
-this fixes the issue of right padding clipped off 
+this fixes the issue of right padding clipped off
 "ideal" size in a given axis when given infinite available space--allows the syntax highlighter to grow to largest possible width including its padding
 minWidth: "max-content",
 */
@@ -39,10 +39,12 @@ const StyledMarkdown = styled.div<{ forceWrap: boolean }>`
 
 	pre {
 		background-color: ${CODE_BLOCK_BG_COLOR};
-		border-radius: 5px;
+		border-radius: 0.5rem;
+		border: 1px solid var(--border);
 		margin: 0;
 		min-width: ${({ forceWrap }) => (forceWrap ? "auto" : "max-content")};
-		padding: 10px 10px;
+		padding: 12px 16px;
+		transition: all 0.15s ease;
 	}
 
 	pre > code {
@@ -63,15 +65,19 @@ const StyledMarkdown = styled.div<{ forceWrap: boolean }>`
 			display: none;
 		}
 		word-wrap: break-word;
-		border-radius: 5px;
+		border-radius: 0.375rem;
 		background-color: ${CODE_BLOCK_BG_COLOR};
-		font-size: var(--vscode-editor-font-size, var(--vscode-font-size, 12px));
-		font-family: var(--vscode-editor-font-family);
+		font-size: var(--text-sm);
+		font-family: var(--font-azeret-mono);
+		line-height: 1.6;
 	}
 
 	code:not(pre > code) {
-		font-family: var(--vscode-editor-font-family);
-		color: #f78383;
+		font-family: var(--font-azeret-mono);
+		color: var(--destructive);
+		background-color: var(--muted);
+		padding: 2px 6px;
+		border-radius: 0.25rem;
 	}
 
 	background-color: ${CODE_BLOCK_BG_COLOR};

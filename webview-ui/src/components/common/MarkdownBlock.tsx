@@ -209,13 +209,16 @@ const remarkPreventBoldFilenames = () => {
 const StyledMarkdown = styled.div<{ compact?: boolean }>`
 	pre {
 		background-color: ${CODE_BLOCK_BG_COLOR};
-		border-radius: 3px;
-		margin: 13px 0;
-		padding: 10px 10px;
+		border-radius: 0.5rem;
+		border: 1px solid var(--border);
+		margin: 16px 0;
+		padding: 12px 16px;
 		max-width: calc(100vw - 20px);
 		overflow-x: auto;
 		overflow-y: hidden;
 		padding-right: 70px;
+		transition: all 0.15s ease;
+		box-shadow: var(--shadow-sm);
 	}
 
 	pre > code {
@@ -236,44 +239,36 @@ const StyledMarkdown = styled.div<{ compact?: boolean }>`
 			display: none;
 		}
 		word-wrap: break-word;
-		border-radius: 3px;
+		border-radius: 0.375rem;
 		background-color: ${CODE_BLOCK_BG_COLOR};
-		font-size: var(--vscode-editor-font-size, var(--vscode-font-size, 12px));
-		font-family: var(--vscode-editor-font-family);
+		font-size: var(--text-sm);
+		font-family: var(--font-azeret-mono);
+		line-height: 1.6;
 	}
 
 	code:not(pre > code) {
-		font-family: var(--vscode-editor-font-family, monospace);
-		color: var(--vscode-textPreformat-foreground, #f78383);
-		background-color: var(--vscode-textCodeBlock-background, #1e1e1e);
-		padding: 0px 2px;
-		border-radius: 3px;
-		border: 1px solid var(--vscode-textSeparator-foreground, #424242);
+		font-family: var(--font-azeret-mono);
+		color: var(--destructive);
+		background-color: var(--muted);
+		padding: 2px 6px;
+		border-radius: 0.25rem;
+		border: 1px solid var(--border);
 		white-space: pre-line;
 		word-break: break-word;
 		overflow-wrap: anywhere;
 	}
 
-	font-family:
-		var(--vscode-font-family),
-		system-ui,
-		-apple-system,
-		BlinkMacSystemFont,
-		"Segoe UI",
-		Roboto,
-		Oxygen,
-		Ubuntu,
-		Cantarell,
-		"Open Sans",
-		"Helvetica Neue",
-		sans-serif;
-	font-size: var(--vscode-font-size, 13px);
+	font-family: var(--font-sans);
+	font-size: var(--text-md);
+	color: var(--foreground);
 
 	p,
 	li,
 	ol,
 	ul {
-		line-height: 1.25;
+		line-height: 1.6;
+		margin-block-start: 0.75em;
+		margin-block-end: 0.75em;
 	}
 
 	ol,
@@ -289,15 +284,23 @@ const StyledMarkdown = styled.div<{ compact?: boolean }>`
 
 	a {
 		text-decoration: none;
-	}
-	a {
+		color: var(--primary);
+		transition: color 0.15s ease;
 		&:hover {
 			text-decoration: underline;
+			color: var(--primary);
+			opacity: 0.8;
 		}
 	}
 
-	hr, ul {
-		margin: 13px 0;
+	hr {
+		margin: 20px 0;
+		border: none;
+		border-top: 1px solid var(--border);
+	}
+
+	ul {
+		margin: 12px 0;
 	}
 
 	li > ul {

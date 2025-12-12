@@ -1,8 +1,6 @@
 import { ClineMessage } from "@shared/ExtensionMessage"
-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import React, { useCallback, useLayoutEffect, useMemo, useState } from "react"
 import Thumbnails from "@/components/common/Thumbnails"
-import { getModeSpecificFields, normalizeApiConfiguration } from "@/components/settings/utils/providerUtils"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { cn } from "@/lib/utils"
 import { getEnvironmentColor } from "@/utils/environmentColors"
@@ -11,7 +9,6 @@ import DeleteTaskButton from "./buttons/DeleteTaskButton"
 import NewTaskButton from "./buttons/NewTaskButton"
 import OpenDiskConversationHistoryButton from "./buttons/OpenDiskConversationHistoryButton"
 import { CheckpointError } from "./CheckpointError"
-import ContextWindow from "./ContextWindow"
 import { FocusChain } from "./FocusChain"
 import { highlightText } from "./Highlights"
 
@@ -30,7 +27,8 @@ interface TaskHeaderProps {
 	onSendMessage?: (command: string, files: string[], images: string[]) => void
 }
 
-const BUTTON_CLASS = "max-h-3 border-0 font-bold bg-transparent hover:opacity-100 text-foreground"
+const BUTTON_CLASS =
+	"h-7 px-2.5 border-0 font-medium bg-transparent hover:bg-muted/50 rounded-md text-foreground transition-all duration-150 text-base"
 
 const TaskHeader: React.FC<TaskHeaderProps> = ({
 	task,
@@ -45,11 +43,9 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	onSendMessage,
 }) => {
 	const {
-		apiConfiguration,
 		currentTaskItem,
 		checkpointManagerErrorMessage,
 		navigateToSettings,
-		mode,
 		expandTaskHeader: isTaskExpanded,
 		setExpandTaskHeader: setIsTaskExpanded,
 		environment,
@@ -86,19 +82,8 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 		return () => document.removeEventListener("mousedown", handleClickOutside)
 	}, [isHighlightedTextExpanded])
 
-	// Simplified computed values
-	const { selectedModelInfo } = normalizeApiConfiguration(apiConfiguration, mode)
-	const modeFields = getModeSpecificFields(apiConfiguration, mode)
-
-	const isCostAvailable =
-		(totalCost &&
-			modeFields.apiProvider === "openai" &&
-			modeFields.openAiModelInfo?.inputPrice &&
-			modeFields.openAiModelInfo?.outputPrice) ||
-		(modeFields.apiProvider !== "vscode-lm" && modeFields.apiProvider !== "ollama" && modeFields.apiProvider !== "lmstudio")
-
 	// Event handlers
-	const toggleTaskExpanded = useCallback(() => setIsTaskExpanded(!isTaskExpanded), [setIsTaskExpanded, isTaskExpanded])
+	const toggleTaskExpanded = () => setIsTaskExpanded(!isTaskExpanded)
 
 	const handleCheckpointSettingsClick = useCallback(() => {
 		navigateToSettings("features")
@@ -107,7 +92,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	const environmentBorderColor = getEnvironmentColor(environment, "border")
 
 	return (
-		<div className="pt-2 pb-2 pl-[15px] pr-[14px] flex flex-col gap-2">
+		<div className="px-4 py-2 flex flex-col gap-2">
 			{/* Display Checkpoint Error */}
 			<CheckpointError
 				checkpointManagerErrorMessage={checkpointManagerErrorMessage}
@@ -115,22 +100,53 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 			/>
 			{/* Task Header */}
 			<div
-				className={cn(
-					"relative overflow-hidden cursor-pointer rounded-sm flex flex-col gap-1.5 z-10 pt-2 pb-2 px-2 hover:opacity-100 bg-(--vscode-toolbar-hoverBackground)/65",
-					{
-						"opacity-100 border-1": isTaskExpanded, // No hover effects when expanded, add border
-						"hover:bg-(--vscode-toolbar-hoverBackground) border-1": !isTaskExpanded, // Hover effects only when collapsed
-					},
-				)}
-				style={{
-					borderColor: environmentBorderColor,
-				}}>
-				{/* Task Title */}
-				<div className="flex justify-between items-center cursor-pointer" onClick={toggleTaskExpanded}>
-					<div className="flex justify-between items-center">
-						{isTaskExpanded ? <ChevronDownIcon size="16" /> : <ChevronRightIcon size="16" />}
+				className={cn("relative overflow-hidden rounded-md flex flex-col transition-all duration-200", {
+					"bg-card border border-border/50 shadow-sm": isTaskExpanded,
+					"hover:bg-muted/30 cursor-pointer": !isTaskExpanded,
+				})}
+				style={
+					!isTaskExpanded
+						? {
+								borderLeft: `3px solid ${environmentBorderColor}`,
+							}
+						: {
+								borderColor: environmentBorderColor,
+							}
+				}>
+				{/* Task Title and Actions - All on one line */}
+				<div className="flex items-center gap-3 px-3 py-2">
+					{/* Task text */}
+					<div
+						className={cn(
+							"ph-no-capture text-md text-foreground/90 leading-relaxed flex-1 min-w-0",
+							isTaskExpanded
+								? "whitespace-pre-wrap break-words max-h-[4rem] overflow-hidden"
+								: "whitespace-nowrap overflow-hidden text-ellipsis",
+							{
+								"max-h-[25vh] overflow-y-auto scroll-smooth": isHighlightedTextExpanded && isTaskExpanded,
+								"cursor-pointer": isTextOverflowing && isTaskExpanded,
+							},
+						)}
+						onClick={() => isTaskExpanded && isTextOverflowing && setIsHighlightedTextExpanded(true)}
+						ref={highlightedTextRef}
+						style={
+							isTaskExpanded && !isHighlightedTextExpanded && isTextOverflowing
+								? {
+										WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+										maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+									}
+								: undefined
+						}>
+						<span className={isTaskExpanded ? "" : "font-medium"}>{highlightedText}</span>
+					</div>
+
+					{/* Action buttons and thumbnails */}
+					<div className="flex items-center gap-2 shrink-0">
 						{isTaskExpanded && (
-							<div className="mt-1 flex justify-end cursor-pointer opacity-80 gap-2 mx-2">
+							<>
+								{((task.images && task.images.length > 0) || (task.files && task.files.length > 0)) && (
+									<Thumbnails files={task.files ?? []} images={task.images ?? []} />
+								)}
 								<CopyTaskButton className={BUTTON_CLASS} taskText={task.text} />
 								<DeleteTaskButton
 									className={BUTTON_CLASS}
@@ -141,69 +157,11 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 								{IS_DEV && (
 									<OpenDiskConversationHistoryButton className={BUTTON_CLASS} taskId={currentTaskItem?.id} />
 								)}
-							</div>
-						)}
-					</div>
-					<div className="flex items-center select-none grow min-w-0 gap-1 justify-between">
-						{!isTaskExpanded && (
-							<div className="whitespace-nowrap overflow-hidden text-ellipsis grow min-w-0">
-								<span className="ph-no-capture text-base">{highlightedText}</span>
-							</div>
-						)}
-					</div>
-					<div className="inline-flex items-center justify-end select-none shrink-0">
-						{isCostAvailable && (
-							<div
-								className="mx-1 px-1 py-0.25 rounded-full inline-flex shrink-0 text-badge-background bg-badge-foreground/80 items-center"
-								id="price-tag">
-								<span className="text-xs sm:text-sm">${totalCost?.toFixed(4)}</span>
-							</div>
+							</>
 						)}
 						<NewTaskButton className={BUTTON_CLASS} onClick={onClose} />
 					</div>
 				</div>
-
-				{/* Expand/Collapse Task Details */}
-				{isTaskExpanded && (
-					<div className="flex flex-col break-words" key={`task-details-${currentTaskItem?.id}`}>
-						<div
-							className={cn(
-								"ph-no-capture whitespace-pre-wrap break-words px-0.5 text-sm mt-1 relative",
-								"max-h-[4.5rem] overflow-hidden",
-								{
-									"max-h-[25vh] overflow-y-auto scroll-smooth": isHighlightedTextExpanded,
-									"cursor-pointer": isTextOverflowing,
-								},
-							)}
-							onClick={() => isTextOverflowing && setIsHighlightedTextExpanded(true)}
-							ref={highlightedTextRef}
-							style={
-								!isHighlightedTextExpanded && isTextOverflowing
-									? {
-											WebkitMaskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
-											maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
-										}
-									: undefined
-							}>
-							{highlightedText}
-						</div>
-
-						{((task.images && task.images.length > 0) || (task.files && task.files.length > 0)) && (
-							<Thumbnails files={task.files ?? []} images={task.images ?? []} />
-						)}
-
-						<ContextWindow
-							cacheReads={cacheReads}
-							cacheWrites={cacheWrites}
-							contextWindow={selectedModelInfo?.contextWindow}
-							lastApiReqTotalTokens={lastApiReqTotalTokens}
-							onSendMessage={onSendMessage}
-							tokensIn={tokensIn}
-							tokensOut={tokensOut}
-							useAutoCondense={false} // Disable auto-condense configuration in UI for now
-						/>
-					</div>
-				)}
 			</div>
 
 			{/* Display Focus Chain To-Do List */}

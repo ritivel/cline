@@ -12,6 +12,28 @@ interface ErrorBlockTitleProps {
 		delaySec?: number
 		errorSnippet?: string
 	}
+	hasToolCalls?: boolean
+	toolNames?: string[]
+}
+
+// Helper function to format tool names for display
+const formatToolName = (toolName: string): string => {
+	const toolNameMap: Record<string, string> = {
+		readFile: "Reading file",
+		editedExistingFile: "Editing file",
+		newFileCreated: "Creating file",
+		fileDeleted: "Deleting file",
+		listFilesTopLevel: "Listing files",
+		listFilesRecursive: "Listing files recursively",
+		listCodeDefinitionNames: "Listing code definitions",
+		searchFiles: "Searching files",
+		webFetch: "Fetching from web",
+		summarizeTask: "Summarizing task",
+		command: "Executing command",
+		use_mcp_server: "Using MCP server",
+		browser_action_launch: "Launching browser",
+	}
+	return toolNameMap[toolName] || toolName
 }
 
 export const ErrorBlockTitle = ({
@@ -19,6 +41,8 @@ export const ErrorBlockTitle = ({
 	apiReqCancelReason,
 	apiRequestFailedMessage,
 	retryStatus,
+	hasToolCalls = false,
+	toolNames = [],
 }: ErrorBlockTitleProps): [React.ReactElement, React.ReactElement] => {
 	const getIconSpan = (iconName: string, colorClass: string) => (
 		<div className="w-4 h-4 flex items-center justify-center">
@@ -42,28 +66,44 @@ export const ErrorBlockTitle = ({
 		)
 
 	const title = (() => {
+		// Determine base title based on whether there are tool calls
+		let baseTitle = "Thinking"
+		if (hasToolCalls && toolNames.length > 0) {
+			// Format tool names for display
+			const formattedToolNames = toolNames.map(formatToolName)
+			if (formattedToolNames.length === 1) {
+				baseTitle = formattedToolNames[0]
+			} else if (formattedToolNames.length === 2) {
+				baseTitle = `${formattedToolNames[0]} and ${formattedToolNames[1]}`
+			} else {
+				baseTitle = `${formattedToolNames.slice(0, -1).join(", ")}, and ${formattedToolNames[formattedToolNames.length - 1]}`
+			}
+		} else if (hasToolCalls) {
+			baseTitle = "Calling tool"
+		}
+
 		// Default loading state
-		const details = { title: "API Request...", classNames: ["font-bold"] }
+		const details = { title: `${baseTitle}...`, classNames: ["font-bold"] }
 		// Handle cancellation states first
 		if (apiReqCancelReason === "user_cancelled") {
-			details.title = "API Request Cancelled"
+			details.title = `${baseTitle} (Cancelled)`
 			details.classNames.push("text-(--vscode-foreground)")
 		} else if (apiReqCancelReason != null) {
-			details.title = "API Request Failed"
+			details.title = `${baseTitle} (Failed)`
 			details.classNames.push("text-(--vscode-errorForeground)")
 		} else if (cost != null) {
 			// Handle completed request
-			details.title = "API Request"
+			details.title = baseTitle
 			details.classNames.push("text-(--vscode-foreground)")
 		} else if (apiRequestFailedMessage) {
 			// Handle failed request
 			const clineError = ClineError.parse(apiRequestFailedMessage)
-			const titleText = clineError?.isErrorType(ClineErrorType.Balance) ? "Credit Limit Reached" : "API Request Failed"
+			const titleText = clineError?.isErrorType(ClineErrorType.Balance) ? "Credit Limit Reached" : `${baseTitle} (Failed)`
 			details.title = titleText
 			details.classNames.push("font-bold text-(--vscode-errorForeground)")
 		} else if (retryStatus) {
 			// Handle retry state
-			details.title = "API Request"
+			details.title = `${baseTitle}...`
 			details.classNames.push("text-(--vscode-foreground)")
 		}
 
