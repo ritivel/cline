@@ -138,7 +138,7 @@
 		"commands": [
 			{
 				"command": "cline.plusButtonClicked",
-				"title": "New Task",
+				"title": "New",
 				"icon": "$(add)"
 			},
 			{
@@ -160,6 +160,11 @@
 				"command": "cline.accountButtonClicked",
 				"title": "Account",
 				"icon": "$(account)"
+			},
+			{
+				"command": "cline.ctdChecklistButtonClicked",
+				"title": "CTD Checklist",
+				"icon": "$(checklist)"
 			},
 			{
 				"command": "cline.settingsButtonClicked",
@@ -321,8 +326,13 @@
 					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{
-					"command": "cline.settingsButtonClicked",
+					"command": "cline.ctdChecklistButtonClicked",
 					"group": "navigation@6",
+					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
+				},
+				{
+					"command": "cline.settingsButtonClicked",
+					"group": "navigation@7",
 					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{

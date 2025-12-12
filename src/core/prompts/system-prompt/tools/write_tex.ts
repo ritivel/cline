@@ -32,7 +32,7 @@ const GENERIC: ClineToolSpec = {
 	id,
 	name: "write_tex",
 	description:
-		"Creates a LaTeX (.tex) file with the provided content, compiles it to PDF, and displays the PDF in VS Code. The .tex file is automatically compiled whenever it changes, and the PDF is updated in real-time. The .tex file itself is hidden from view - only the compiled PDF is shown.",
+		"[DEFAULT FOR NEW FILES] Creates a LaTeX (.tex) file with the provided content, compiles it to PDF, and displays the PDF in VS Code. This is the DEFAULT tool for creating new files, especially technical documentation, scientific documents, research papers, academic papers, and any document that benefits from LaTeX formatting. ALWAYS use this tool for technical documentation writing. The .tex file is automatically compiled whenever it changes, and the PDF is updated in real-time. The .tex file itself is hidden from view - only the compiled PDF is shown.",
 	parameters: [
 		{
 			name: "path",
@@ -56,7 +56,7 @@ const NATIVE_NEXT_GEN: ClineToolSpec = {
 	id,
 	name: "write_tex",
 	description:
-		"[IMPORTANT: Always output the absolutePath first] Creates a LaTeX (.tex) file with the provided content, compiles it to PDF, and displays the PDF in VS Code. The .tex file is automatically compiled whenever it changes, and the PDF is updated in real-time. The .tex file itself is hidden from view - only the compiled PDF is shown.",
+		"[IMPORTANT: Always output the absolutePath first] [DEFAULT FOR NEW FILES] Creates a LaTeX (.tex) file with the provided content, compiles it to PDF, and displays the PDF in VS Code. This is the DEFAULT tool for creating new files, especially technical documentation, scientific documents, research papers, academic papers, and any document that benefits from LaTeX formatting. ALWAYS use this tool for technical documentation writing. The .tex file is automatically compiled whenever it changes, and the PDF is updated in real-time. The .tex file itself is hidden from view - only the compiled PDF is shown.",
 	parameters: [
 		{
 			name: "absolutePath",

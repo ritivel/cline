@@ -519,6 +519,7 @@ export async function readGlobalStateFromDisk(context: ExtensionContext): Promis
 			context.globalState.get<GlobalStateAndSettings["remoteWorkflowToggles"]>("remoteWorkflowToggles")
 		const showRegulatoryOnboarding =
 			context.globalState.get<GlobalStateAndSettings["showRegulatoryOnboarding"]>("showRegulatoryOnboarding")
+		const showCtdChecklist = context.globalState.get<GlobalStateAndSettings["showCtdChecklist"]>("showCtdChecklist")
 		const currentRegulatoryProduct =
 			context.globalState.get<GlobalStateAndSettings["currentRegulatoryProduct"]>("currentRegulatoryProduct")
 		const regulatoryProducts = context.globalState.get<GlobalStateAndSettings["regulatoryProducts"]>("regulatoryProducts")
@@ -715,6 +716,7 @@ export async function readGlobalStateFromDisk(context: ExtensionContext): Promis
 			remoteRulesToggles: remoteRulesToggles || {},
 			remoteWorkflowToggles: remoteWorkflowToggles || {},
 			showRegulatoryOnboarding,
+			showCtdChecklist,
 			currentRegulatoryProduct,
 			regulatoryProducts: regulatoryProducts || [],
 		}

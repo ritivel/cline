@@ -888,6 +888,7 @@ export class Controller {
 		// Can be undefined but is set to either true or false by the migration that runs on extension launch in extension.ts
 		const welcomeViewCompleted = !!this.stateManager.getGlobalStateKey("welcomeViewCompleted")
 		const showRegulatoryOnboarding = !!this.stateManager.getGlobalStateKey("showRegulatoryOnboarding")
+		const showCtdChecklist = !!this.stateManager.getGlobalStateKey("showCtdChecklist")
 		const currentRegulatoryProduct = this.stateManager.getGlobalStateKey("currentRegulatoryProduct")
 
 		const customPrompt = this.stateManager.getGlobalSettingsKey("customPrompt")
@@ -1002,6 +1003,7 @@ export class Controller {
 			subagentsEnabled,
 			nativeToolCallSetting: this.stateManager.getGlobalStateKey("nativeToolCallEnabled"),
 			showRegulatoryOnboarding,
+			showCtdChecklist,
 			currentRegulatoryProduct,
 		} as any // Type assertion needed since ExtensionState interface doesn't include this field yet
 	}

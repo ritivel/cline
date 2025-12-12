@@ -2,6 +2,7 @@ import type { Boolean, EmptyRequest } from "@shared/proto/cline/common"
 import { useEffect } from "react"
 import AccountView from "./components/account/AccountView"
 import ChatView from "./components/chat/ChatView"
+import CtdChecklistView from "./components/ctd-checklist/CtdChecklistView"
 import HistoryView from "./components/history/HistoryView"
 import McpView from "./components/mcp/configuration/McpConfigurationView"
 import NoProductTabsView from "./components/no-product/NoProductTabsView"
@@ -31,6 +32,7 @@ const AppContent = () => {
 		showRegulatoryOnboarding,
 		currentRegulatoryProduct,
 		noProductInitialTab,
+		showCtdChecklist,
 		setShowAnnouncement,
 		setShouldShowAnnouncement,
 		closeMcpView,
@@ -40,6 +42,7 @@ const AppContent = () => {
 		hideProducts,
 		hideAccount,
 		hideAnnouncement,
+		hideCtdChecklist,
 	} = useExtensionState()
 
 	const { clineUser, organizations, activeOrganization } = useClineAuth()
@@ -73,7 +76,16 @@ const AppContent = () => {
 	// If no product is active and no other views are shown, show the three-tab interface
 	// Include showRegulatoryOnboarding case - when true, show tabs with "create" tab active
 	const shouldShowNoProductTabs =
-		!hasActiveProduct && !showSettings && !showHistory && !showProducts && !showMcp && !showAccount
+		!hasActiveProduct && !showSettings && !showHistory && !showProducts && !showMcp && !showAccount && !showCtdChecklist
+
+	console.log("[PAVAN] shouldShowNoProductTabs:", shouldShowNoProductTabs)
+	console.log("[PAVAN] showCtdChecklist:", showCtdChecklist)
+	console.log("[PAVAN] showRegulatoryOnboarding:", showRegulatoryOnboarding)
+	console.log("[PAVAN] showSettings:", showSettings)
+	console.log("[PAVAN] showHistory:", showHistory)
+	console.log("[PAVAN] showProducts:", showProducts)
+	console.log("[PAVAN] showMcp:", showMcp)
+	console.log("[PAVAN] showAccount:", showAccount)
 
 	return (
 		<div className="flex h-screen w-full flex-col">
@@ -89,6 +101,7 @@ const AppContent = () => {
 					organizations={organizations}
 				/>
 			)}
+			{showCtdChecklist && <CtdChecklistView onDone={hideCtdChecklist} />}
 			{shouldShowNoProductTabs && (
 				<NoProductTabsView initialTab={showRegulatoryOnboarding ? "create" : noProductInitialTab} />
 			)}
@@ -101,6 +114,7 @@ const AppContent = () => {
 					showProducts ||
 					showMcp ||
 					showAccount ||
+					showCtdChecklist ||
 					showRegulatoryOnboarding ||
 					shouldShowNoProductTabs
 				}

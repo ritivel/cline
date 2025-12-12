@@ -2,8 +2,9 @@ import { SystemPromptSection } from "../../templates/placeholders"
 import { PromptVariant } from "../../types"
 
 const XS_EDITING_FILES = `FILE EDITING RULES
-- Default: replace_in_file; write_to_file for new files or full rewrites.
-- Match the file’s **final** (auto-formatted) state in SEARCH; use complete lines.
+- Default: replace_in_file; write_tex for new files or full rewrites.
+- MANDATORY: ALWAYS use write_tex for technical documentation writing.
+- Match the file's **final** (auto-formatted) state in SEARCH; use complete lines.
 - Use multiple small blocks in file order. Delete = empty REPLACE. Move = delete block + insert block.`
 
 const XS_ACT_PLAN_MODE = `MODES (STRICT)

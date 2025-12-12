@@ -414,6 +414,18 @@ function startDossierGeneration(workspaceRoot: string): void {
 		return
 	}
 
+	// Check if submissions folder is set
+	const submissionsProvider = SubmissionsPaneProvider.getInstance()
+	const submissionsPath = submissionsProvider?.getSubmissionsFolder()
+	if (!submissionsPath) {
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message:
+				"Cannot start dossier generation: No submissions folder set. Please set a submissions folder in the left pane before generating dossier content.",
+			type: ShowMessageType.ERROR,
+		})
+		return
+	}
+
 	const service = new DossierGeneratorService(workspaceRoot, controller)
 	dossierGeneratorService = service
 
@@ -511,6 +523,18 @@ function startDossierSectionGeneration(workspaceRoot: string, sectionNameOrId: s
 		console.error("Cannot start section generation: No controller available")
 		HostProvider.get().hostBridge.windowClient.showMessage({
 			message: "Cannot start section generation: No controller available. Please ensure Cline is properly initialized.",
+			type: ShowMessageType.ERROR,
+		})
+		return
+	}
+
+	// Check if submissions folder is set
+	const submissionsProvider = SubmissionsPaneProvider.getInstance()
+	const submissionsPath = submissionsProvider?.getSubmissionsFolder()
+	if (!submissionsPath) {
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message:
+				"Cannot start section generation: No submissions folder set. Please set a submissions folder in the left pane before generating sections.",
 			type: ShowMessageType.ERROR,
 		})
 		return

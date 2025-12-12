@@ -5,6 +5,7 @@ import assert from "node:assert"
 import { DIFF_VIEW_URI_SCHEME } from "@hosts/vscode/VscodeDiffViewProvider"
 import * as vscode from "vscode"
 import { sendAccountButtonClickedEvent } from "./core/controller/ui/subscribeToAccountButtonClicked"
+import { sendCtdChecklistButtonClickedEvent } from "./core/controller/ui/subscribeToCtdChecklistButtonClicked"
 import { sendHistoryButtonClickedEvent } from "./core/controller/ui/subscribeToHistoryButtonClicked"
 import { sendMcpButtonClickedEvent } from "./core/controller/ui/subscribeToMcpButtonClicked"
 import { sendSettingsButtonClickedEvent } from "./core/controller/ui/subscribeToSettingsButtonClicked"
@@ -43,7 +44,6 @@ import { VscodeWebviewProvider } from "./hosts/vscode/VscodeWebviewProvider"
 import { ExtensionRegistryInfo } from "./registry"
 import { AuthService } from "./services/auth/AuthService"
 import { LogoutReason } from "./services/auth/types"
-import { ClineFileDecorationProvider } from "./services/fileTracking/ClineFileDecorationProvider"
 import { telemetryService } from "./services/telemetry"
 import { SharedUriHandler } from "./services/uri/SharedUriHandler"
 import { ShowMessageType } from "./shared/proto/host/window"
@@ -99,10 +99,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Set initial context for hasActiveProduct based on current state
 	const currentRegulatoryProduct = context.globalState.get("currentRegulatoryProduct")
 	vscode.commands.executeCommand("setContext", "cline.hasActiveProduct", !!currentRegulatoryProduct)
-
-	// Register file decoration provider for "ai" badge on Cline-created files
-	const decorationProvider = new ClineFileDecorationProvider()
-	context.subscriptions.push(vscode.window.registerFileDecorationProvider(decorationProvider))
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(VscodeWebviewProvider.SIDEBAR_ID, webview, {
@@ -296,6 +292,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(commands.AccountButton, () => {
 			// Send event to all subscribers using the gRPC streaming method
 			sendAccountButtonClickedEvent()
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.CtdChecklistButton, async () => {
+			// Send event to all subscribers using the gRPC streaming method
+			await sendCtdChecklistButtonClickedEvent()
 		}),
 	)
 

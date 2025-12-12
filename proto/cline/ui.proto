@@ -240,6 +240,9 @@ service UiService {
   // Subscribe to history button click events
   rpc subscribeToHistoryButtonClicked(EmptyRequest) returns (stream Empty);
 
+  // Subscribe to CTDChecklist button click events
+  rpc subscribeToCtdChecklistButtonClicked(EmptyRequest) returns (stream Empty);
+
   // Subscribe to products button click events
   rpc subscribeToProductsButtonClicked(EmptyRequest) returns (stream Empty);
 
@@ -299,4 +302,13 @@ service UiService {
 
   // Gets the current submissions folder from the left pane
   rpc getCurrentSubmissionsFolder(EmptyRequest) returns (String);
+
+  // Gets the CTD structure for a given market
+  rpc getCtdStructure(StringRequest) returns (String);
+
+  // Assesses CTD documents for a regulatory product
+  rpc assessCtdDocuments(StringRequest) returns (String);
+
+  // Generates CTD dossier sections based on assessment
+  rpc generateCtdDossier(StringRequest) returns (Empty);
 }

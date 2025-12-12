@@ -38,15 +38,34 @@ interface DocumentContent {
  */
 export class DossierGeneratorService {
 	private workspaceRoot: string
+	private submissionsPath: string | undefined
 	private dossierPath: string
 	private documentsPath: string
 	private controller?: Controller
 
 	constructor(workspaceRoot: string, controller?: Controller) {
 		this.workspaceRoot = workspaceRoot
-		this.dossierPath = path.join(workspaceRoot, "dossier")
-		this.documentsPath = path.join(workspaceRoot, "documents")
+
+		// Get submissions path from SubmissionsPaneProvider
+		try {
+			const { SubmissionsPaneProvider } = require("@/hosts/vscode/SubmissionsPaneProvider")
+			const submissionsProvider = SubmissionsPaneProvider.getInstance()
+			this.submissionsPath = submissionsProvider?.getSubmissionsFolder()
+		} catch (error) {
+			console.warn(`[DossierGeneratorService] Failed to get submissions path: ${error}`)
+		}
+
+		// Use submissions path if available, otherwise fall back to workspace root
+		const basePath = this.submissionsPath || workspaceRoot
+		this.dossierPath = path.join(basePath, "dossier")
+		this.documentsPath = path.join(basePath, "documents")
 		this.controller = controller
+
+		if (this.submissionsPath) {
+			console.log(`[DossierGeneratorService] Using submissions path: ${this.submissionsPath}`)
+		} else {
+			console.warn(`[DossierGeneratorService] No submissions path set, falling back to workspace root: ${workspaceRoot}`)
+		}
 	}
 
 	/**

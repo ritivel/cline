@@ -65,6 +65,7 @@ export interface GlobalState {
 	remoteWorkflowToggles: ClineRulesToggles
 	dismissedBanners: Array<{ bannerId: string; dismissedAt: number }>
 	showRegulatoryOnboarding: boolean | undefined
+	showCtdChecklist: boolean | undefined
 	currentRegulatoryProduct: RegulatoryProductConfig | undefined
 	regulatoryProducts: RegulatoryProductConfig[]
 }

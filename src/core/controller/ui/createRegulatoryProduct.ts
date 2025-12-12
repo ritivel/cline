@@ -78,7 +78,14 @@ export async function createRegulatoryProduct(_controller: Controller, request: 
 
 		// Clear the regulatory onboarding flag in global state
 		_controller.stateManager.setGlobalState("showRegulatoryOnboarding", false)
+
+		// Set flag to show CTD checklist (will be auto-cleared after showing once)
+		_controller.stateManager.setGlobalState("showCtdChecklist", true)
+
 		await _controller.postStateToWebview()
+
+		// Clear the flag immediately after posting state to prevent it from persisting
+		_controller.stateManager.setGlobalState("showCtdChecklist", false)
 
 		return Empty.create({})
 	} catch (error) {

@@ -35,7 +35,49 @@ You accomplish a given task iteratively, breaking it down into clear steps and w
 
 const GEMINI_3_EDITING_FILES_TEMPLATE = (_context: SystemPromptContext) => `EDITING FILES
 
-You have access to two tools for working with files: **write_to_file** and **replace_in_file**. Understanding their roles and selecting the right one for the job will help ensure efficient and accurate modifications.
+You have access to tools for working with files: **write_tex**, **write_to_file**, **replace_in_tex**, and **replace_in_file**. Understanding their roles and selecting the right one for the job will help ensure efficient and accurate modifications.
+
+# write_tex
+
+## Purpose
+
+- Create LaTeX (.tex) files that are automatically compiled to PDF and displayed in VS Code.
+
+## When to Use
+
+- **DEFAULT: Use write_tex as the default tool for creating new files.** Prefer write_tex for new file creation unless there's a specific reason to use write_to_file.
+- **MANDATORY: ALWAYS use write_tex for technical documentation writing** (API documentation, user guides, technical specifications, architecture documents, etc.).
+- **ALWAYS use write_tex** when creating new LaTeX documents (.tex files).
+- When the user requests a scientific document, research paper, academic paper, or any LaTeX-based document.
+- When creating any new document that could benefit from LaTeX formatting and PDF output.
+- The tool automatically compiles the LaTeX to PDF, displays the PDF in VS Code, and hides the .tex file from view.
+- The PDF automatically updates whenever the .tex file is modified.
+
+## Important Considerations
+
+- write_tex handles the entire LaTeX workflow: file creation, PDF compilation, and PDF display.
+- The .tex file is automatically compiled using LaTeX Workshop whenever it changes.
+- Only the compiled PDF is shown to the user - the .tex file remains hidden but is kept up-to-date.
+
+# replace_in_tex
+
+## Purpose
+
+- Edit existing LaTeX (.tex) files using SEARCH/REPLACE blocks, automatically recompile to PDF, and update the PDF viewer.
+
+## When to Use
+
+- **ALWAYS use replace_in_tex** when editing existing LaTeX documents (.tex files).
+- When you need to make targeted changes to specific parts of a LaTeX document.
+- The tool automatically recompiles the LaTeX to PDF after each edit and updates the PDF viewer.
+- The .tex file remains hidden - only the compiled PDF is shown.
+
+## Important Considerations
+
+- replace_in_tex handles the entire LaTeX workflow: file editing, PDF recompilation, and PDF display updates.
+- The .tex file is automatically recompiled using LaTeX Workshop whenever it changes.
+- Only the compiled PDF is shown to the user - the .tex file remains hidden but is kept up-to-date.
+- Use SEARCH/REPLACE blocks just like replace_in_file, but for .tex files.
 
 # write_to_file
 
@@ -45,16 +87,17 @@ You have access to two tools for working with files: **write_to_file** and **rep
 
 ## When to Use
 
-- Initial file creation, such as when scaffolding a new project.
-- Overwriting large boilerplate files where you want to replace the entire content at once.
-- When the complexity or number of changes would make replace_in_file unwieldy or error-prone.
-- When you need to completely restructure a file's content or change its fundamental organization.
+- Only use write_to_file when you specifically need a plain text file (not LaTeX) and cannot use write_tex.
+- Overwriting large boilerplate files where you want to replace the entire content at once (for non-LaTeX files).
+- When the complexity or number of changes would make replace_in_file unwieldy or error-prone (for non-LaTeX files).
+- When you need to completely restructure a file's content or change its fundamental organization (for non-LaTeX files).
+- When creating code files, configuration files, or other non-document files that require plain text format.
 
 ## Important Considerations
 
+- **Default to write_tex for new file creation.** Only use write_to_file when LaTeX format is not appropriate (e.g., code files, config files, or when explicitly requested).
 - Using write_to_file requires providing the file's complete final content.
 - If you only need to make small changes to an existing file, consider using replace_in_file instead to avoid unnecessarily rewriting the entire file.
-- While write_to_file should not be your default choice, don't hesitate to use it when the situation truly calls for it.
 
 # replace_in_file
 
@@ -93,13 +136,18 @@ You have access to two tools for working with files: **write_to_file** and **rep
 
 # Choosing the Appropriate Tool
 
-- **Default to replace_in_file** for most changes. It's the safer, more precise option that minimizes potential issues.
+- **DEFAULT: Use write_tex** when:
+  - **Creating any new file** (this is the default preference)
+  - **Creating technical documentation** (API documentation, user guides, technical specifications, architecture documents, etc.) - MANDATORY
+  - Creating new LaTeX documents (.tex files)
+  - Creating new regulatory documents, reports, or any document that would benefit from LaTeX formatting
+- **Default to replace_in_file** for most changes to existing files. It's the safer, more precise option that minimizes potential issues.
 - **Use write_to_file** when:
-  - Creating new files
-  - The changes are so extensive that using replace_in_file would be more complex or risky
-  - You need to completely reorganize or restructure a file
-  - The file is relatively small and the changes affect most of its content
-  - You're generating boilerplate or template files
+  - Creating code files, configuration files, or other non-document files that require plain text format
+  - The user explicitly requests a plain text file (not LaTeX)
+  - **NEVER use write_to_file for technical documentation** - always use write_tex instead
+  - The changes are so extensive that using replace_in_file would be more complex or risky (for non-LaTeX files)
+  - You need to completely reorganize or restructure a file (for non-LaTeX files)
 
 # Auto-formatting Considerations
 
@@ -117,13 +165,14 @@ You have access to two tools for working with files: **write_to_file** and **rep
 
 # Workflow Tips
 
-1. Before editing, assess the scope of your changes and decide which tool to use.
-2. For targeted edits, apply replace_in_file with carefully crafted SEARCH/REPLACE blocks. If you need multiple changes, stack multiple SEARCH/REPLACE blocks within a single replace_in_file call.
-3. IMPORTANT: When you determine that you need to make several changes to the same file, prefer to use a single replace_in_file call with multiple SEARCH/REPLACE blocks. DO NOT make multiple successive replace_in_file calls for the same file. For example, if adding a component to a file, use one call with separate blocks for the import statement and component usage.
-4. For major overhauls or initial file creation, rely on write_to_file.
-5. Once the file has been edited, the system will provide you with the final state of the modified file. Use this updated content as the reference point for any subsequent SEARCH/REPLACE operations, since it reflects any auto-formatting or user-applied changes.
+1. **DEFAULT FOR NEW FILES: Use write_tex as the default tool for creating new files.** Only use write_to_file when creating code files, configuration files, or when explicitly requested.
+2. Before editing, assess the scope of your changes and decide which tool to use.
+3. For targeted edits, apply replace_in_file with carefully crafted SEARCH/REPLACE blocks. If you need multiple changes, stack multiple SEARCH/REPLACE blocks within a single replace_in_file call.
+4. IMPORTANT: When you determine that you need to make several changes to the same file, prefer to use a single replace_in_file call with multiple SEARCH/REPLACE blocks. DO NOT make multiple successive replace_in_file calls for the same file. For example, if adding a component to a file, use one call with separate blocks for the import statement and component usage.
+5. For major overhauls or initial file creation, default to write_tex. Only use write_to_file for code files, configuration files, or other non-document files.
+6. Once the file has been edited, the system will provide you with the final state of the modified file. Use this updated content as the reference point for any subsequent SEARCH/REPLACE operations, since it reflects any auto-formatting or user-applied changes.
 
-By thoughtfully selecting between write_to_file and replace_in_file, you can make your file editing process smoother, safer, and more efficient.`
+By thoughtfully selecting between write_tex, write_to_file, and replace_in_file, you can make your file editing process smoother, safer, and more efficient.`
 
 const GEMINI_3_RULES_TEMPLATE = (_context: SystemPromptContext) => `RULES
 

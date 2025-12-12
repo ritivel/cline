@@ -30,6 +30,21 @@ import {
 import type { McpMarketplaceCatalog, McpServer, McpViewTab } from "../../../src/shared/mcp"
 import { McpServiceClient, ModelsServiceClient, StateServiceClient, UiServiceClient } from "../services/grpc-client"
 
+// CTD Assessment Types
+export interface CtdSectionStatus {
+	sectionId: string
+	sectionTitle: string
+	hasDocuments: boolean
+	presentDocuments: string[]
+	missingDocuments: string[]
+	isComplete: boolean
+}
+
+export interface CtdAssessment {
+	sections: CtdSectionStatus[]
+	assessedAt: number
+}
+
 export interface ExtensionStateContextType extends ExtensionState {
 	didHydrateState: boolean
 	showWelcome: boolean
@@ -48,6 +63,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	lastDismissedCliBannerVersion: number
 
 	availableTerminalProfiles: TerminalProfile[]
+	ctdAssessment: CtdAssessment | null
 
 	// View state
 	showMcp: boolean
@@ -63,6 +79,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	showChatModelSelector: boolean
 	expandTaskHeader: boolean
 	showRegulatoryOnboarding: boolean
+	showCtdChecklist: boolean
 
 	// Setters
 	setDictationSettings: (value: DictationSettings) => void
@@ -108,6 +125,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	navigateToProducts: () => void
 	navigateToAccount: () => void
 	navigateToChat: () => void
+	navigateToCtdChecklist: () => void
 
 	// Hide functions
 	hideSettings: () => void
@@ -116,7 +134,9 @@ export interface ExtensionStateContextType extends ExtensionState {
 	hideAccount: () => void
 	hideAnnouncement: () => void
 	hideChatModelSelector: () => void
+	hideCtdChecklist: () => void
 	closeMcpView: () => void
+	setCtdAssessment: (assessment: CtdAssessment | null) => void
 
 	// Event callbacks
 	onRelinquishControl: (callback: () => void) => () => void
@@ -139,6 +159,10 @@ export const ExtensionStateContextProvider: React.FC<{
 	const [showChatModelSelector, setShowChatModelSelector] = useState(false)
 	const [showRegulatoryOnboarding, setShowRegulatoryOnboarding] = useState(false)
 	const [noProductInitialTab, setNoProductInitialTab] = useState<"create" | "products">("create")
+	const [showCtdChecklist, setShowCtdChecklist] = useState(false)
+	const [ctdAssessment, setCtdAssessment] = useState<CtdAssessment | null>(null)
+	// Track if we've already auto-shown the checklist for the current product to prevent re-showing on state updates
+	const hasAutoShownCtdChecklistRef = useRef<string | null>(null)
 
 	// Helper for MCP view
 	const closeMcpView = useCallback(() => {
@@ -156,9 +180,25 @@ export const ExtensionStateContextProvider: React.FC<{
 	const hideAccount = useCallback(() => setShowAccount(false), [setShowAccount])
 	const hideAnnouncement = useCallback(() => setShowAnnouncement(false), [setShowAnnouncement])
 	const hideChatModelSelector = useCallback(() => setShowChatModelSelector(false), [setShowChatModelSelector])
+	const hideCtdChecklist = useCallback(() => setShowCtdChecklist(false), [setShowCtdChecklist])
 
 	// Navigation functions
 	const navigateToMcp = useCallback(
+		(tab?: McpViewTab) => {
+			console.log("[ExtensionStateContext] navigateToMcp called", { tab })
+			setShowSettings(false)
+			setShowHistory(false)
+			setShowAccount(false)
+			if (tab) {
+				setMcpTab(tab)
+			}
+			setShowMcp(true)
+			console.log("[ExtensionStateContext] navigateToMcp completed - showMcp set to true")
+		},
+		[setShowMcp, setMcpTab, setShowSettings, setShowHistory, setShowAccount],
+	)
+
+	const navigateToMcp2 = useCallback(
 		(tab?: McpViewTab) => {
 			setShowSettings(false)
 			setShowHistory(false)
@@ -173,21 +213,25 @@ export const ExtensionStateContextProvider: React.FC<{
 
 	const navigateToSettings = useCallback(
 		(targetSection?: string) => {
+			console.log("[ExtensionStateContext] navigateToSettings called", { targetSection })
 			setShowHistory(false)
 			closeMcpView()
 			setShowAccount(false)
 			setSettingsTargetSection(targetSection)
 			setShowSettings(true)
+			console.log("[ExtensionStateContext] navigateToSettings completed - showSettings set to true")
 		},
 		[closeMcpView],
 	)
 
 	const navigateToHistory = useCallback(() => {
+		console.log("[ExtensionStateContext] navigateToHistory called")
 		setShowSettings(false)
 		closeMcpView()
 		setShowAccount(false)
 		setShowProducts(false)
 		setShowHistory(true)
+		console.log("[ExtensionStateContext] navigateToHistory completed - showHistory set to true")
 	}, [setShowSettings, closeMcpView, setShowAccount, setShowProducts, setShowHistory])
 
 	const navigateToProducts = useCallback(() => {
@@ -200,20 +244,36 @@ export const ExtensionStateContextProvider: React.FC<{
 	}, [setShowSettings, closeMcpView, setShowAccount, setShowHistory, setShowProducts, setNoProductInitialTab])
 
 	const navigateToAccount = useCallback(() => {
+		console.log("[ExtensionStateContext] navigateToAccount called")
 		setShowSettings(false)
 		closeMcpView()
 		setShowHistory(false)
 		setShowAccount(true)
+		console.log("[ExtensionStateContext] navigateToAccount completed - showAccount set to true")
 	}, [setShowSettings, closeMcpView, setShowHistory, setShowAccount])
 
 	const navigateToChat = useCallback(() => {
+		console.log("[ExtensionStateContext] navigateToChat called")
 		setShowSettings(false)
 		closeMcpView()
 		setShowHistory(false)
 		setShowProducts(false)
 		setShowAccount(false)
 		setShowRegulatoryOnboarding(false)
-	}, [setShowSettings, closeMcpView, setShowHistory, setShowProducts, setShowAccount])
+		setShowCtdChecklist(false)
+		console.log("[ExtensionStateContext] navigateToChat completed - all views hidden, chat view active")
+	}, [setShowSettings, closeMcpView, setShowHistory, setShowProducts, setShowAccount, setShowCtdChecklist])
+
+	const navigateToCtdChecklist = useCallback(() => {
+		console.log("[ExtensionStateContext] navigateToCtdChecklist called")
+		setShowSettings(false)
+		closeMcpView()
+		setShowHistory(false)
+		setShowProducts(false)
+		setShowAccount(false)
+		setShowCtdChecklist(true)
+		console.log("[ExtensionStateContext] navigateToCtdChecklist completed - showCtdChecklist set to true")
+	}, [setShowSettings, closeMcpView, setShowHistory, setShowProducts, setShowAccount, setShowCtdChecklist])
 
 	const [state, setState] = useState<ExtensionState>({
 		version: "",
@@ -308,7 +368,9 @@ export const ExtensionStateContextProvider: React.FC<{
 	// Reference for focusChatInput subscription
 	const focusChatInputUnsubscribeRef = useRef<(() => void) | null>(null)
 	const mcpButtonUnsubscribeRef = useRef<(() => void) | null>(null)
+	const mcpButtonUnsubscribeRef2 = useRef<(() => void) | null>(null)
 	const historyButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
+	const ctdChecklistButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
 	const productsButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
 	const chatButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const accountButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
@@ -380,6 +442,35 @@ export const ExtensionStateContextProvider: React.FC<{
 								setShowRegulatoryOnboarding(false)
 							}
 
+							// Check for CTD checklist flag (stored in global state)
+							// This is a temporary flag that gets cleared after showing the view
+							const shouldShowCtdChecklist = (newState as any).showCtdChecklist === true
+							const currentProductId = newState.currentRegulatoryProduct
+								? `${newState.currentRegulatoryProduct.drugName}-${newState.currentRegulatoryProduct.marketName}`
+								: null
+
+							// Only auto-show if:
+							// 1. Flag is true in state
+							// 2. We haven't already shown it for this product
+							// 3. There's a current product
+							if (
+								shouldShowCtdChecklist &&
+								!showCtdChecklist &&
+								currentProductId &&
+								hasAutoShownCtdChecklistRef.current !== currentProductId
+							) {
+								setShowCtdChecklist(true)
+								hasAutoShownCtdChecklistRef.current = currentProductId
+							} else if (!shouldShowCtdChecklist && showCtdChecklist) {
+								// Clear the flag if it's false in state but true locally
+								setShowCtdChecklist(false)
+							}
+
+							// Reset the ref if product changes
+							if (currentProductId !== hasAutoShownCtdChecklistRef.current && currentProductId) {
+								hasAutoShownCtdChecklistRef.current = null
+							}
+
 							setDidHydrateState(true)
 
 							return newState
@@ -416,6 +507,22 @@ export const ExtensionStateContextProvider: React.FC<{
 			},
 		)
 
+		mcpButtonUnsubscribeRef2.current = UiServiceClient.subscribeToMcpButtonClicked(
+			{},
+			{
+				onResponse: () => {
+					console.log("[DEBUG] Received mcpButtonClicked event from gRPC stream")
+					navigateToMcp2()
+				},
+				onError: (error) => {
+					console.error("Error in mcpButtonClicked subscription:", error)
+				},
+				onComplete: () => {
+					console.log("mcpButtonClicked subscription completed")
+				},
+			},
+		)
+
 		// Set up history button clicked subscription with webview type
 		historyButtonClickedSubscriptionRef.current = UiServiceClient.subscribeToHistoryButtonClicked(
 			{},
@@ -431,6 +538,21 @@ export const ExtensionStateContextProvider: React.FC<{
 				onComplete: () => {
 					console.log("History button clicked subscription completed")
 				},
+			},
+		)
+
+		// Setup ctd checklist button clicked subscription with webview type
+		ctdChecklistButtonClickedSubscriptionRef.current = UiServiceClient.subscribeToCtdChecklistButtonClicked(
+			{},
+			{
+				onResponse: () => {
+					console.log("[NIRMIT] CTD Checklist button clicked")
+					navigateToCtdChecklist()
+				},
+				onError: (error: any) => {
+					console.error("Error in ctd checklist button clicked subscription:", error)
+				},
+				onComplete: () => {},
 			},
 		)
 
@@ -660,9 +782,17 @@ export const ExtensionStateContextProvider: React.FC<{
 				mcpButtonUnsubscribeRef.current()
 				mcpButtonUnsubscribeRef.current = null
 			}
+			if (mcpButtonUnsubscribeRef2.current) {
+				mcpButtonUnsubscribeRef2.current()
+				mcpButtonUnsubscribeRef2.current = null
+			}
 			if (historyButtonClickedSubscriptionRef.current) {
 				historyButtonClickedSubscriptionRef.current()
 				historyButtonClickedSubscriptionRef.current = null
+			}
+			if (ctdChecklistButtonClickedSubscriptionRef.current) {
+				ctdChecklistButtonClickedSubscriptionRef.current()
+				ctdChecklistButtonClickedSubscriptionRef.current = null
 			}
 			if (productsButtonClickedSubscriptionRef.current) {
 				productsButtonClickedSubscriptionRef.current()
@@ -779,6 +909,8 @@ export const ExtensionStateContextProvider: React.FC<{
 		showChatModelSelector,
 		showRegulatoryOnboarding,
 		noProductInitialTab,
+		showCtdChecklist,
+		ctdAssessment,
 		globalClineRulesToggles: state.globalClineRulesToggles || {},
 		localClineRulesToggles: state.localClineRulesToggles || {},
 		localCursorRulesToggles: state.localCursorRulesToggles || {},
@@ -798,6 +930,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		navigateToProducts,
 		navigateToAccount,
 		navigateToChat,
+		navigateToCtdChecklist,
 
 		// Hide functions
 		hideSettings,
@@ -807,10 +940,12 @@ export const ExtensionStateContextProvider: React.FC<{
 		hideAnnouncement,
 		setShowAnnouncement,
 		hideChatModelSelector,
+		hideCtdChecklist,
 		setShowWelcome,
 		setOnboardingModels,
 		setShowRegulatoryOnboarding,
 		setNoProductInitialTab,
+		setCtdAssessment,
 		setShowChatModelSelector,
 		setShouldShowAnnouncement: (value) =>
 			setState((prevState) => ({
