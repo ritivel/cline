@@ -233,11 +233,23 @@ function parseFileEntry(fileEntry: string): {
 /**
  * Helper function used to load file(s) and format them into a string
  * Supports embedded text format for files with line ranges from markdown editor
+ * @param files Array of file paths or file entries with embedded text
+ * @param onProgress Optional callback to report progress: (current: number, total: number, fileName: string) => void
  */
-export async function processFilesIntoText(files: string[]): Promise<string> {
-	const fileContentsPromises = files.map(async (fileEntry) => {
+export async function processFilesIntoText(
+	files: string[],
+	onProgress?: (current: number, total: number, fileName: string) => void,
+): Promise<string> {
+	const totalFiles = files.length
+	const fileContentsPromises = files.map(async (fileEntry, index) => {
 		try {
 			const { filePath, lineRange, embeddedText, startLine, endLine } = parseFileEntry(fileEntry)
+
+			// Report progress if callback provided
+			if (onProgress) {
+				const fileName = path.basename(filePath)
+				onProgress(index + 1, totalFiles, fileName)
+			}
 
 			// If embedded text is provided (from markdown editor with line range), use it directly
 			if (embeddedText !== null) {

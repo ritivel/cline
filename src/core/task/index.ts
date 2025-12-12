@@ -931,7 +931,21 @@ export class Task {
 		]
 
 		if (files && files.length > 0) {
-			const fileContentString = await processFilesIntoText(files)
+			const fileContentString = await vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title: "Processing Files",
+					cancellable: false,
+				},
+				async (progress) => {
+					return processFilesIntoText(files, (current, total, fileName) => {
+						progress.report({
+							message: `Processing ${fileName} (${current}/${total})`,
+							increment: (100 / total) * (current === 1 ? 0 : 1),
+						})
+					})
+				},
+			)
 			if (fileContentString) {
 				userContent.push({
 					type: "text",
@@ -1244,7 +1258,21 @@ export class Task {
 		}
 
 		if (responseFiles && responseFiles.length > 0) {
-			const fileContentString = await processFilesIntoText(responseFiles)
+			const fileContentString = await vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title: "Processing Files",
+					cancellable: false,
+				},
+				async (progress) => {
+					return processFilesIntoText(responseFiles, (current, total, fileName) => {
+						progress.report({
+							message: `Processing ${fileName} (${current}/${total})`,
+							increment: (100 / total) * (current === 1 ? 0 : 1),
+						})
+					})
+				},
+			)
 			if (fileContentString) {
 				newUserContent.push({
 					type: "text",
@@ -1844,7 +1872,22 @@ export class Task {
 
 			let fileContentString = ""
 			if (userFeedback.files && userFeedback.files.length > 0) {
-				fileContentString = await processFilesIntoText(userFeedback.files)
+				const filesToProcess = userFeedback.files
+				fileContentString = await vscode.window.withProgress(
+					{
+						location: vscode.ProgressLocation.Notification,
+						title: "Processing Files",
+						cancellable: false,
+					},
+					async (progress) => {
+						return processFilesIntoText(filesToProcess, (current, total, fileName) => {
+							progress.report({
+								message: `Processing ${fileName} (${current}/${total})`,
+								increment: (100 / total) * (current === 1 ? 0 : 1),
+							})
+						})
+					},
+				)
 			}
 
 			return [
@@ -2495,7 +2538,21 @@ export class Task {
 
 				let fileContentString = ""
 				if (files && files.length > 0) {
-					fileContentString = await processFilesIntoText(files)
+					fileContentString = await vscode.window.withProgress(
+						{
+							location: vscode.ProgressLocation.Notification,
+							title: "Processing Files",
+							cancellable: false,
+						},
+						async (progress) => {
+							return processFilesIntoText(files, (current, total, fileName) => {
+								progress.report({
+									message: `Processing ${fileName} (${current}/${total})`,
+									increment: (100 / total) * (current === 1 ? 0 : 1),
+								})
+							})
+						},
+					)
 				}
 
 				if (fileContentString) {

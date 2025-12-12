@@ -216,9 +216,9 @@ export class ToolExecutor {
 
 		// Register WriteToFileToolHandler for all three file tools with proper typing
 		const writeHandler = new WriteToFileToolHandler(validator)
-		// TEMPORARILY DISABLED: write_to_file (FILE_NEW) and replace_in_file (FILE_EDIT)
-		// this.coordinator.register(writeHandler) // registers as "write_to_file" (ClineDefaultTool.FILE_NEW)
-		// this.coordinator.register(new SharedToolHandler(ClineDefaultTool.FILE_EDIT, writeHandler))
+		// Register write_to_file (FILE_NEW) and replace_in_file (FILE_EDIT)
+		this.coordinator.register(writeHandler) // registers as "write_to_file" (ClineDefaultTool.FILE_NEW)
+		this.coordinator.register(new SharedToolHandler(ClineDefaultTool.FILE_EDIT, writeHandler))
 		this.coordinator.register(new SharedToolHandler(ClineDefaultTool.NEW_RULE, writeHandler))
 
 		// Register WriteTexToolHandler for LaTeX document creation

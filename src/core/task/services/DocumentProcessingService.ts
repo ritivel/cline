@@ -196,7 +196,7 @@ export class DocumentProcessingService {
 
 	/**
 	 * Reads document content from a processed folder
-	 * Note: Paths in tags.md are relative to the workspace's documents folder
+	 * Note: Paths in tags.md are workspace-relative (e.g., "documents/adsa")
 	 */
 	async readDocumentContent(entry: DocumentEntry): Promise<DocumentContent | null> {
 		// Use submissions path if available, otherwise fall back to documents base path

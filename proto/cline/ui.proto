@@ -311,4 +311,10 @@ service UiService {
 
   // Generates CTD dossier sections based on assessment
   rpc generateCtdDossier(StringRequest) returns (Empty);
+
+  // Reads checklist.md file content for a section
+  rpc readChecklistFile(StringRequest) returns (String);
+
+  // Executes a slash command programmatically
+  rpc executeSlashCommand(StringRequest) returns (String);
 }

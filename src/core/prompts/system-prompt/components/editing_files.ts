@@ -4,16 +4,12 @@ import type { PromptVariant, SystemPromptContext } from "../types"
 
 const EDITING_FILES_TEMPLATE_TEXT = `EDITING FILES
 
+You have access to tools for working with files: **write_tex**, **write_to_file**, **replace_in_tex**, and **replace_in_file**. Understanding their roles and selecting the right one for the job will help ensure efficient and accurate modifications to files.
+
 **IMPORTANT: DEFAULT TOOL FOR NEW FILES**
 - **DEFAULT: Use write_tex as the default tool for creating new files.**
 - **MANDATORY: ALWAYS use write_tex for technical documentation writing.**
-- **NOTE: write_to_file and replace_in_file are currently disabled. Use write_tex and replace_in_tex instead.**
-
-You have access to tools for working with pharmaceutical regulatory documents: **write_tex** and **replace_in_tex**. Understanding their roles and selecting the right one for the job will help ensure efficient and accurate modifications to regulatory documents such as INDs (Investigational New Drug applications), NDAs (New Drug Applications), regulatory submissions, compliance reports, and other regulatory documentation.
-
-**TEMPORARILY DISABLED TOOLS:**
-- **write_to_file** - Currently disabled. Use write_tex instead for creating new files.
-- **replace_in_file** - Currently disabled. Use replace_in_tex instead for editing existing files.
+- **Use write_to_file for code files, configuration files, and other non-LaTeX files.**
 
 # write_tex
 
@@ -23,7 +19,7 @@ You have access to tools for working with pharmaceutical regulatory documents: *
 
 ## When to Use
 
-- **DEFAULT: Use write_tex as the default tool for creating new files.** This is the only available tool for creating new files (write_to_file is currently disabled).
+- **DEFAULT: Use write_tex as the default tool for creating new files.**
 - **MANDATORY: ALWAYS use write_tex for technical documentation writing** (API documentation, user guides, technical specifications, architecture documents, etc.).
 - **ALWAYS use write_tex** when creating new LaTeX documents (.tex files).
 - When the user requests a scientific document, research paper, academic paper, or any LaTeX-based document.
@@ -57,13 +53,59 @@ You have access to tools for working with pharmaceutical regulatory documents: *
 - Only the compiled PDF is shown to the user - the .tex file remains hidden but is kept up-to-date.
 - Use SEARCH/REPLACE blocks just like you would with file editing tools, but for .tex files.
 
-# write_to_file (TEMPORARILY DISABLED)
+# write_to_file
 
-**This tool is currently disabled. Use write_tex instead for creating new files.**
+## Purpose
 
-# replace_in_file (TEMPORARILY DISABLED)
+- Create or overwrite files with complete content.
+- Use for code files, configuration files, and other non-LaTeX files.
 
-**This tool is currently disabled. Use replace_in_tex instead for editing existing files.**
+## When to Use
+
+- **Use write_to_file** when:
+  - Creating new code files (e.g., .js, .ts, .py, .java, .cpp, etc.)
+  - Creating configuration files (e.g., .json, .yaml, .toml, .ini, etc.)
+  - Creating plain text files or markdown files (when not using LaTeX)
+  - When the file is not a LaTeX document (.tex file)
+  - When you need to provide the complete file content
+
+## Important Considerations
+
+- write_to_file requires providing the file's complete final content.
+- If you only need to make small changes to an existing file, consider using replace_in_file instead.
+- The tool will automatically create any directories needed to write the file.
+
+# replace_in_file
+
+## Purpose
+
+- Edit existing files using SEARCH/REPLACE blocks for targeted modifications.
+- Use for code files, configuration files, and other non-LaTeX files.
+
+## When to Use
+
+- **Use replace_in_file** when:
+  - Editing existing code files (e.g., .js, .ts, .py, .java, .cpp, etc.)
+  - Editing configuration files (e.g., .json, .yaml, .toml, .ini, etc.)
+  - Editing plain text files or markdown files (when not using LaTeX)
+  - When the file is not a LaTeX document (.tex file)
+  - When you need to make targeted changes to specific parts of a file
+  - When you want to preserve most of the existing file content
+
+## Important Considerations
+
+- replace_in_file uses SEARCH/REPLACE blocks following this exact format:
+  \`\`\`
+  ------- SEARCH
+  [exact content to find]
+  =======
+  [new content to replace with]
+  +++++++ REPLACE
+  \`\`\`
+- You can include multiple SEARCH/REPLACE blocks in a single call.
+- SEARCH blocks must match the exact content in the file, including whitespace.
+- Always include complete lines in SEARCH blocks, not partial lines.
+- List multiple SEARCH/REPLACE blocks in the order they appear in the file.
 
 # Choosing the Appropriate Tool
 
@@ -98,13 +140,20 @@ You have access to tools for working with pharmaceutical regulatory documents: *
   - The file path ends with .tex and the file already exists
   - User mentions a PDF file that was generated from a .tex file (use the corresponding .tex file path)
   - User wants to modify LaTeX content in an existing document
-  - Editing any existing files (since replace_in_file is disabled, use replace_in_tex for all file edits)
 
-**NOTE: Since write_to_file and replace_in_file are disabled, you must use write_tex and replace_in_tex for all file operations.**
+- **Use write_to_file** when:
+  - Creating new code files, configuration files, or other non-LaTeX files
+  - The file path does NOT end with .tex
+  - Creating files that don't require LaTeX formatting
+
+- **Use replace_in_file** when:
+  - Editing existing code files, configuration files, or other non-LaTeX files
+  - The file path does NOT end with .tex
+  - Making targeted edits to non-LaTeX files
 
 # Auto-formatting Considerations
 
-- After using write_tex or replace_in_tex, the user's editor may automatically format the file
+- After using write_tex, replace_in_tex, write_to_file, or replace_in_file, the user's editor may automatically format the file
 - This auto-formatting may modify the file contents, for example:
   - Breaking single lines into multiple lines
   - Adjusting indentation to match project style (e.g. 2 spaces vs 4 spaces vs tabs)
@@ -114,20 +163,29 @@ You have access to tools for working with pharmaceutical regulatory documents: *
   - Enforcing consistent brace style (e.g. same-line vs new-line)
   - Standardizing semicolon usage (adding or removing based on style)
 - The tool responses will include the final state of the file after any auto-formatting
-- Use this final state as your reference point for any subsequent edits. This is ESPECIALLY important when crafting SEARCH blocks for replace_in_tex which require the content to match what's in the file exactly.
+- Use this final state as your reference point for any subsequent edits. This is ESPECIALLY important when crafting SEARCH blocks for replace_in_tex and replace_in_file which require the content to match what's in the file exactly.
 
 # Workflow Tips
 
-1. **DEFAULT FOR NEW FILES: Use write_tex as the default tool for creating new files.** This is the only available tool for creating files (write_to_file is disabled).
-2. **FIRST**: Check if you're working with a LaTeX file (.tex extension) or LaTeX content. Use write_tex or replace_in_tex for all file operations.
+1. **FIRST**: Check if you're working with a LaTeX file (.tex extension) or LaTeX content.
+   - If LaTeX: Use write_tex for new files, replace_in_tex for edits
+   - If not LaTeX: Use write_to_file for new files, replace_in_file for edits
+
+2. **DEFAULT FOR NEW FILES**: Use write_tex as the default tool for creating new files (especially for documentation). Use write_to_file for code and configuration files.
+
 3. Before editing, assess the scope of your changes and decide which tool to use.
-4. For targeted edits to any files, apply replace_in_tex with carefully crafted SEARCH/REPLACE blocks. If you need multiple changes, you can stack multiple SEARCH/REPLACE blocks within a single replace_in_tex call.
-5. IMPORTANT: When you determine that you need to make several changes to the same file, prefer to use a single tool call with multiple SEARCH/REPLACE blocks. DO NOT prefer to make multiple successive tool calls for the same file. For example, if you were to add a component to a file, you would use a single replace_in_tex call with a SEARCH/REPLACE block to add the import statement and another SEARCH/REPLACE block to add the component usage, rather than making one tool call for the import statement and then another separate tool call for the component usage.
-6. For major overhauls or initial file creation, use write_tex.
+
+4. For targeted edits, apply replace_in_tex (for .tex files) or replace_in_file (for other files) with carefully crafted SEARCH/REPLACE blocks. If you need multiple changes, you can stack multiple SEARCH/REPLACE blocks within a single tool call.
+
+5. IMPORTANT: When you determine that you need to make several changes to the same file, prefer to use a single tool call with multiple SEARCH/REPLACE blocks. DO NOT prefer to make multiple successive tool calls for the same file. For example, if you were to add a component to a file, you would use a single replace_in_file call with a SEARCH/REPLACE block to add the import statement and another SEARCH/REPLACE block to add the component usage, rather than making one tool call for the import statement and then another separate tool call for the component usage.
+
+6. For major overhauls or initial file creation:
+   - Use write_tex for LaTeX documents and technical documentation
+   - Use write_to_file for code files and configuration files
+
 7. Once the file has been edited, the system will provide you with the final state of the modified file. Use this updated content as the reference point for any subsequent SEARCH/REPLACE operations, since it reflects any auto-formatting or user-applied changes.
 
-**IMPORTANT: write_to_file and replace_in_file are currently disabled. You must use write_tex and replace_in_tex for all file operations.**
-By thoughtfully selecting between write_tex and replace_in_tex based on whether you're creating or editing files, you can make your file editing process smoother, safer, and more efficient.`
+By thoughtfully selecting between write_tex, write_to_file, replace_in_tex, and replace_in_file based on the file type and whether you're creating or editing files, you can make your file editing process smoother, safer, and more efficient.`
 
 export async function getEditingFilesSection(variant: PromptVariant, context: SystemPromptContext): Promise<string> {
 	const template = variant.componentOverrides?.[SystemPromptSection.EDITING_FILES]?.template || EDITING_FILES_TEMPLATE_TEXT

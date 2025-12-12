@@ -78,15 +78,6 @@ const AppContent = () => {
 	const shouldShowNoProductTabs =
 		!hasActiveProduct && !showSettings && !showHistory && !showProducts && !showMcp && !showAccount && !showCtdChecklist
 
-	console.log("[PAVAN] shouldShowNoProductTabs:", shouldShowNoProductTabs)
-	console.log("[PAVAN] showCtdChecklist:", showCtdChecklist)
-	console.log("[PAVAN] showRegulatoryOnboarding:", showRegulatoryOnboarding)
-	console.log("[PAVAN] showSettings:", showSettings)
-	console.log("[PAVAN] showHistory:", showHistory)
-	console.log("[PAVAN] showProducts:", showProducts)
-	console.log("[PAVAN] showMcp:", showMcp)
-	console.log("[PAVAN] showAccount:", showAccount)
-
 	return (
 		<div className="flex h-screen w-full flex-col">
 			{showSettings && <SettingsView onDone={hideSettings} targetSection={settingsTargetSection} />}

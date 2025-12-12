@@ -131,8 +131,6 @@ export const Navbar = () => {
 		)
 	}
 
-	console.log("[PAVAN] filteredTabs:", filteredTabs)
-
 	return (
 		<nav
 			className="flex-none inline-flex justify-end bg-transparent gap-2 mb-1 z-10 border-none items-center mr-4!"

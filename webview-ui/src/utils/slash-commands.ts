@@ -52,6 +52,11 @@ const BASE_SLASH_COMMANDS: SlashCommand[] = [
 		description: "Generate regulatory content for a specific section by name or ID",
 		section: "default",
 	},
+	{
+		name: "update-checklist",
+		description: "Update input checklist features for a section by checking against document info.json files",
+		section: "default",
+	},
 ]
 
 // VS Code-only slash commands

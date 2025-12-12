@@ -255,20 +255,18 @@ export class ReplaceInTexToolHandler implements IFullyManagedTool {
 				await latexWorkshopExtension.activate()
 			}
 
-			// Open and save the .tex file first so LaTeX Workshop can detect it
+			// Open the document (without showing it) and save it so LaTeX Workshop can detect it
 			const texUri = vscode.Uri.file(texPath)
 			const document = await vscode.workspace.openTextDocument(texUri)
-			const editor = await vscode.window.showTextDocument(document, { preview: false, preserveFocus: false })
-
-			// Save the file to ensure it's on disk
+			// Save the file to ensure it's on disk (opening the document is enough, no need to show it)
 			await document.save()
 
 			// Wait a bit for LaTeX Workshop to recognize the file
-			await new Promise((resolve) => setTimeout(resolve, 2000))
+			await new Promise((resolve) => setTimeout(resolve, 500))
 
-			// Trigger LaTeX Workshop build
-			console.log(`[ReplaceInTexToolHandler] Triggering LaTeX Workshop build...`)
-			await vscode.commands.executeCommand("latex-workshop.build")
+			// Trigger LaTeX Workshop build with file path - no need to open/show the document
+			console.log(`[ReplaceInTexToolHandler] Triggering LaTeX Workshop build for: ${texPath}`)
+			await vscode.commands.executeCommand("latex-workshop.build", false, texPath, "latex")
 
 			// Wait for compilation to complete
 			console.log(`[ReplaceInTexToolHandler] Waiting for PDF to be created by LaTeX Workshop...`)
@@ -276,20 +274,14 @@ export class ReplaceInTexToolHandler implements IFullyManagedTool {
 				await new Promise((resolve) => setTimeout(resolve, 500))
 				if (await fileExistsAtPath(pdfPath)) {
 					console.log(`[ReplaceInTexToolHandler] PDF created by LaTeX Workshop: ${pdfPath}`)
-					// Close the .tex file after compilation
-					await this.closeTexFile(texPath)
 					return pdfPath
 				}
 			}
 
 			console.log(`[ReplaceInTexToolHandler] LaTeX Workshop compilation timed out after 60 seconds`)
-			// Close the .tex file even if compilation timed out
-			await this.closeTexFile(texPath)
 			return null
 		} catch (error) {
 			console.log(`[ReplaceInTexToolHandler] LaTeX Workshop build failed: ${error}`)
-			// Close the .tex file if we opened it
-			await this.closeTexFile(texPath)
 		}
 
 		return null

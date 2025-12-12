@@ -186,13 +186,10 @@ export class DossierTagsService {
 		const tagsPath = path.join(sectionFolderPath, "tags.md")
 
 		const existingTags = await this.readExistingTags(tagsPath)
-		const relativePathToProcessed = path.relative(
-			sectionFolderPath,
-			path.join(this.workspaceRoot, processedFolderRelativePath),
-		)
+		// Use processedFolderRelativePath directly (workspace-relative) for comparison
 
 		const targetList = type === "placement" ? existingTags.placements : existingTags.references
-		return targetList.some((e) => e.pdfName === pdfName && e.processedFolderPath === relativePathToProcessed)
+		return targetList.some((e) => e.pdfName === pdfName && e.processedFolderPath === processedFolderRelativePath)
 	}
 
 	/**
@@ -224,18 +221,15 @@ export class DossierTagsService {
 
 		const tagsPath = path.join(sectionFolderPath, "tags.md")
 
-		// Calculate relative path from dossier section to documents folder
-		const relativePathToProcessed = path.relative(
-			sectionFolderPath,
-			path.join(this.workspaceRoot, processedFolderRelativePath),
-		)
+		// Use processedFolderRelativePath directly (workspace-relative, e.g., "documents/adsa")
+		// instead of calculating relative path from section folder
 
 		// Read existing tags
 		const existingTags = await this.readExistingTags(tagsPath)
 
 		// Check if entry already exists
 		const targetList = type === "placement" ? existingTags.placements : existingTags.references
-		const exists = targetList.some((e) => e.pdfName === pdfName && e.processedFolderPath === relativePathToProcessed)
+		const exists = targetList.some((e) => e.pdfName === pdfName && e.processedFolderPath === processedFolderRelativePath)
 
 		// Skip if already exists - no changes needed
 		if (exists) {
@@ -246,7 +240,7 @@ export class DossierTagsService {
 		// Create and add new entry
 		const newEntry: PdfTagEntry = {
 			pdfName,
-			processedFolderPath: relativePathToProcessed,
+			processedFolderPath: processedFolderRelativePath, // Store workspace-relative path directly
 			confidence,
 			type,
 		}

@@ -1,21 +1,23 @@
 import { StringRequest } from "@shared/proto/cline/common"
 import type { RegulatoryProductConfig } from "@shared/storage/state-keys"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
-import { CheckCircle2, Circle, FileText, Loader2 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import { type CtdAssessment, type CtdSectionStatus, useExtensionState } from "@/context/ExtensionStateContext"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 import { UiServiceClient } from "@/services/grpc-client"
+import { ChecklistDisplay } from "./ChecklistDisplay"
+import { CtdFolderTree } from "./CtdFolderTree"
 
 type CtdChecklistViewProps = {
 	onDone: () => void
 }
 
 const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
-	const { currentRegulatoryProduct, ctdAssessment, setCtdAssessment } = useExtensionState()
-	const [isAssessing, setIsAssessing] = useState(false)
-	const [isGenerating, setIsGenerating] = useState(false)
+	const { currentRegulatoryProduct } = useExtensionState()
 	const [error, setError] = useState<string | null>(null)
 	const [ctdStructure, setCtdStructure] = useState<any>(null)
+	const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
+	const [assessingSections, setAssessingSections] = useState<Set<string>>(new Set())
+	const [generatingSections, setGeneratingSections] = useState<Set<string>>(new Set())
 
 	useEffect(() => {
 		if (currentRegulatoryProduct) {
@@ -37,80 +39,90 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 		}
 	}
 
-	const handleAssess = useCallback(async () => {
-		if (!currentRegulatoryProduct) return
+	const handleAssess = useCallback(
+		async (sectionId: string) => {
+			if (!currentRegulatoryProduct) return
 
-		setIsAssessing(true)
-		setError(null)
+			setAssessingSections((prev) => new Set(prev).add(sectionId))
+			setError(null)
 
-		try {
-			const response = await UiServiceClient.assessCtdDocuments(
-				StringRequest.create({ value: JSON.stringify(currentRegulatoryProduct) }),
-			)
-
-			if (response.value) {
-				const assessment: CtdAssessment = JSON.parse(response.value)
-				setCtdAssessment(assessment)
-			}
-		} catch (error: any) {
-			console.error("Failed to assess documents:", error)
-			setError(error?.message || "Failed to assess documents")
-		} finally {
-			setIsAssessing(false)
-		}
-	}, [currentRegulatoryProduct, setCtdAssessment])
-
-	const handleGenerate = useCallback(async () => {
-		if (!currentRegulatoryProduct || !ctdAssessment) return
-
-		setIsGenerating(true)
-		setError(null)
-
-		try {
-			await UiServiceClient.generateCtdDossier(
-				StringRequest.create({
-					value: JSON.stringify({
-						product: currentRegulatoryProduct,
-						assessment: ctdAssessment,
+			try {
+				const response = await UiServiceClient.executeSlashCommand(
+					StringRequest.create({
+						value: JSON.stringify({
+							command: `/update-checklist ${sectionId}`,
+						}),
 					}),
-				}),
-			)
+				)
 
-			onDone()
-		} catch (error: any) {
-			console.error("Failed to generate dossier:", error)
-			setError(error?.message || "Failed to generate dossier")
-		} finally {
-			setIsGenerating(false)
-		}
-	}, [currentRegulatoryProduct, ctdAssessment, onDone])
+				if (response.value) {
+					const result = JSON.parse(response.value) as { success: boolean; message: string }
+					if (result.success) {
+						// Automatically select the section to show the checklist
+						setSelectedSectionId(sectionId)
+						// Refresh checklist display after a short delay to allow file to be written
+						setTimeout(() => {
+							// Trigger refresh by updating selected section
+							setSelectedSectionId(null)
+							setTimeout(() => setSelectedSectionId(sectionId), 100)
+						}, 2000)
+					} else {
+						setError(result.message || "Failed to assess section")
+					}
+				}
+			} catch (error: any) {
+				console.error("Failed to assess section:", error)
+				setError(error?.message || "Failed to assess section")
+			} finally {
+				setAssessingSections((prev) => {
+					const next = new Set(prev)
+					next.delete(sectionId)
+					return next
+				})
+			}
+		},
+		[currentRegulatoryProduct],
+	)
 
-	const renderSection = (section: CtdSectionStatus, level: number = 0) => {
-		const indent = level * 24
-		return (
-			<div className="mb-2" key={section.sectionId} style={{ paddingLeft: `${indent}px` }}>
-				<div className="flex items-center gap-2">
-					{section.isComplete ? (
-						<CheckCircle2 className="w-4 h-4 text-green-500" />
-					) : (
-						<Circle className="w-4 h-4 text-gray-400" />
-					)}
-					<span className="font-medium">{section.sectionId}</span>
-					<span className="text-sm text-(--vscode-descriptionForeground)">{section.sectionTitle}</span>
-				</div>
-				{ctdAssessment && (
-					<div className="ml-6 mt-1 text-xs text-(--vscode-descriptionForeground)">
-						{section.presentDocuments.length > 0 && (
-							<div className="text-green-500">✓ {section.presentDocuments.length} document(s) present</div>
-						)}
-						{section.missingDocuments.length > 0 && (
-							<div className="text-orange-500">⚠ {section.missingDocuments.length} document(s) missing</div>
-						)}
-					</div>
-				)}
-			</div>
-		)
-	}
+	const handleGenerate = useCallback(
+		async (sectionId: string) => {
+			if (!currentRegulatoryProduct) return
+
+			setGeneratingSections((prev) => new Set(prev).add(sectionId))
+			setError(null)
+
+			try {
+				const response = await UiServiceClient.executeSlashCommand(
+					StringRequest.create({
+						value: JSON.stringify({
+							command: `/generate-section ${sectionId}`,
+						}),
+					}),
+				)
+
+				if (response.value) {
+					const result = JSON.parse(response.value) as { success: boolean; message: string }
+					if (!result.success) {
+						setError(result.message || "Failed to generate section")
+					}
+				}
+			} catch (error: any) {
+				console.error("Failed to generate section:", error)
+				setError(error?.message || "Failed to generate section")
+			} finally {
+				setGeneratingSections((prev) => {
+					const next = new Set(prev)
+					next.delete(sectionId)
+					return next
+				})
+			}
+		},
+		[currentRegulatoryProduct],
+	)
+
+	const handleSectionSelect = useCallback((sectionId: string) => {
+		setSelectedSectionId(sectionId)
+	}, [])
 
 	if (!currentRegulatoryProduct) {
 		return (
@@ -132,55 +144,37 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 				<VSCodeButton onClick={onDone}>Done</VSCodeButton>
 			</div>
 
-			<div className="flex-1 overflow-auto p-4">
+			<div className="flex-1 overflow-hidden flex">
 				{error && (
-					<div className="p-3 mb-4 bg-(--vscode-inputValidation-errorBackground) border border-(--vscode-inputValidation-errorBorder) rounded">
+					<div className="absolute top-16 left-4 right-4 z-10 p-3 bg-(--vscode-inputValidation-errorBackground) border border-(--vscode-inputValidation-errorBorder) rounded">
 						<p className="text-sm text-(--vscode-inputValidation-errorForeground)">❌ {error}</p>
 					</div>
 				)}
 
-				{/* CTD Structure Display */}
-				<div className="mb-4">
-					<h3 className="text-md font-semibold mb-2">CTD Structure</h3>
-					{ctdStructure ? (
-						<div className="space-y-1">{ctdAssessment?.sections.map((section) => renderSection(section))}</div>
-					) : ctdAssessment ? (
-						<div className="space-y-1">{ctdAssessment.sections.map((section) => renderSection(section))}</div>
-					) : (
-						<p className="text-sm text-(--vscode-descriptionForeground)">
-							Click 'Assess Documents' to view CTD structure
-						</p>
-					)}
+				{/* CTD Structure Tree */}
+				<div className="flex-1 overflow-auto p-4 border-r border-(--vscode-panel-border)">
+					<CtdFolderTree
+						assessingSections={assessingSections}
+						generatingSections={generatingSections}
+						onAssess={handleAssess}
+						onGenerate={handleGenerate}
+						onSectionSelect={handleSectionSelect}
+						structure={ctdStructure}
+					/>
 				</div>
 
-				{/* Action Buttons */}
-				<div className="flex gap-2 mt-4">
-					<VSCodeButton disabled={isAssessing || isGenerating} onClick={handleAssess}>
-						{isAssessing ? (
-							<>
-								<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-								Assessing...
-							</>
-						) : (
-							<>
-								<FileText className="w-4 h-4 mr-2" />
-								Assess Documents
-							</>
-						)}
-					</VSCodeButton>
-
-					{ctdAssessment && (
-						<VSCodeButton disabled={isGenerating || isAssessing} onClick={handleGenerate}>
-							{isGenerating ? (
-								<>
-									<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-									Generating...
-								</>
-							) : (
-								"Generate Dossier"
-							)}
-						</VSCodeButton>
-					)}
+				{/* Checklist Display */}
+				<div className="flex-1 overflow-hidden">
+					<ChecklistDisplay
+						onRefresh={() => {
+							if (selectedSectionId) {
+								setSelectedSectionId(null)
+								setTimeout(() => setSelectedSectionId(selectedSectionId), 100)
+							}
+						}}
+						product={currentRegulatoryProduct}
+						sectionId={selectedSectionId}
+					/>
 				</div>
 			</div>
 		</div>
