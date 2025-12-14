@@ -1,3 +1,4 @@
+import * as fs from "node:fs"
 import path from "node:path"
 import type { ToolUse } from "@core/assistant-message"
 import { constructNewFileContent } from "@core/assistant-message/diff"
@@ -7,6 +8,7 @@ import { showSystemNotification } from "@integrations/notifications"
 import { ClineSayTool } from "@shared/ExtensionMessage"
 import { fileExistsAtPath } from "@utils/fs"
 import { getCwd, getReadablePath, isLocatedInWorkspace } from "@utils/path"
+import { spawn } from "child_process"
 import chokidar, { FSWatcher } from "chokidar"
 import * as vscode from "vscode"
 import { telemetryService } from "@/services/telemetry"
@@ -232,7 +234,8 @@ export class ReplaceInTexToolHandler implements IFullyManagedTool {
 	}
 
 	/**
-	 * Compiles a .tex file to PDF using LaTeX Workshop if available, otherwise falls back to pdflatex
+	 * Compiles a .tex file to PDF using LaTeX Workshop if available,
+	 * then falls back to Tectonic, then to pdflatex.
 	 */
 	private async compileToPdf(texPath: string, config: TaskConfig): Promise<string | null> {
 		const texDir = path.dirname(texPath)
@@ -284,7 +287,197 @@ export class ReplaceInTexToolHandler implements IFullyManagedTool {
 			console.log(`[ReplaceInTexToolHandler] LaTeX Workshop build failed: ${error}`)
 		}
 
-		return null
+		// If LaTeX Workshop didn't work, try Tectonic.
+		const tectonicPdfPath = await this.compileToPdfWithTectonic(texPath)
+		if (tectonicPdfPath) {
+			return tectonicPdfPath
+		}
+
+		// Final fallback: try pdflatex if available.
+		return await this.compileToPdfWithPdflatex(texPath, config)
+	}
+
+	/**
+	 * Compiles a .tex file to PDF using Tectonic.
+	 *
+	 * Mirrors the invocation used by `extensions/overleaf-visual`:
+	 * `tectonic -X compile <texPath> --outdir <texDir>`
+	 */
+	private async compileToPdfWithTectonic(texPath: string): Promise<string | null> {
+		const texDir = path.dirname(texPath)
+		const texBasename = path.basename(texPath, ".tex")
+		const pdfPath = path.join(texDir, `${texBasename}.pdf`)
+
+		return await new Promise((resolve) => {
+			let settled = false
+			const tectonicCommand = this.resolveTectonicCommand()
+			const proc = spawn(tectonicCommand, ["-X", "compile", texPath, "--outdir", texDir], {
+				cwd: texDir,
+				shell: process.platform === "win32",
+			})
+
+			let stderr = ""
+			proc.stderr.on("data", (d) => (stderr += String(d)))
+
+			proc.on("error", (e) => {
+				if (settled) {
+					return
+				}
+				settled = true
+				console.error("[ReplaceInTexToolHandler] Failed to run tectonic", e)
+
+				const isSystem = tectonicCommand === "tectonic" || tectonicCommand === "tectonic.exe"
+				showSystemNotification({
+					subtitle: "LaTeX Compilation Error",
+					message: isSystem
+						? "Tectonic was not found on PATH. Install it, or use the bundled Tectonic from LaTeX-Workshop."
+						: `Failed to run Tectonic at: ${tectonicCommand}`,
+				})
+				resolve(null)
+			})
+
+			proc.on("close", async (code) => {
+				if (settled) {
+					return
+				}
+				settled = true
+
+				if (code !== 0) {
+					console.error("[ReplaceInTexToolHandler] tectonic exited non-zero", { code, stderr })
+					resolve(null)
+					return
+				}
+
+				try {
+					if (await fileExistsAtPath(pdfPath)) {
+						resolve(pdfPath)
+					} else {
+						resolve(null)
+					}
+				} catch {
+					resolve(null)
+				}
+			})
+		})
+	}
+
+	/**
+	 * Resolve a Tectonic executable to run.
+	 *
+	 * - Prefer an explicit override (`CLINE_TECTONIC_PATH` or `OVERLEAF_TECTONIC_PATH`)
+	 * - Prefer LaTeX-Workshop's bundled Tectonic binary (if present)
+	 * - Fall back to system `tectonic`
+	 */
+	private resolveTectonicCommand(): string {
+		const envOverride = process.env.CLINE_TECTONIC_PATH || process.env.OVERLEAF_TECTONIC_PATH
+		if (envOverride && typeof envOverride === "string") {
+			const candidate = envOverride.trim()
+			if (candidate) {
+				try {
+					if (fs.existsSync(candidate)) {
+						return candidate
+					}
+				} catch {
+					// ignore
+				}
+			}
+		}
+
+		// Prefer LaTeX-Workshop's bundled Tectonic, if available.
+		try {
+			const lw = vscode.extensions.getExtension("James-Yu.latex-workshop")
+			if (lw) {
+				const platform = process.platform
+				const arch = process.arch
+				let platformDir: string | undefined
+				let binaryName: string | undefined
+
+				if (platform === "darwin") {
+					platformDir = arch === "arm64" ? "darwin-arm64" : "darwin-x64"
+					binaryName = "tectonic"
+				} else if (platform === "linux") {
+					platformDir = "linux-x64"
+					binaryName = "tectonic"
+				} else if (platform === "win32") {
+					platformDir = "win32-x64"
+					binaryName = "tectonic.exe"
+				}
+
+				if (platformDir && binaryName) {
+					const bundled = path.join(lw.extensionPath, "binaries", platformDir, binaryName)
+					if (fs.existsSync(bundled)) {
+						if (platform !== "win32") {
+							try {
+								fs.chmodSync(bundled, 0o755)
+							} catch {
+								// ignore
+							}
+						}
+						return bundled
+					}
+				}
+			}
+		} catch (err) {
+			console.error("[ReplaceInTexToolHandler] Failed to resolve bundled tectonic", err)
+		}
+
+		return process.platform === "win32" ? "tectonic.exe" : "tectonic"
+	}
+
+	/**
+	 * Compiles a .tex file to PDF using pdflatex directly
+	 */
+	private async compileToPdfWithPdflatex(texPath: string, config: TaskConfig): Promise<string | null> {
+		const texDir = path.dirname(texPath)
+		const texBasename = path.basename(texPath, ".tex")
+		const texFilename = path.basename(texPath)
+		const pdfPath = path.join(texDir, `${texBasename}.pdf`)
+
+		console.log(`[ReplaceInTexToolHandler] Compiling LaTeX file with pdflatex: ${texPath}`)
+
+		return new Promise((resolve) => {
+			const pdflatex = spawn("pdflatex", ["-interaction=nonstopmode", "-output-directory", texDir, texFilename], {
+				cwd: texDir,
+				shell: process.platform === "win32",
+			})
+
+			let stdout = ""
+			let stderr = ""
+
+			pdflatex.stdout.on("data", (data) => {
+				const output = data.toString()
+				stdout += output
+				console.log(`[ReplaceInTexToolHandler] pdflatex stdout: ${output}`)
+			})
+
+			pdflatex.stderr.on("data", (data) => {
+				const output = data.toString()
+				stderr += output
+				console.log(`[ReplaceInTexToolHandler] pdflatex stderr: ${output}`)
+			})
+
+			pdflatex.on("close", (code) => {
+				console.log(`[ReplaceInTexToolHandler] pdflatex run completed with code: ${code}`)
+				fileExistsAtPath(pdfPath).then((exists) => {
+					if (exists) {
+						resolve(pdfPath)
+					} else {
+						console.warn(`[ReplaceInTexToolHandler] PDF not found after pdflatex run`)
+						console.warn(`[ReplaceInTexToolHandler] Compilation output:\n${stdout}\n${stderr}`)
+						resolve(null)
+					}
+				})
+			})
+
+			pdflatex.on("error", (err) => {
+				console.error("[ReplaceInTexToolHandler] Error running pdflatex:", err)
+				showSystemNotification({
+					subtitle: "LaTeX Compilation Error",
+					message: `Failed to run pdflatex. Make sure pdflatex is installed and in your PATH. Error: ${err.message}`,
+				})
+				resolve(null)
+			})
+		})
 	}
 
 	/**

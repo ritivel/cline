@@ -1,3 +1,4 @@
+import * as fs from "node:fs"
 import path from "node:path"
 import type { ToolUse } from "@core/assistant-message"
 import { formatResponse } from "@core/prompts/responses"
@@ -141,7 +142,7 @@ export class WriteTexToolHandler implements IFullyManagedTool {
 			// Close the .tex file if it's open
 			await this.closeTexFile(absolutePath)
 
-			// Compile to PDF using LaTeX Workshop if available, otherwise use pdflatex directly
+			// Compile to PDF (LaTeX Workshop → Tectonic → pdflatex)
 			const pdfPath = await this.compileToPdf(absolutePath, config)
 
 			// Open PDF in VS Code
@@ -311,7 +312,7 @@ ${preamble}
 % Footer: Confidential on left, page number in center, company name on right
 \\fancyfoot[L]{Confidential}
 \\fancyfoot[C]{\\thepage}
-\\fancyfoot[R]{ABC ltd.}
+\\fancyfoot[R]{YC LifeSciences Ltd}
 
 % Apply the same style to the first page (plain style)
 \\fancypagestyle{plain}{%
@@ -322,7 +323,7 @@ ${preamble}
   \\fancyhead[R]{Aspirin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
   \\fancyfoot[L]{Confidential}
   \\fancyfoot[C]{\\thepage}
-  \\fancyfoot[R]{ABC ltd.}
+  \\fancyfoot[R]{YC LifeSciences Ltd}
 }
 
 \\begin{document}
@@ -333,7 +334,8 @@ ${bodyContent}
 	}
 
 	/**
-	 * Compiles a .tex file to PDF using LaTeX Workshop if available, otherwise falls back to pdflatex
+	 * Compiles a .tex file to PDF using LaTeX Workshop if available,
+	 * then falls back to Tectonic, then to pdflatex.
 	 */
 	private async compileToPdf(texPath: string, config: TaskConfig): Promise<string | null> {
 		const texDir = path.dirname(texPath)
@@ -386,8 +388,143 @@ ${bodyContent}
 			console.log(`[WriteTexToolHandler] LaTeX Workshop build failed: ${error}`)
 		}
 
-		// If LaTeX Workshop didn't work, return null (don't fall back to pdflatex if it's not available)
-		return null
+		// If LaTeX Workshop didn't work, try Tectonic.
+		const tectonicPdfPath = await this.compileToPdfWithTectonic(texPath)
+		if (tectonicPdfPath) {
+			return tectonicPdfPath
+		}
+
+		// Final fallback: try pdflatex if available.
+		return await this.compileToPdfWithPdflatex(texPath, config)
+	}
+
+	/**
+	 * Compiles a .tex file to PDF using Tectonic.
+	 *
+	 * Mirrors the invocation used by `extensions/overleaf-visual`:
+	 * `tectonic -X compile <texPath> --outdir <texDir>`
+	 */
+	private async compileToPdfWithTectonic(texPath: string): Promise<string | null> {
+		const texDir = path.dirname(texPath)
+		const texBasename = path.basename(texPath, ".tex")
+		const pdfPath = path.join(texDir, `${texBasename}.pdf`)
+
+		return await new Promise((resolve) => {
+			let settled = false
+			const tectonicCommand = this.resolveTectonicCommand()
+			const proc = spawn(tectonicCommand, ["-X", "compile", texPath, "--outdir", texDir], {
+				cwd: texDir,
+				shell: process.platform === "win32",
+			})
+
+			let stderr = ""
+			proc.stderr.on("data", (d) => (stderr += String(d)))
+
+			proc.on("error", (e) => {
+				if (settled) {
+					return
+				}
+				settled = true
+				console.error("[WriteTexToolHandler] Failed to run tectonic", e)
+
+				const isSystem = tectonicCommand === "tectonic" || tectonicCommand === "tectonic.exe"
+				showSystemNotification({
+					subtitle: "LaTeX Compilation Error",
+					message: isSystem
+						? "Tectonic was not found on PATH. Install it, or use the bundled Tectonic from LaTeX-Workshop."
+						: `Failed to run Tectonic at: ${tectonicCommand}`,
+				})
+				resolve(null)
+			})
+
+			proc.on("close", async (code) => {
+				if (settled) {
+					return
+				}
+				settled = true
+
+				if (code !== 0) {
+					console.error("[WriteTexToolHandler] tectonic exited non-zero", { code, stderr })
+					resolve(null)
+					return
+				}
+
+				try {
+					if (await fileExistsAtPath(pdfPath)) {
+						resolve(pdfPath)
+					} else {
+						resolve(null)
+					}
+				} catch {
+					resolve(null)
+				}
+			})
+		})
+	}
+
+	/**
+	 * Resolve a Tectonic executable to run.
+	 *
+	 * - Prefer an explicit override (`CLINE_TECTONIC_PATH` or `OVERLEAF_TECTONIC_PATH`)
+	 * - Prefer LaTeX-Workshop's bundled Tectonic binary (if present)
+	 * - Fall back to system `tectonic`
+	 */
+	private resolveTectonicCommand(): string {
+		const envOverride = process.env.CLINE_TECTONIC_PATH || process.env.OVERLEAF_TECTONIC_PATH
+		if (envOverride && typeof envOverride === "string") {
+			const candidate = envOverride.trim()
+			if (candidate) {
+				try {
+					if (fs.existsSync(candidate)) {
+						return candidate
+					}
+				} catch {
+					// ignore
+				}
+			}
+		}
+
+		// Prefer LaTeX-Workshop's bundled Tectonic, if available.
+		try {
+			const lw = vscode.extensions.getExtension("James-Yu.latex-workshop")
+			if (lw) {
+				const platform = process.platform
+				const arch = process.arch
+				let platformDir: string | undefined
+				let binaryName: string | undefined
+
+				if (platform === "darwin") {
+					platformDir = arch === "arm64" ? "darwin-arm64" : "darwin-x64"
+					binaryName = "tectonic"
+				} else if (platform === "linux") {
+					// LaTeX-Workshop commonly ships linux-x64.
+					platformDir = "linux-x64"
+					binaryName = "tectonic"
+				} else if (platform === "win32") {
+					platformDir = "win32-x64"
+					binaryName = "tectonic.exe"
+				}
+
+				if (platformDir && binaryName) {
+					const bundled = path.join(lw.extensionPath, "binaries", platformDir, binaryName)
+					if (fs.existsSync(bundled)) {
+						// Ensure executable on Unix systems.
+						if (platform !== "win32") {
+							try {
+								fs.chmodSync(bundled, 0o755)
+							} catch {
+								// ignore
+							}
+						}
+						return bundled
+					}
+				}
+			}
+		} catch (err) {
+			console.error("[WriteTexToolHandler] Failed to resolve bundled tectonic", err)
+		}
+
+		return process.platform === "win32" ? "tectonic.exe" : "tectonic"
 	}
 
 	/**
