@@ -18,6 +18,10 @@ export const BASE = `{{${SystemPromptSection.AGENT_ROLE}}}
 
 ====
 
+{{${SystemPromptSection.DOSSIER_COMMAND}}}
+
+====
+
 {{${SystemPromptSection.EDITING_FILES}}}
 
 ====

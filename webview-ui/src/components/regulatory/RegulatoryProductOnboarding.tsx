@@ -10,16 +10,15 @@ export const RegulatoryProductOnboarding = () => {
 	const [drugName, setDrugName] = useState("")
 	const [marketName, setMarketName] = useState("")
 	const [workspacePath, setWorkspacePath] = useState("")
-	const [submissionsPath, setSubmissionsPath] = useState("")
 	const [isCreating, setIsCreating] = useState(false)
 	const [foldersLoaded, setFoldersLoaded] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
-	// Auto-populate folders from left pane when component mounts
+	// Auto-populate workspace folder from left pane when component mounts
 	useEffect(() => {
-		const loadFolders = async () => {
+		const loadWorkspaceFolder = async () => {
 			try {
-				console.log("[DEBUG] Loading folders from left pane...")
+				console.log("[DEBUG] Loading workspace folder from left pane...")
 				// Get current workspace folder from left pane
 				const workspaceResponse = await UiServiceClient.getCurrentWorkspaceFolder(EmptyRequest.create())
 				console.log("[DEBUG] Workspace folder response:", workspaceResponse.value)
@@ -27,38 +26,28 @@ export const RegulatoryProductOnboarding = () => {
 					setWorkspacePath(workspaceResponse.value)
 				}
 
-				// Get current submissions folder from left pane
-				const submissionsResponse = await UiServiceClient.getCurrentSubmissionsFolder(EmptyRequest.create())
-				console.log("[DEBUG] Submissions folder response:", submissionsResponse.value)
-				if (submissionsResponse.value) {
-					setSubmissionsPath(submissionsResponse.value)
-				}
-
 				setFoldersLoaded(true)
-				console.log("[DEBUG] Folders loaded:", {
-					workspacePath: workspaceResponse.value,
-					submissionsPath: submissionsResponse.value,
-				})
+				console.log("[DEBUG] Workspace folder loaded:", workspaceResponse.value)
 			} catch (error) {
-				console.error("[DEBUG] Failed to load folders from left pane:", error)
+				console.error("[DEBUG] Failed to load workspace folder from left pane:", error)
 				setFoldersLoaded(true)
 			}
 		}
 
-		loadFolders()
+		loadWorkspaceFolder()
 	}, [])
 
 	const handleCreate = async () => {
-		console.log("[DEBUG] handleCreate called", { drugName, marketName, workspacePath, submissionsPath, isFormValid })
+		console.log("[DEBUG] handleCreate called", { drugName, marketName, workspacePath, isFormValid })
 
 		// Clear any previous errors
 		setError(null)
 
-		// Validate inputs - folders must be loaded from left pane
-		if (!drugName.trim() || !marketName.trim() || !workspacePath || !submissionsPath) {
-			if (!workspacePath || !submissionsPath) {
-				const errorMsg = "Please ensure workspace and submissions folders are set in the left pane"
-				console.error("[DEBUG] Validation failed - missing folders:", { workspacePath, submissionsPath })
+		// Validate inputs
+		if (!drugName.trim() || !marketName.trim() || !workspacePath) {
+			if (!workspacePath) {
+				const errorMsg = "Please ensure workspace folder is set in the left pane"
+				console.error("[DEBUG] Validation failed - missing workspace folder:", workspacePath)
 				setError(errorMsg)
 			} else {
 				const errorMsg = "Please fill in all required fields (Drug Name and Market Name)"
@@ -74,7 +63,7 @@ export const RegulatoryProductOnboarding = () => {
 		try {
 			const config: RegulatoryProductConfig = {
 				workspacePath,
-				submissionsPath,
+				submissionsPath: "", // Backend will create and set this
 				drugName: drugName.trim(),
 				marketName: marketName.trim(),
 			}
@@ -100,25 +89,25 @@ export const RegulatoryProductOnboarding = () => {
 		}
 	}
 
-	const isFormValid = drugName.trim() && marketName.trim() && workspacePath && submissionsPath
+	const isFormValid = drugName.trim() && marketName.trim() && workspacePath
 
 	return (
 		<div className="h-full p-0 flex flex-col">
 			<div className="h-full px-5 overflow-auto flex flex-col gap-4">
 				<h2 className="text-lg font-semibold">Create New Regulatory Product</h2>
 				<p className="text-sm text-(--vscode-descriptionForeground)">
-					Enter product information. Workspace and submissions folders are automatically loaded from the left pane.
+					Enter product information. Workspace folder is automatically loaded from the left pane. A submission folder
+					will be created automatically.
 				</p>
 
 				{!foldersLoaded && (
 					<p className="text-xs text-(--vscode-descriptionForeground)">Loading folders from left pane...</p>
 				)}
 
-				{foldersLoaded && (!workspacePath || !submissionsPath) && (
+				{foldersLoaded && !workspacePath && (
 					<div className="p-3 bg-(--vscode-inputValidation-warningBackground) border border-(--vscode-inputValidation-warningBorder) rounded">
 						<p className="text-sm text-(--vscode-inputValidation-warningForeground)">
-							⚠️ Please ensure both workspace and submissions folders are set in the left pane before creating a
-							product.
+							⚠️ Please ensure workspace folder is set in the left pane before creating a product.
 						</p>
 					</div>
 				)}
@@ -135,15 +124,6 @@ export const RegulatoryProductOnboarding = () => {
 							Workspace Folder (from left pane)
 						</label>
 						<p className="text-xs text-(--vscode-descriptionForeground) break-all">{workspacePath}</p>
-					</div>
-				)}
-
-				{submissionsPath && (
-					<div className="flex flex-col gap-1">
-						<label className="text-xs font-medium text-(--vscode-descriptionForeground)">
-							Submissions Folder (from left pane)
-						</label>
-						<p className="text-xs text-(--vscode-descriptionForeground) break-all">{submissionsPath}</p>
 					</div>
 				)}
 
@@ -179,7 +159,6 @@ export const RegulatoryProductOnboarding = () => {
 								drugName,
 								marketName,
 								workspacePath,
-								submissionsPath,
 							})
 							e.preventDefault()
 							e.stopPropagation()
@@ -192,7 +171,7 @@ export const RegulatoryProductOnboarding = () => {
 					{process.env.NODE_ENV === "development" && (
 						<div className="text-xs text-(--vscode-descriptionForeground) mt-2">
 							Debug: Form valid: {isFormValid ? "Yes" : "No"} | Creating: {isCreating ? "Yes" : "No"} | Workspace:{" "}
-							{workspacePath ? "✓" : "✗"} | Submissions: {submissionsPath ? "✓" : "✗"}
+							{workspacePath ? "✓" : "✗"}
 						</div>
 					)}
 				</div>

@@ -20,7 +20,7 @@ export async function createRegulatoryProduct(_controller: Controller, request: 
 		const config: RegulatoryProductConfig = JSON.parse(request.value || "{}")
 
 		// Validate required fields
-		if (!config.workspacePath || !config.submissionsPath || !config.drugName || !config.marketName) {
+		if (!config.workspacePath || !config.drugName || !config.marketName) {
 			throw new Error("Missing required fields in product configuration")
 		}
 
@@ -31,12 +31,18 @@ export async function createRegulatoryProduct(_controller: Controller, request: 
 			throw new Error(`Workspace folder does not exist: ${config.workspacePath}`)
 		}
 
-		// Ensure submissions folder exists
+		// Create submission folder inside workspace folder
+		const submissionFolderPath = path.join(config.workspacePath, "submission")
 		try {
-			await fs.access(config.submissionsPath)
-		} catch {
-			throw new Error(`Submissions folder does not exist: ${config.submissionsPath}`)
+			await fs.mkdir(submissionFolderPath, { recursive: true })
+			console.log("[createRegulatoryProduct] Created submission folder:", submissionFolderPath)
+		} catch (error) {
+			console.error("[createRegulatoryProduct] Failed to create submission folder:", error)
+			throw new Error(`Failed to create submission folder: ${submissionFolderPath}`)
 		}
+
+		// Set submissionsPath to the created folder
+		config.submissionsPath = submissionFolderPath
 
 		// Save product to extension global state (so it's visible across all workspaces)
 		// This doesn't require package.json registration

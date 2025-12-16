@@ -303,9 +303,17 @@ export class TaskSectionCreation extends Task {
 			})
 			const finalContent = await this.generateFinalSection(partialDrafts)
 
+			// Step 6.5: Correct and improve LaTeX code
+			this.reportProgress("Correcting LaTeX code...")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "Improving LaTeX code quality...",
+			})
+			const correctedContent = await this.correctLatexCode(finalContent)
+
 			// Step 7: Write output file
 			this.reportProgress("Writing output file...")
-			await this.writeOutputFile(finalContent)
+			await this.writeOutputFile(correctedContent)
 			showSystemNotification({
 				subtitle: `Section ${this.sectionId}`,
 				message: `Written to: ${this.expectedOutputFile}`,
@@ -490,6 +498,27 @@ export class TaskSectionCreation extends Task {
 
 		if (!result.success || !result.result) {
 			throw new Error(`Failed to generate final section: ${result.error?.message}`)
+		}
+
+		return result.result
+	}
+
+	/**
+	 * Corrects and improves LaTeX code without changing semantic content
+	 */
+	private async correctLatexCode(content: string): Promise<string> {
+		const prompt = this.buildLatexCorrectionPrompt(content)
+
+		const result = await this.errorHandler.executeWithContextReduction(async (reductionFactor) => {
+			const adjustedContent = reductionFactor < 1 ? this.reducePromptContent(prompt, reductionFactor) : prompt
+
+			return this.callLLMWithLatexSystemPrompt(adjustedContent)
+		})
+
+		if (!result.success || !result.result) {
+			console.warn(`[TaskSectionCreation] LaTeX correction failed: ${result.error?.message}`)
+			// Fall back to original content
+			return content
 		}
 
 		return result.result
@@ -717,6 +746,30 @@ export class TaskSectionCreation extends Task {
 	}
 
 	/**
+	 * Calls the LLM with LaTeX correction system prompt
+	 */
+	private async callLLMWithLatexSystemPrompt(prompt: string): Promise<string> {
+		const stateManager = StateManager.get()
+		const apiConfiguration = stateManager.getApiConfiguration()
+		const currentMode = "act"
+		const apiHandler = buildApiHandler(apiConfiguration, currentMode)
+
+		const systemPrompt = this.buildLatexCorrectionSystemPrompt()
+		const messages = [{ role: "user" as const, content: prompt }]
+
+		const stream = apiHandler.createMessage(systemPrompt, messages)
+
+		let response = ""
+		for await (const chunk of stream) {
+			if (chunk.type === "text") {
+				response += chunk.text
+			}
+		}
+
+		return response
+	}
+
+	/**
 	 * Builds the system prompt for LLM
 	 */
 	private buildSystemPrompt(): string {
@@ -737,6 +790,33 @@ Your task is to write regulatory content for CTD Section ${this.sectionId}: ${th
 - Include specific data values, specifications, and results
 - Reference source documents appropriately
 - Maintain consistency in terminology`
+	}
+
+	/**
+	 * Builds the system prompt for LaTeX correction agent
+	 */
+	private buildLatexCorrectionSystemPrompt(): string {
+		return `You are a LaTeX expert specializing in code quality and syntax correction.
+
+Your task is to improve the LaTeX code quality of a regulatory document WITHOUT changing any semantic content.
+
+## CRITICAL CONSTRAINTS:
+1. **DO NOT** change any words, sentences, or semantic meaning
+2. **DO NOT** modify data values, numbers, or technical content
+3. **DO NOT** alter document structure or section organization
+4. **ONLY** fix LaTeX syntax, code quality, and formatting
+
+## What to Fix/Improve:
+- LaTeX syntax errors (escaping, commands, environments)
+- Package usage and imports
+- Table formatting and alignment
+- Proper use of LaTeX commands and environments
+- Code organization and readability
+- Ensure document compiles without errors
+- Fix any LaTeX compilation issues
+
+## Output:
+Return the corrected LaTeX code with all semantic content preserved exactly as provided.`
 	}
 
 	/**
@@ -804,6 +884,21 @@ Provide a structured analysis that preserves all important details. Do NOT summa
 </output_requirements>`)
 
 		return parts.join("\n")
+	}
+
+	/**
+	 * Builds the prompt for LaTeX correction
+	 */
+	private buildLatexCorrectionPrompt(content: string): string {
+		return `Review and correct the following LaTeX document. Improve its code quality, fix syntax errors, and ensure it follows LaTeX best practices.
+
+IMPORTANT: You must preserve ALL semantic content, wording, and data values exactly as they are. Only fix LaTeX code structure, syntax, and formatting.
+
+<latex_content>
+${content}
+</latex_content>
+
+Return the corrected LaTeX code with improved syntax and code quality, but with all content and meaning preserved exactly.`
 	}
 
 	// =========================================================================

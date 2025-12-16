@@ -4,7 +4,7 @@ import type { Controller } from "../index"
 
 /**
  * Executes a slash command programmatically
- * Supports: /update-checklist <sectionId> and /generate-section <sectionId>
+ * Supports: /update-checklist <sectionId>, /update-output-checklist <sectionId>, and /generate-section <sectionId>
  */
 export async function executeSlashCommand(controller: Controller, request: StringRequest): Promise<ProtoString> {
 	try {
@@ -41,6 +41,13 @@ export async function executeSlashCommand(controller: Controller, request: Strin
 			// Dynamic import to avoid circular dependency
 			const { executeUpdateChecklist } = await import("@/core/slash-commands/index")
 			result = await executeUpdateChecklist(workspaceRoot, sectionId)
+		} else if (commandName === "update-output-checklist") {
+			if (!sectionId) {
+				throw new Error("Section ID is required for /update-output-checklist command")
+			}
+			// Dynamic import to avoid circular dependency
+			const { executeUpdateOutputChecklist } = await import("@/core/slash-commands/index")
+			result = await executeUpdateOutputChecklist(workspaceRoot, sectionId)
 		} else if (commandName === "generate-section") {
 			if (!sectionId) {
 				throw new Error("Section ID is required for /generate-section command")
@@ -49,7 +56,9 @@ export async function executeSlashCommand(controller: Controller, request: Strin
 			const { executeGenerateDossierSection } = await import("@/core/slash-commands/index")
 			result = await executeGenerateDossierSection(workspaceRoot, sectionId)
 		} else {
-			throw new Error(`Unsupported command: ${commandName}. Only /update-checklist and /generate-section are supported.`)
+			throw new Error(
+				`Unsupported command: ${commandName}. Only /update-checklist, /update-output-checklist, and /generate-section are supported.`,
+			)
 		}
 
 		return ProtoString.create({ value: JSON.stringify(result) })
