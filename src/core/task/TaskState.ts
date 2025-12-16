@@ -68,4 +68,7 @@ export class TaskState {
 	// Auto-context summarization
 	currentlySummarizing: boolean = false
 	lastAutoCompactTriggerIndex?: number
+
+	// Dossier command tracking
+	activeDossierCommand?: "generate-dossier" | "generate-section"
 }

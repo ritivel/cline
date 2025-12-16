@@ -10,6 +10,10 @@ export const baseTemplate = `{{${SystemPromptSection.AGENT_ROLE}}}
 
 ====
 
+{{${SystemPromptSection.DOSSIER_COMMAND}}}
+
+====
+
 {{${SystemPromptSection.MCP}}}
 
 ====

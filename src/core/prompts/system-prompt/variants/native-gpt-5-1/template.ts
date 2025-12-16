@@ -13,6 +13,10 @@ export const BASE = `{{${SystemPromptSection.AGENT_ROLE}}}
 
 ====
 
+{{${SystemPromptSection.DOSSIER_COMMAND}}}
+
+====
+
 {{${SystemPromptSection.ACT_VS_PLAN}}}
 
 ====

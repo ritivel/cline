@@ -622,6 +622,7 @@ export async function executeGenerateDossierSection(
 
 // Global variable to track checklist updation service
 let checklistUpdationService: any = null
+let outputChecklistUpdationService: any = null
 
 /**
  * Starts checklist updation in the background
@@ -876,6 +877,257 @@ export async function executeUpdateChecklist(
 }
 
 /**
+ * Starts output checklist updation in the background
+ */
+function startOutputChecklistUpdation(workspaceRoot: string, sectionNameOrId: string): void {
+	// Get controller from webview provider for subagents
+	const webview = WebviewProvider.getVisibleInstance()
+	const controller = webview?.controller
+
+	if (!controller) {
+		console.error("Cannot start output checklist updation: No controller available")
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message:
+				"Cannot start output checklist updation: No controller available. Please ensure Cline is properly initialized.",
+			type: ShowMessageType.ERROR,
+		})
+		return
+	}
+
+	// Check if submissions folder is set
+	const submissionsProvider = SubmissionsPaneProvider.getInstance()
+	const submissionsPath = submissionsProvider?.getSubmissionsFolder()
+	if (!submissionsPath) {
+		HostProvider.get().hostBridge.windowClient.showMessage({
+			message:
+				"Cannot start output checklist updation: No submissions folder set. Please set a submissions folder in the left pane before updating checklists.",
+			type: ShowMessageType.ERROR,
+		})
+		return
+	}
+
+	const service = new DossierGeneratorService(workspaceRoot, controller)
+	outputChecklistUpdationService = service
+
+	vscode.window.withProgress(
+		{
+			location: vscode.ProgressLocation.Notification,
+			title: `Updating Output Checklist: ${sectionNameOrId}`,
+			cancellable: true,
+		},
+		async (progress, token) => {
+			token.onCancellationRequested(() => {
+				outputChecklistUpdationService = null
+			})
+
+			try {
+				// Find section by name or ID
+				const searchTerm = sectionNameOrId.toLowerCase().trim()
+				let sectionId: string | null = null
+				let section: CTDSectionDef | null = null
+
+				// First, try exact ID match
+				for (const module of EAC_NMRA_TEMPLATE.modules) {
+					if (module.sections[sectionNameOrId]) {
+						sectionId = sectionNameOrId
+						section = module.sections[sectionNameOrId]
+						break
+					}
+				}
+
+				// Then, try case-insensitive partial match on section IDs
+				if (!sectionId) {
+					for (const module of EAC_NMRA_TEMPLATE.modules) {
+						for (const [id, sec] of Object.entries(module.sections)) {
+							if (id.toLowerCase().includes(searchTerm)) {
+								sectionId = id
+								section = sec
+								break
+							}
+						}
+						if (sectionId) break
+					}
+				}
+
+				// Finally, try case-insensitive partial match on section titles
+				if (!sectionId) {
+					for (const module of EAC_NMRA_TEMPLATE.modules) {
+						for (const [id, sec] of Object.entries(module.sections)) {
+							if (sec.title.toLowerCase().includes(searchTerm)) {
+								sectionId = id
+								section = sec
+								break
+							}
+						}
+						if (sectionId) break
+					}
+				}
+
+				if (!sectionId || !section) {
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Section not found: "${sectionNameOrId}". Please provide a valid section ID (e.g., "1.1") or section name.`,
+						type: ShowMessageType.ERROR,
+					})
+					return
+				}
+
+				// Get section folder path
+				const { SECTION_PARENT_MAP } = await import("@/core/ctd/templates/eac-nmra/prompts")
+				const moduleNum = sectionId.charAt(0)
+				const basePath = submissionsPath || workspaceRoot
+				const dossierPath = path.join(basePath, "dossier")
+
+				if (!(sectionId in SECTION_PARENT_MAP)) {
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Cannot determine folder path for section ${sectionId}`,
+						type: ShowMessageType.ERROR,
+					})
+					return
+				}
+
+				const ancestors: string[] = []
+				let current: string | null = sectionId
+
+				while (current !== null) {
+					ancestors.unshift(current)
+					current = SECTION_PARENT_MAP[current] ?? null
+				}
+
+				const sectionFolders = ancestors.map((s) => `section-${s}`)
+				const sectionFolderPath = path.join(dossierPath, `module-${moduleNum}`, ...sectionFolders)
+
+				// Check if section folder exists
+				try {
+					const stat = await fs.stat(sectionFolderPath)
+					if (!stat.isDirectory()) {
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Section folder is not a directory: ${sectionFolderPath}`,
+							type: ShowMessageType.ERROR,
+						})
+						return
+					}
+				} catch {
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Section folder does not exist: ${sectionFolderPath}. Please create the dossier structure first.`,
+						type: ShowMessageType.ERROR,
+					})
+					return
+				}
+
+				const checklistPath = path.join(sectionFolderPath, "checklist.md")
+
+				// Dynamic import to avoid circular dependency
+				const { OutputChecklistUpdation } = await import("@/core/task/OutputChecklistUpdation")
+				const stateManager = StateManager.get()
+				const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+				const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+				const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+				const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+				const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+				const defaultTerminalProfile = stateManager.getGlobalSettingsKey("defaultTerminalProfile")
+
+				// Setup workspace manager
+				const { setupWorkspaceManager } = await import("@/core/workspace/setup")
+				const { detectWorkspaceRoots } = await import("@/core/workspace/detection")
+				const workspaceManager = await setupWorkspaceManager({
+					stateManager,
+					detectRoots: detectWorkspaceRoots,
+				})
+
+				const cwd = workspaceManager?.getPrimaryRoot()?.path || workspaceRoot
+				const taskId = `output-checklist-updation-${sectionId}-${Date.now()}`
+
+				// Acquire task lock
+				const { tryAcquireTaskLockWithRetry } = await import("@/core/task/TaskLockUtils")
+				const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+				const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+				// Create OutputChecklistUpdation instance
+				const task = new OutputChecklistUpdation({
+					controller,
+					mcpHub: controller.mcpHub,
+					shellIntegrationTimeout,
+					terminalReuseEnabled: terminalReuseEnabled ?? true,
+					terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+					subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+					defaultTerminalProfile: defaultTerminalProfile ?? "default",
+					vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+					cwd,
+					stateManager,
+					workspaceManager,
+					task: `Update output checklist for section ${sectionId}`,
+					taskId,
+					taskLockAcquired,
+					sectionId,
+					sectionFolderPath,
+					checklistPath,
+					onProgress: (sectionId: string, status: string) => {
+						console.log(`[Output Checklist Updation ${sectionId}] ${status}`)
+						progress.report({ message: status })
+						HostProvider.get().hostBridge.windowClient.showMessage({
+							message: `Output Checklist Updation (${sectionId}): ${status}`,
+							type: ShowMessageType.INFORMATION,
+						})
+					},
+				})
+
+				// Set mode to "act" and disable strict plan mode for subagents
+				stateManager.setGlobalState("mode", "act")
+				stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+				// Run output checklist updation
+				const result = await task.runChecklistUpdation()
+
+				if (result.success) {
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Output checklist updation completed for ${sectionId}: ${result.newlyCheckedCount} features checked`,
+						type: ShowMessageType.INFORMATION,
+					})
+				} else {
+					HostProvider.get().hostBridge.windowClient.showMessage({
+						message: `Output checklist updation failed for ${sectionId}: ${result.error || "Unknown error"}`,
+						type: ShowMessageType.ERROR,
+					})
+				}
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				console.error(`Error updating output checklist for ${sectionNameOrId}:`, error)
+				HostProvider.get().hostBridge.windowClient.showMessage({
+					message: `Output Checklist Updation Error (${sectionNameOrId}): ${errorMessage}`,
+					type: ShowMessageType.ERROR,
+				})
+			} finally {
+				if (outputChecklistUpdationService === service) {
+					outputChecklistUpdationService = null
+				}
+			}
+		},
+	)
+}
+
+/**
+ * Executes the update-output-checklist command
+ */
+export async function executeUpdateOutputChecklist(
+	workspaceRoot: string,
+	sectionNameOrId: string,
+): Promise<{ success: boolean; message: string }> {
+	try {
+		// Start output checklist updation in the background
+		startOutputChecklistUpdation(workspaceRoot, sectionNameOrId)
+
+		const message = `Output checklist updation for "${sectionNameOrId}" has been started in the background. The system will check output features against content.tex and update the checklist. Progress notifications will appear as the checklist is updated.`
+		return { success: true, message }
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		return {
+			success: false,
+			message: `Failed to start output checklist updation: ${errorMessage}`,
+		}
+	}
+}
+
+/**
  * Processes text for slash commands and transforms them with appropriate instructions
  * This is called after parseMentions() to process any slash commands in the user's message
  */
@@ -887,7 +1139,7 @@ export async function parseSlashCommands(
 	focusChainSettings?: { enabled: boolean },
 	enableNativeToolCalls?: boolean,
 	providerInfo?: ApiProviderInfo,
-): Promise<{ processedText: string; needsClinerulesFileCheck: boolean }> {
+): Promise<{ processedText: string; needsClinerulesFileCheck: boolean; detectedSlashCommand?: string }> {
 	const SUPPORTED_DEFAULT_COMMANDS = [
 		"newtask",
 		"smol",
@@ -900,6 +1152,7 @@ export async function parseSlashCommands(
 		"generate-dossier",
 		"generate-section",
 		"update-checklist",
+		"update-output-checklist",
 	]
 
 	// Determine if the current provider/model/setting actually uses native tool calling
@@ -1014,7 +1267,7 @@ The /generate-dossier command failed to execute. Please inform the user about th
 </explicit_instructions>
 
 ${textWithoutSlashCommand}`
-					return { processedText, needsClinerulesFileCheck: false }
+					return { processedText, needsClinerulesFileCheck: false, detectedSlashCommand: commandName }
 				}
 			}
 
@@ -1087,6 +1340,75 @@ ${textWithoutSlashCommand}`
 				}
 			}
 
+			// Special handling for update-output-checklist: execute directly with section name parameter
+			if (commandName === "update-output-checklist") {
+				try {
+					// Extract section name/ID from the command
+					// The command format is: /update-output-checklist <section-name-or-id>
+					const commandEndPosition = slashMatch.index + slashMatch[1].length + slashMatch[2].length + 1 // +1 for the slash
+					const remainingText = tagContent.substring(commandEndPosition).trim()
+
+					// Extract the section parameter (could be quoted or unquoted)
+					let sectionName: string | undefined
+					if (remainingText) {
+						// Check if it's quoted
+						const quotedMatch = remainingText.match(/^["']([^"']+)["']/)
+						if (quotedMatch) {
+							sectionName = quotedMatch[1]
+						} else {
+							// Take the first word/token
+							const firstToken = remainingText.split(/\s+/)[0]
+							sectionName = firstToken || undefined
+						}
+					}
+
+					if (!sectionName) {
+						const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+						const processedText = `<explicit_instructions type="update-output-checklist-result">
+The /update-output-checklist command requires a section name or ID as a parameter. Usage: /update-output-checklist <section-name-or-id>
+
+Example: /update-output-checklist "1.1" or /update-output-checklist 1.1
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+						return { processedText, needsClinerulesFileCheck: false }
+					}
+
+					// Get workspace root
+					const workspacePaths = await HostProvider.workspace.getWorkspacePaths({})
+					const workspaceRoot = workspacePaths.paths?.[0] || process.cwd()
+
+					// Execute the command
+					const result = await executeUpdateOutputChecklist(workspaceRoot, sectionName)
+
+					// Remove slash command from text
+					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+
+					// Return message for AI to report to user
+					const processedText = `<explicit_instructions type="update-output-checklist-result">
+The /update-output-checklist command has been executed for section "${sectionName}". ${result.message}
+
+Please inform the user about the result: ${result.success ? "Success" : "Error"} - ${result.message}
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+
+					// Track telemetry for builtin slash command usage
+					telemetryService.captureSlashCommandUsed(ulid, commandName, "builtin")
+
+					return { processedText, needsClinerulesFileCheck: false }
+				} catch (error) {
+					console.error(`Error executing update-output-checklist command: ${error}`)
+					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
+					const processedText = `<explicit_instructions type="update-output-checklist-result">
+The /update-output-checklist command failed to execute. Please inform the user about the error: ${error instanceof Error ? error.message : String(error)}
+</explicit_instructions>
+
+${textWithoutSlashCommand}`
+					return { processedText, needsClinerulesFileCheck: false }
+				}
+			}
+
 			// Special handling for generate-section: execute directly with section name parameter
 			if (commandName === "generate-section") {
 				try {
@@ -1118,7 +1440,7 @@ Example: /generate-section "3.2.P.5" or /generate-section 3.2.P.5
 </explicit_instructions>
 
 ${textWithoutSlashCommand}`
-						return { processedText, needsClinerulesFileCheck: false }
+						return { processedText, needsClinerulesFileCheck: false, detectedSlashCommand: commandName }
 					}
 
 					// Get workspace root
@@ -1143,7 +1465,7 @@ ${textWithoutSlashCommand}`
 					// Track telemetry for builtin slash command usage
 					telemetryService.captureSlashCommandUsed(ulid, commandName, "builtin")
 
-					return { processedText, needsClinerulesFileCheck: false }
+					return { processedText, needsClinerulesFileCheck: false, detectedSlashCommand: commandName }
 				} catch (error) {
 					console.error(`Error executing generate-section command: ${error}`)
 					const textWithoutSlashCommand = removeSlashCommand(text, tagContent, contentStartIndex, slashMatch)
@@ -1152,7 +1474,7 @@ The /generate-section command failed to execute. Please inform the user about th
 </explicit_instructions>
 
 ${textWithoutSlashCommand}`
-					return { processedText, needsClinerulesFileCheck: false }
+					return { processedText, needsClinerulesFileCheck: false, detectedSlashCommand: commandName }
 				}
 			}
 

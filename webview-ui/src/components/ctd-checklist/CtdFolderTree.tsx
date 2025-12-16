@@ -26,8 +26,10 @@ interface CtdFolderTreeProps {
 	structure: CtdStructure | null
 	onSectionSelect?: (sectionId: string) => void
 	onAssess?: (sectionId: string) => void
+	onAssessOutput?: (sectionId: string) => void
 	onGenerate?: (sectionId: string) => void
 	assessingSections?: Set<string>
+	assessingOutputSections?: Set<string>
 	generatingSections?: Set<string>
 }
 
@@ -37,8 +39,10 @@ interface SectionNodeProps {
 	level: number
 	onSectionSelect?: (sectionId: string) => void
 	onAssess?: (sectionId: string) => void
+	onAssessOutput?: (sectionId: string) => void
 	onGenerate?: (sectionId: string) => void
 	assessingSections?: Set<string>
+	assessingOutputSections?: Set<string>
 	generatingSections?: Set<string>
 }
 
@@ -48,14 +52,17 @@ const SectionNode = ({
 	level,
 	onSectionSelect,
 	onAssess,
+	onAssessOutput,
 	onGenerate,
 	assessingSections,
+	assessingOutputSections,
 	generatingSections,
 }: SectionNodeProps) => {
 	const [isExpanded, setIsExpanded] = useState(level < 2) // Auto-expand first 2 levels
 	const isLeaf = !section.children || section.children.length === 0
 	const hasChildren = section.children && section.children.length > 0
 	const isAssessing = assessingSections?.has(section.id) || false
+	const isAssessingOutput = assessingOutputSections?.has(section.id) || false
 	const isGenerating = generatingSections?.has(section.id) || false
 
 	const handleToggle = useCallback(() => {
@@ -78,6 +85,16 @@ const SectionNode = ({
 			}
 		},
 		[onAssess, section.id],
+	)
+
+	const handleAssessOutput = useCallback(
+		(e: React.MouseEvent) => {
+			e.stopPropagation()
+			if (onAssessOutput) {
+				onAssessOutput(section.id)
+			}
+		},
+		[onAssessOutput, section.id],
 	)
 
 	const handleGenerate = useCallback(
@@ -117,7 +134,7 @@ const SectionNode = ({
 					<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
 						<VSCodeButton
 							appearance="secondary"
-							disabled={isAssessing || isGenerating}
+							disabled={isAssessing || isAssessingOutput || isGenerating}
 							onClick={handleAssess}
 							style={{ minWidth: "80px", height: "24px", fontSize: "11px" }}>
 							{isAssessing ? (
@@ -131,7 +148,7 @@ const SectionNode = ({
 						</VSCodeButton>
 						<VSCodeButton
 							appearance="secondary"
-							disabled={isAssessing || isGenerating}
+							disabled={isAssessing || isAssessingOutput || isGenerating}
 							onClick={handleGenerate}
 							style={{ minWidth: "80px", height: "24px", fontSize: "11px" }}>
 							{isGenerating ? (
@@ -143,6 +160,22 @@ const SectionNode = ({
 								"Generate"
 							)}
 						</VSCodeButton>
+						{onAssessOutput && (
+							<VSCodeButton
+								appearance="secondary"
+								disabled={isAssessing || isAssessingOutput || isGenerating}
+								onClick={handleAssessOutput}
+								style={{ minWidth: "80px", height: "24px", fontSize: "11px" }}>
+								{isAssessingOutput ? (
+									<>
+										<Loader2 className="w-3 h-3 mr-1 animate-spin" />
+										Reviewing...
+									</>
+								) : (
+									"Review"
+								)}
+							</VSCodeButton>
+						)}
 					</div>
 				)}
 			</div>
@@ -154,11 +187,13 @@ const SectionNode = ({
 						return (
 							<SectionNode
 								allSections={allSections}
+								assessingOutputSections={assessingOutputSections}
 								assessingSections={assessingSections}
 								generatingSections={generatingSections}
 								key={childId}
 								level={level + 1}
 								onAssess={onAssess}
+								onAssessOutput={onAssessOutput}
 								onGenerate={onGenerate}
 								onSectionSelect={onSectionSelect}
 								section={childSection}
@@ -175,8 +210,10 @@ export const CtdFolderTree = ({
 	structure,
 	onSectionSelect,
 	onAssess,
+	onAssessOutput,
 	onGenerate,
 	assessingSections,
+	assessingOutputSections,
 	generatingSections,
 }: CtdFolderTreeProps) => {
 	if (!structure) {
@@ -227,11 +264,13 @@ export const CtdFolderTree = ({
 							{moduleTopLevelSections.map((section) => (
 								<SectionNode
 									allSections={allSections}
+									assessingOutputSections={assessingOutputSections}
 									assessingSections={assessingSections}
 									generatingSections={generatingSections}
 									key={section.id}
 									level={0}
 									onAssess={onAssess}
+									onAssessOutput={onAssessOutput}
 									onGenerate={onGenerate}
 									onSectionSelect={onSectionSelect}
 									section={section}

@@ -913,6 +913,8 @@ export class Task {
 		// if the extension process were killed, then on restart the clineMessages might not be empty, so we need to set it to [] when we create a new Cline client (otherwise webview would show stale messages from previous session)
 		this.messageStateHandler.setClineMessages([])
 		this.messageStateHandler.setApiConversationHistory([])
+		// Clear dossier command state when starting a new task
+		this.taskState.activeDossierCommand = undefined
 
 		await this.postStateToWebview()
 
@@ -2172,6 +2174,7 @@ export class Task {
 			runtimePlaceholders: {
 				mode: this.stateManager.getGlobalSettingsKey("mode"),
 				isSubagent: this.taskId.startsWith("dossier-subagent-"),
+				activeDossierCommand: this.taskState.activeDossierCommand,
 			},
 		}
 
@@ -3341,7 +3344,11 @@ export class Task {
 				this.workspaceManager,
 			)
 
-			const { processedText, needsClinerulesFileCheck: needsCheck } = await parseSlashCommands(
+			const {
+				processedText,
+				needsClinerulesFileCheck: needsCheck,
+				detectedSlashCommand,
+			} = await parseSlashCommands(
 				parsedText,
 				localWorkflowToggles,
 				globalWorkflowToggles,
@@ -3353,6 +3360,11 @@ export class Task {
 
 			if (needsCheck) {
 				needsClinerulesFileCheck = true
+			}
+
+			// Store dossier command in task state if detected
+			if (detectedSlashCommand === "generate-dossier" || detectedSlashCommand === "generate-section") {
+				this.taskState.activeDossierCommand = detectedSlashCommand
 			}
 
 			return processedText

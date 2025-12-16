@@ -17,6 +17,7 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 	const [ctdStructure, setCtdStructure] = useState<any>(null)
 	const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
 	const [assessingSections, setAssessingSections] = useState<Set<string>>(new Set())
+	const [assessingOutputSections, setAssessingOutputSections] = useState<Set<string>>(new Set())
 	const [generatingSections, setGeneratingSections] = useState<Set<string>>(new Set())
 
 	useEffect(() => {
@@ -120,6 +121,51 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 		[currentRegulatoryProduct],
 	)
 
+	const handleAssessOutput = useCallback(
+		async (sectionId: string) => {
+			if (!currentRegulatoryProduct) return
+
+			setAssessingOutputSections((prev) => new Set(prev).add(sectionId))
+			setError(null)
+
+			try {
+				const response = await UiServiceClient.executeSlashCommand(
+					StringRequest.create({
+						value: JSON.stringify({
+							command: `/update-output-checklist ${sectionId}`,
+						}),
+					}),
+				)
+
+				if (response.value) {
+					const result = JSON.parse(response.value) as { success: boolean; message: string }
+					if (result.success) {
+						// Automatically select the section to show the checklist
+						setSelectedSectionId(sectionId)
+						// Refresh checklist display after a short delay to allow file to be written
+						setTimeout(() => {
+							// Trigger refresh by updating selected section
+							setSelectedSectionId(null)
+							setTimeout(() => setSelectedSectionId(sectionId), 100)
+						}, 2000)
+					} else {
+						setError(result.message || "Failed to assess output")
+					}
+				}
+			} catch (error: any) {
+				console.error("Failed to assess output:", error)
+				setError(error?.message || "Failed to assess output")
+			} finally {
+				setAssessingOutputSections((prev) => {
+					const next = new Set(prev)
+					next.delete(sectionId)
+					return next
+				})
+			}
+		},
+		[currentRegulatoryProduct],
+	)
+
 	const handleSectionSelect = useCallback((sectionId: string) => {
 		setSelectedSectionId(sectionId)
 	}, [])
@@ -154,9 +200,11 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 				{/* CTD Structure Tree */}
 				<div className="flex-1 overflow-auto p-4 border-r border-(--vscode-panel-border)">
 					<CtdFolderTree
+						assessingOutputSections={assessingOutputSections}
 						assessingSections={assessingSections}
 						generatingSections={generatingSections}
 						onAssess={handleAssess}
+						onAssessOutput={handleAssessOutput}
 						onGenerate={handleGenerate}
 						onSectionSelect={handleSectionSelect}
 						structure={ctdStructure}

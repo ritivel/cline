@@ -52,6 +52,11 @@ const BASE_SLASH_COMMANDS: SlashCommand[] = [
 		description: "Update input checklist features for a section by checking against document info.json files",
 		section: "default",
 	},
+	{
+		name: "update-output-checklist",
+		description: "Update output checklist features for a section by checking against content.tex",
+		section: "default",
+	},
 ]
 
 // VS Code-only slash commands
