@@ -29,7 +29,12 @@ export class SubmissionsPaneProvider {
 
 		// Listen for workspace folder changes
 		vscode.workspace.onDidChangeWorkspaceFolders(() => {
-			this._suggestSubmissionsFolder()
+			// If no submissions folder is set, show the welcome message
+			if (!this._treeDataProvider.getSubmissionsFolder()) {
+				this._updateTreeMessage(
+					"No submissions folder set. Create a regulatory product to automatically create a submissions folder.",
+				)
+			}
 		})
 
 		// Don't show explorer by default when a new window opens
@@ -43,60 +48,67 @@ export class SubmissionsPaneProvider {
 		return SubmissionsPaneProvider._instance
 	}
 
-	private async _ensureViewVisible() {
-		// Ensure the Explorer viewlet is open (which contains the Submissions view)
-		// This ensures the Submissions view is visible and accessible
-		try {
-			await vscode.commands.executeCommand("workbench.view.explorer")
-		} catch (error) {
-			// Ignore errors if command doesn't exist or view is already visible
-			console.log("Could not ensure view visibility:", error)
-		}
-	}
-
 	private async _initializeView() {
 		// Try to restore previously set submissions folder
 		const savedConfig = await this._getSavedConfig()
-		if (savedConfig && fs.existsSync(savedConfig.submissionsPath)) {
-			this._treeDataProvider.setSubmissionsFolder(savedConfig.submissionsPath)
-			this._updateTreeMessage()
+		if (savedConfig) {
+			// Check if folder exists, with retry logic in case it's being created
+			const folderExists = await this._waitForFolderExists(savedConfig.submissionsPath, 1000)
 
-			// Hide submissions folder from explorer
-			const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
-			if (workspaceFolder) {
-				await this._hideSubmissionsFolderFromExplorer(savedConfig.submissionsPath, workspaceFolder.uri.fsPath)
+			if (folderExists) {
+				this._treeDataProvider.setSubmissionsFolder(savedConfig.submissionsPath)
+				// Ensure watcher is set up (with retry if needed)
+				await this._treeDataProvider.ensureWatcherSetup()
+				this._updateTreeMessage()
+
+				// Hide submissions folder from explorer
+				const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+				if (workspaceFolder) {
+					await this._hideSubmissionsFolderFromExplorer(savedConfig.submissionsPath, workspaceFolder.uri.fsPath)
+				}
+
+				// Start PDF processing for the restored folder
+				const { PdfProcessingManager } = await import("@/services/pdf/PdfProcessingManager")
+				const pdfManager = PdfProcessingManager.getInstance()
+				this._setupPdfManager(pdfManager)
+
+				// Show progress UI for restored folder processing
+				await vscode.window.withProgress(
+					{
+						location: vscode.ProgressLocation.Notification,
+						title: "PDF Processing",
+						cancellable: true,
+					},
+					async (progress, token) => {
+						token.onCancellationRequested(() => {
+							pdfManager.cancel()
+						})
+
+						// Set progress reporter so manager can update UI
+						pdfManager.setProgressReporter({
+							report: (value) => progress.report(value),
+						})
+
+						await pdfManager.setSubmissionsFolder(savedConfig.submissionsPath)
+					},
+				)
+			} else {
+				// Folder was deleted externally, clear invalid config
+				const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+				if (workspaceFolder) {
+					const configKey = `submissions.config.${workspaceFolder.uri.fsPath}`
+					await this._context.workspaceState.update(configKey, undefined)
+				}
+				// Show welcome message
+				this._updateTreeMessage(
+					"No submissions folder set. Create a regulatory product to automatically create a submissions folder.",
+				)
 			}
-
-			// Start PDF processing for the restored folder
-			const { PdfProcessingManager } = await import("@/services/pdf/PdfProcessingManager")
-			const pdfManager = PdfProcessingManager.getInstance()
-			this._setupPdfManager(pdfManager)
-
-			// Show progress UI for restored folder processing
-			await vscode.window.withProgress(
-				{
-					location: vscode.ProgressLocation.Notification,
-					title: "PDF Processing",
-					cancellable: true,
-				},
-				async (progress, token) => {
-					token.onCancellationRequested(() => {
-						pdfManager.cancel()
-					})
-
-					// Set progress reporter so manager can update UI
-					pdfManager.setProgressReporter({
-						report: (value) => progress.report(value),
-					})
-
-					await pdfManager.setSubmissionsFolder(savedConfig.submissionsPath)
-				},
-			)
 		} else {
 			// Show welcome message
-			this._updateTreeMessage("No submissions folder set. Use the folder icon to select or create one.")
-			// Suggest a submissions folder based on current workspace
-			await this._suggestSubmissionsFolder()
+			this._updateTreeMessage(
+				"No submissions folder set. Create a regulatory product to automatically create a submissions folder.",
+			)
 		}
 	}
 
@@ -237,49 +249,6 @@ export class SubmissionsPaneProvider {
 		}
 	}
 
-	private async _suggestSubmissionsFolder() {
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
-		if (!workspaceFolder) {
-			this._updateTreeMessage("No project open. Open a project folder to get started.")
-			return
-		}
-
-		const workspacePath = workspaceFolder.uri.fsPath
-		const workspaceName = path.basename(workspacePath)
-
-		// Check for common submissions folder patterns
-		const possiblePaths = [
-			path.join(workspacePath, "submissions"),
-			path.join(workspacePath, ".submissions"),
-			path.join(workspacePath, "output"),
-			path.join(workspacePath, `${workspaceName}-submissions`),
-		]
-
-		let suggestedPath: string | undefined
-
-		// Check if any of these folders exist
-		for (const p of possiblePaths) {
-			if (fs.existsSync(p)) {
-				suggestedPath = p
-				break
-			}
-		}
-
-		// If no existing folder found, suggest creating one
-		if (!suggestedPath) {
-			suggestedPath = path.join(workspacePath, "submissions")
-		}
-
-		const suggestedFolderName = path.basename(suggestedPath)
-		const exists = fs.existsSync(suggestedPath)
-
-		this._updateTreeMessage(
-			exists
-				? `Recommended folder: ${suggestedFolderName} (in ${workspaceName})`
-				: `Recommended folder: ${suggestedFolderName} (will be created in ${workspaceName})`,
-		)
-	}
-
 	private _updateTreeMessage(message?: string) {
 		if (this._treeView) {
 			this._treeView.message = message
@@ -349,17 +318,53 @@ export class SubmissionsPaneProvider {
 		}
 	}
 
+	/**
+	 * Waits for a folder to exist, with retry logic
+	 * @param folderPath Path to the folder
+	 * @param maxWaitMs Maximum time to wait in milliseconds
+	 * @returns true if folder exists, false if timeout
+	 */
+	private async _waitForFolderExists(folderPath: string, maxWaitMs: number = 2000): Promise<boolean> {
+		if (fs.existsSync(folderPath)) {
+			return true
+		}
+
+		const startTime = Date.now()
+		const checkInterval = 100 // Check every 100ms
+
+		while (Date.now() - startTime < maxWaitMs) {
+			await new Promise((resolve) => setTimeout(resolve, checkInterval))
+			if (fs.existsSync(folderPath)) {
+				return true
+			}
+		}
+
+		return false
+	}
+
 	private async _setSubmissionsFolder(folderPath: string) {
+		// Create folder if it doesn't exist
 		if (!fs.existsSync(folderPath)) {
 			try {
 				fs.mkdirSync(folderPath, { recursive: true })
+				// Wait a bit for filesystem propagation (50-100ms)
+				await new Promise((resolve) => setTimeout(resolve, 100))
 			} catch (error) {
 				vscode.window.showErrorMessage(`Failed to create folder: ${error}`)
 				return
 			}
 		}
 
+		// Verify folder exists before proceeding (with retry)
+		const folderExists = await this._waitForFolderExists(folderPath, 1000)
+		if (!folderExists) {
+			vscode.window.showErrorMessage(`Folder does not exist and could not be created: ${folderPath}`)
+			return
+		}
+
 		this._treeDataProvider.setSubmissionsFolder(folderPath)
+		// Ensure watcher is set up (with retry if needed)
+		await this._treeDataProvider.ensureWatcherSetup()
 		this._updateTreeMessage()
 
 		// Save the config
@@ -480,7 +485,9 @@ export class SubmissionsPaneProvider {
 		}
 
 		// Show welcome message
-		this._updateTreeMessage("No submissions folder set. Use the folder icon to select or create one.")
+		this._updateTreeMessage(
+			"No submissions folder set. Create a regulatory product to automatically create a submissions folder.",
+		)
 	}
 
 	dispose() {

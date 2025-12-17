@@ -336,18 +336,8 @@
 					"when": "view == claude-dev.SidebarProvider && cline.hasActiveProduct"
 				},
 				{
-					"command": "cline.submissions.createFolder",
-					"group": "navigation@1",
-					"when": "view == cline.SubmissionsPane"
-				},
-				{
-					"command": "cline.submissions.openFolder",
-					"group": "navigation@2",
-					"when": "view == cline.SubmissionsPane"
-				},
-				{
 					"command": "cline.submissions.refresh",
-					"group": "navigation@3",
+					"group": "navigation@1",
 					"when": "view == cline.SubmissionsPane"
 				}
 			],

@@ -99,10 +99,10 @@ export class PdfProcessingService {
 		const normalizedSubmissionsFolder = submissionsFolder ? path.resolve(path.normalize(submissionsFolder)) : undefined
 
 		async function traverse(currentPath: string): Promise<void> {
-			let entries
+			let entries: fs.Dirent[]
 			try {
 				entries = await fs.promises.readdir(currentPath, { withFileTypes: true })
-			} catch (error) {
+			} catch (_error) {
 				return
 			}
 
@@ -293,7 +293,7 @@ export class PdfProcessingService {
 	 * Checks if a PDF folder already exists with valid extracted content
 	 * Uses hash-based tracking to handle file moves/renames
 	 */
-	private async isPdfFolderAlreadyProcessed(pdfPath: string, extractPath: string, workspaceRoot: string): Promise<boolean> {
+	private async isPdfFolderAlreadyProcessed(pdfPath: string, _extractPath: string, workspaceRoot: string): Promise<boolean> {
 		const tracker = this.getTracker(workspaceRoot)
 		return tracker.isProcessed(pdfPath, workspaceRoot)
 	}
@@ -302,7 +302,7 @@ export class PdfProcessingService {
 	 * Calculates the expected output folder path for a PDF file
 	 * Uses linear structure: all PDFs as folders directly in documents/
 	 */
-	private getExpectedOutputPath(pdfPath: string, workspaceRoot: string, outputDir: string): string {
+	private getExpectedOutputPath(pdfPath: string, _workspaceRoot: string, outputDir: string): string {
 		const pdfFolderName = path.basename(pdfPath, ".pdf")
 		// Linear structure: always put directly in documents folder
 		return path.join(outputDir, pdfFolderName)
@@ -389,32 +389,48 @@ export class PdfProcessingService {
 					onProgress("metadata", `Metadata extracted for ${path.basename(pdfName)}`)
 				}
 
-				// Classify the document if info.json exists
+				// Classify the document if info.json exists and dossier folder exists
 				const infoJsonPath = path.join(extractPath, "info.json")
-				try {
-					await fs.promises.access(infoJsonPath)
-					// info.json exists, classify the document
-					if (onProgress) {
-						onProgress("classifying", `Classifying ${path.basename(pdfName)}...`)
-					}
+				const dossierPath = path.join(submissionsFolder, "dossier")
 
-					const relativePath = path.relative(outputDir, extractPath)
-					const classifier = new CtdClassifierServiceV2(submissionsFolder)
-					try {
-						const success = await classifier.classifyFolder(extractPath, relativePath, submissionsFolder)
-						if (success && onProgress) {
-							onProgress("classified", `Classified ${path.basename(pdfName)}`)
-						}
-					} catch (classificationError) {
-						// Log error but don't fail the process
-						console.error(`Failed to classify ${pdfName}:`, classificationError)
-						if (onProgress) {
-							onProgress("error", `Classification failed for ${path.basename(pdfName)}`)
-						}
-					}
+				// Check if dossier folder exists before classification
+				let dossierExists = false
+				try {
+					await fs.promises.access(dossierPath)
+					dossierExists = true
 				} catch {
-					// info.json doesn't exist, skip classification
-					// This is expected for some documents, so we silently skip
+					// Dossier folder doesn't exist yet, skip classification
+					console.log(
+						`Dossier folder does not exist at ${dossierPath}, skipping classification until product is created`,
+					)
+				}
+
+				if (dossierExists) {
+					try {
+						await fs.promises.access(infoJsonPath)
+						// info.json exists, classify the document
+						if (onProgress) {
+							onProgress("classifying", `Classifying ${path.basename(pdfName)}...`)
+						}
+
+						const relativePath = path.relative(outputDir, extractPath)
+						const classifier = new CtdClassifierServiceV2(submissionsFolder)
+						try {
+							const success = await classifier.classifyFolder(extractPath, relativePath, submissionsFolder)
+							if (success && onProgress) {
+								onProgress("classified", `Classified ${path.basename(pdfName)}`)
+							}
+						} catch (classificationError) {
+							// Log error but don't fail the process
+							console.error(`Failed to classify ${pdfName}:`, classificationError)
+							if (onProgress) {
+								onProgress("error", `Classification failed for ${path.basename(pdfName)}`)
+							}
+						}
+					} catch {
+						// info.json doesn't exist, skip classification
+						// This is expected for some documents, so we silently skip
+					}
 				}
 			} catch (metadataError) {
 				console.error(`Failed to extract metadata for existing folder ${pdfName}:`, metadataError)
@@ -497,32 +513,48 @@ export class PdfProcessingService {
 					await tracker.markProcessed(pdfName, extractPath, workspaceRoot, sourceHash)
 				}
 
-				// Classify the document if info.json exists
+				// Classify the document if info.json exists and dossier folder exists
 				const infoJsonPath = path.join(extractPath, "info.json")
-				try {
-					await fs.promises.access(infoJsonPath)
-					// info.json exists, classify the document
-					if (onProgress) {
-						onProgress("classifying", `Classifying ${path.basename(pdfName)}...`)
-					}
+				const dossierPath = path.join(submissionsFolder, "dossier")
 
-					const relativePath = path.relative(outputDir, extractPath)
-					const classifier = new CtdClassifierServiceV2(submissionsFolder)
-					try {
-						const success = await classifier.classifyFolder(extractPath, relativePath, submissionsFolder)
-						if (success && onProgress) {
-							onProgress("classified", `Classified ${path.basename(pdfName)}`)
-						}
-					} catch (classificationError) {
-						// Log error but don't fail the download/extraction
-						console.error(`Failed to classify ${pdfName}:`, classificationError)
-						if (onProgress) {
-							onProgress("error", `Classification failed for ${path.basename(pdfName)}`)
-						}
-					}
+				// Check if dossier folder exists before classification
+				let dossierExists = false
+				try {
+					await fs.promises.access(dossierPath)
+					dossierExists = true
 				} catch {
-					// info.json doesn't exist, skip classification
-					// This is expected for some documents, so we silently skip
+					// Dossier folder doesn't exist yet, skip classification
+					console.log(
+						`Dossier folder does not exist at ${dossierPath}, skipping classification until product is created`,
+					)
+				}
+
+				if (dossierExists) {
+					try {
+						await fs.promises.access(infoJsonPath)
+						// info.json exists, classify the document
+						if (onProgress) {
+							onProgress("classifying", `Classifying ${path.basename(pdfName)}...`)
+						}
+
+						const relativePath = path.relative(outputDir, extractPath)
+						const classifier = new CtdClassifierServiceV2(submissionsFolder)
+						try {
+							const success = await classifier.classifyFolder(extractPath, relativePath, submissionsFolder)
+							if (success && onProgress) {
+								onProgress("classified", `Classified ${path.basename(pdfName)}`)
+							}
+						} catch (classificationError) {
+							// Log error but don't fail the download/extraction
+							console.error(`Failed to classify ${pdfName}:`, classificationError)
+							if (onProgress) {
+								onProgress("error", `Classification failed for ${path.basename(pdfName)}`)
+							}
+						}
+					} catch {
+						// info.json doesn't exist, skip classification
+						// This is expected for some documents, so we silently skip
+					}
 				}
 			} catch (metadataError) {
 				console.error(`Failed to extract metadata for ${pdfName}:`, metadataError)
@@ -616,7 +648,7 @@ export class PdfProcessingService {
 		for (let attempt = 0; attempt < maxAttempts; attempt++) {
 			if (this.abortController?.signal.aborted) {
 				// Cancel all active downloads
-				for (const downloadPromise of activeDownloads) {
+				for (const _downloadPromise of activeDownloads) {
 					// Downloads will be cancelled via abortController signal
 				}
 				await Promise.allSettled(activeDownloads)
@@ -768,7 +800,9 @@ export class PdfProcessingService {
 		const signal = this.abortController.signal
 
 		try {
-			if (signal.aborted) throw new Error("Operation cancelled")
+			if (signal.aborted) {
+				throw new Error("Operation cancelled")
+			}
 
 			// Stage 1: Find PDF files in workspace root (excluding submissions folder)
 			if (onProgress) {
@@ -787,7 +821,9 @@ export class PdfProcessingService {
 				onProgress("discovered", `Found ${allPdfFiles.length} PDF file(s)`)
 			}
 
-			if (signal.aborted) throw new Error("Operation cancelled")
+			if (signal.aborted) {
+				throw new Error("Operation cancelled")
+			}
 
 			// Stage 1.5: Filter out already processed PDFs
 			// Save processed documents in submissions folder
@@ -813,7 +849,9 @@ export class PdfProcessingService {
 				)
 			}
 
-			if (signal.aborted) throw new Error("Operation cancelled")
+			if (signal.aborted) {
+				throw new Error("Operation cancelled")
+			}
 
 			// Stage 2: Request upload slots (only for unprocessed PDFs)
 			if (onProgress) {
@@ -831,20 +869,26 @@ export class PdfProcessingService {
 				throw new Error(`Mismatch: received ${uploadUrls.length} upload URLs for ${pdfFiles.length} files`)
 			}
 
-			if (signal.aborted) throw new Error("Operation cancelled")
+			if (signal.aborted) {
+				throw new Error("Operation cancelled")
+			}
 
 			// Stage 3: Upload files to S3 (only unprocessed PDFs)
 			if (onProgress) {
 				onProgress("uploading", `Uploading ${pdfFiles.length} file(s) to S3...`)
 			}
 			await this.uploadFilesToS3(pdfFiles, uploadUrls, (uploaded, total) => {
-				if (signal.aborted) throw new Error("Operation cancelled")
+				if (signal.aborted) {
+					throw new Error("Operation cancelled")
+				}
 				if (onProgress) {
 					onProgress("uploading", `Uploaded ${uploaded}/${total} files`)
 				}
 			})
 
-			if (signal.aborted) throw new Error("Operation cancelled")
+			if (signal.aborted) {
+				throw new Error("Operation cancelled")
+			}
 
 			// Stage 4: Trigger processing
 			if (onProgress) {
@@ -852,7 +896,9 @@ export class PdfProcessingService {
 			}
 			await axios.post(`${this.apiBaseUrl}/jobs/start`, { jobId }, { headers: this.getHeaders(), signal })
 
-			if (signal.aborted) throw new Error("Operation cancelled")
+			if (signal.aborted) {
+				throw new Error("Operation cancelled")
+			}
 
 			// Stage 5: Poll and download results
 			if (incremental) {
@@ -875,7 +921,9 @@ export class PdfProcessingService {
 				}
 				const downloadUrl = await this.pollJobStatus(jobId)
 
-				if (signal.aborted) throw new Error("Operation cancelled")
+				if (signal.aborted) {
+					throw new Error("Operation cancelled")
+				}
 
 				if (onProgress) {
 					onProgress("downloading", "Downloading processed results...")
@@ -883,7 +931,9 @@ export class PdfProcessingService {
 				const resultsPath = path.join(documentsPath, "results.zip")
 				await this.downloadResults(downloadUrl, resultsPath)
 
-				if (signal.aborted) throw new Error("Operation cancelled")
+				if (signal.aborted) {
+					throw new Error("Operation cancelled")
+				}
 
 				if (onProgress) {
 					onProgress(

@@ -71,11 +71,9 @@ const CLASSIFICATION_PLACEHOLDER_VALUES = ["Unknown - Classification failed", "U
  * CTD Classifier Service using template-driven prompts
  */
 export class CtdClassifierServiceV2 {
-	private workspaceRoot: string | undefined
 	private dossierTagsService: DossierTagsService | undefined
 
-	constructor(workspaceRoot?: string) {
-		this.workspaceRoot = workspaceRoot
+	constructor(_workspaceRoot?: string) {
 		if (workspaceRoot) {
 			this.dossierTagsService = new DossierTagsService(workspaceRoot)
 		}
@@ -478,14 +476,6 @@ ${description}`
 	}
 
 	/**
-	 * Checks if classification.txt has valid content
-	 */
-	private isValidClassification(content: string): boolean {
-		const parsed = this.parseClassificationContent(content)
-		return parsed.isValid
-	}
-
-	/**
 	 * Classifies a folder and saves results to classification.txt
 	 */
 	async classifyFolder(folderPath: string, relativePath: string, workspaceRoot?: string): Promise<boolean> {
@@ -500,38 +490,46 @@ ${description}`
 			if (parsedClassification.isValid) {
 				console.log(`classification.txt already exists with valid content for ${folderPath}`)
 
-				// Still update dossier tags even if classification exists (tags might be missing)
+				// Update dossier tags if classification.txt exists and dossier folder exists
 				if (workspaceRoot) {
+					const dossierPath = path.join(workspaceRoot, "dossier")
 					try {
-						// Lazily create DossierTagsService if not already created
-						const tagsService = this.dossierTagsService || new DossierTagsService(workspaceRoot)
+						await fs.promises.access(dossierPath)
+						// Dossier folder exists, update tags
+						try {
+							// Lazily create DossierTagsService if not already created
+							const tagsService = this.dossierTagsService || new DossierTagsService(workspaceRoot)
 
-						const pdfName = path.basename(folderPath) + ".pdf"
-						const processedFolderRelativePath = path.join("documents", relativePath)
+							const pdfName = path.basename(folderPath) + ".pdf"
+							const processedFolderRelativePath = path.join("documents", relativePath)
 
-						const confidenceMap: Record<string, string> = {}
-						for (const sec of parsedClassification.referenceSections) {
-							confidenceMap[sec] = parsedClassification.confidence
-						}
+							const confidenceMap: Record<string, string> = {}
+							for (const sec of parsedClassification.referenceSections) {
+								confidenceMap[sec] = parsedClassification.confidence
+							}
 
-						const tagResult = await tagsService.updateTagsForPdf(
-							pdfName,
-							processedFolderRelativePath,
-							parsedClassification.placementSection,
-							parsedClassification.confidence,
-							parsedClassification.referenceSections,
-							confidenceMap,
-						)
-
-						if (tagResult.skipped) {
-							console.log(`Dossier tags already exist for ${pdfName}`)
-						} else {
-							console.log(
-								`Updated dossier tags for ${pdfName}: ${tagResult.placementsAdded} placement(s), ${tagResult.referencesAdded} reference(s)`,
+							const tagResult = await tagsService.updateTagsForPdf(
+								pdfName,
+								processedFolderRelativePath,
+								parsedClassification.placementSection,
+								parsedClassification.confidence,
+								parsedClassification.referenceSections,
+								confidenceMap,
 							)
+
+							if (tagResult.skipped) {
+								console.log(`Dossier tags already exist for ${pdfName}`)
+							} else {
+								console.log(
+									`Updated dossier tags for ${pdfName}: ${tagResult.placementsAdded} placement(s), ${tagResult.referencesAdded} reference(s)`,
+								)
+							}
+						} catch (error) {
+							console.error(`Failed to update dossier tags for ${folderPath}:`, error)
 						}
-					} catch (error) {
-						console.error(`Failed to update dossier tags for ${folderPath}:`, error)
+					} catch {
+						// Dossier folder doesn't exist yet, skip tag creation
+						console.log(`Dossier folder does not exist at ${dossierPath}, skipping tag creation for ${folderPath}`)
 					}
 				}
 
@@ -592,7 +590,7 @@ Classified At: ${placementClassification.classified_at}
 Template: ${TEMPLATE_NAME}
 `
 
-		// Write classification.txt
+		// Write classification.txt (always create, regardless of dossier folder existence)
 		try {
 			await fs.promises.writeFile(classificationPath, classificationText, "utf-8")
 			console.log(`Saved classification to ${classificationPath}`)
@@ -601,33 +599,41 @@ Template: ${TEMPLATE_NAME}
 			return false
 		}
 
-		// Update dossier tags.md files
+		// Update dossier tags.md files only if dossier folder exists
 		if (workspaceRoot) {
+			const dossierPath = path.join(workspaceRoot, "dossier")
 			try {
-				// Lazily create DossierTagsService if not already created
-				const tagsService = this.dossierTagsService || new DossierTagsService(workspaceRoot)
+				await fs.promises.access(dossierPath)
+				// Dossier folder exists, update tags
+				try {
+					// Lazily create DossierTagsService if not already created
+					const tagsService = this.dossierTagsService || new DossierTagsService(workspaceRoot)
 
-				const pdfName = path.basename(folderPath) + ".pdf"
-				const processedFolderRelativePath = path.join("documents", relativePath)
+					const pdfName = path.basename(folderPath) + ".pdf"
+					const processedFolderRelativePath = path.join("documents", relativePath)
 
-				const tagResult = await tagsService.updateTagsForPdf(
-					pdfName,
-					processedFolderRelativePath,
-					placementClassification.section,
-					placementClassification.confidence,
-					referenceClassification.sections,
-					referenceClassification.confidence_map,
-				)
-
-				if (tagResult.skipped) {
-					console.log(`Dossier tags already exist for ${pdfName}`)
-				} else {
-					console.log(
-						`Updated dossier tags for ${pdfName}: ${tagResult.placementsAdded} placement(s), ${tagResult.referencesAdded} reference(s)`,
+					const tagResult = await tagsService.updateTagsForPdf(
+						pdfName,
+						processedFolderRelativePath,
+						placementClassification.section,
+						placementClassification.confidence,
+						referenceClassification.sections,
+						referenceClassification.confidence_map,
 					)
+
+					if (tagResult.skipped) {
+						console.log(`Dossier tags already exist for ${pdfName}`)
+					} else {
+						console.log(
+							`Updated dossier tags for ${pdfName}: ${tagResult.placementsAdded} placement(s), ${tagResult.referencesAdded} reference(s)`,
+						)
+					}
+				} catch (error) {
+					console.error(`Failed to update dossier tags for ${folderPath}:`, error)
 				}
-			} catch (error) {
-				console.error(`Failed to update dossier tags for ${folderPath}:`, error)
+			} catch {
+				// Dossier folder doesn't exist yet, skip tag creation
+				console.log(`Dossier folder does not exist at ${dossierPath}, skipping tag creation for ${folderPath}`)
 			}
 		}
 

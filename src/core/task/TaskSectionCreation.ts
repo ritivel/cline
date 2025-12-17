@@ -8,9 +8,9 @@ import { ClineSay } from "@shared/ExtensionMessage"
 import { ClineContent } from "@shared/messages/content"
 import { fileExistsAtPath } from "@utils/fs"
 import { getCwd } from "@utils/path"
-import { spawn } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
+import * as vscode from "vscode"
 import { ClineDefaultTool } from "@/shared/tools"
 import { Controller } from "../controller"
 import { EAC_NMRA_TEMPLATE } from "../ctd/templates/eac-nmra/definition"
@@ -448,7 +448,7 @@ export class TaskSectionCreation extends Task {
 	private async generatePartialDraft(chunk: DocumentChunk): Promise<PartialDraft> {
 		const chunkContent = this.documentProcessor.formatChunkForLLM(chunk)
 
-		const prompt = this.buildChunkAnalysisPrompt(chunkContent)
+		const _prompt = this.buildChunkAnalysisPrompt(chunkContent)
 
 		// Use error handler with context reduction for potential context window issues
 		const result = await this.errorHandler.executeWithContextReduction(async (reductionFactor) => {
@@ -478,7 +478,9 @@ export class TaskSectionCreation extends Task {
 	 */
 	private reduceChunkContent(content: string, factor: number): string {
 		const targetLength = Math.floor(content.length * factor)
-		if (content.length <= targetLength) return content
+		if (content.length <= targetLength) {
+			return content
+		}
 
 		// Truncate while trying to preserve structure
 		const truncated = content.substring(0, targetLength)
@@ -607,8 +609,12 @@ export class TaskSectionCreation extends Task {
 						console.log(`[TaskSectionCreation ${this.sectionId}] Error ${idx + 1}: ${err}`)
 					})
 
-					// Build prompt with errors and current content
-					const prompt = this.buildLatexCorrectionPrompt(currentContent, compilationResult.errors)
+					// Build prompt with errors, compile.log content, and current content
+					const prompt = this.buildLatexCorrectionPrompt(
+						currentContent,
+						compilationResult.errors,
+						compilationResult.fullOutput,
+					)
 
 					// Call LLM to fix the errors
 					const result = await this.errorHandler.executeWithContextReduction(async (reductionFactor) => {
@@ -635,8 +641,8 @@ export class TaskSectionCreation extends Task {
 						`[TaskSectionCreation ${this.sectionId}] Compilation failed without specific errors on attempt ${attempt}`,
 					)
 
-					// Try a general correction without specific errors
-					const prompt = this.buildLatexCorrectionPrompt(currentContent)
+					// Try a general correction without specific errors, but include compile.log
+					const prompt = this.buildLatexCorrectionPrompt(currentContent, undefined, compilationResult.fullOutput)
 					const result = await this.errorHandler.executeWithContextReduction(async (reductionFactor) => {
 						const adjustedPrompt = reductionFactor < 1 ? this.reducePromptContent(prompt, reductionFactor) : prompt
 						return this.callLLMWithLatexSystemPrompt(adjustedPrompt)
@@ -706,7 +712,9 @@ export class TaskSectionCreation extends Task {
 	private reducePromptContent(prompt: string, factor: number): string {
 		// Similar to reduceChunkContent but for the full prompt
 		const targetLength = Math.floor(prompt.length * factor)
-		if (prompt.length <= targetLength) return prompt
+		if (prompt.length <= targetLength) {
+			return prompt
+		}
 
 		return prompt.substring(0, targetLength) + "\n... [prompt reduced due to context limits]"
 	}
@@ -754,7 +762,7 @@ export class TaskSectionCreation extends Task {
 
 		// Build parent-child map to determine hierarchy
 		const parentMap = new Map<string, string | null>()
-		for (const [sectionId, section] of Object.entries(module.sections)) {
+		for (const [sectionId, _section] of Object.entries(module.sections)) {
 			let parent: string | null = null
 			for (const [potentialParentId, potentialParent] of Object.entries(module.sections)) {
 				if (potentialParent.children?.includes(sectionId)) {
@@ -991,7 +999,7 @@ ${tableRows.join("\n")}
 				say: async (type, text, images, files, partial) => {
 					return await this.say(type, text, images, files, partial)
 				},
-				ask: async (type, text, partial) => {
+				ask: async (_type, _text, _partial) => {
 					// For write_tex, we'll auto-approve
 					return { response: "approved" as any }
 				},
@@ -1214,7 +1222,7 @@ Provide a structured analysis that preserves all important details. Do NOT summa
 	 * @param content The LaTeX content to correct
 	 * @param compilationErrors Optional array of compilation errors to include in the prompt
 	 */
-	private buildLatexCorrectionPrompt(content: string, compilationErrors?: string[]): string {
+	private buildLatexCorrectionPrompt(content: string, compilationErrors?: string[], compileLogContent?: string): string {
 		let errorSection = ""
 		if (compilationErrors && compilationErrors.length > 0) {
 			errorSection = `
@@ -1227,11 +1235,28 @@ ${compilationErrors.map((err, idx) => `${idx + 1}. ${err}`).join("\n")}
 `
 		}
 
+		let compileLogSection = ""
+		if (compileLogContent && compileLogContent.trim().length > 0) {
+			// Truncate very long logs to avoid context window issues (keep last 8000 chars)
+			const logContent =
+				compileLogContent.length > 8000
+					? `... (log truncated, showing last 8000 characters)\n${compileLogContent.slice(-8000)}`
+					: compileLogContent
+
+			compileLogSection = `
+<compile_log>
+The following is the full compilation log from LaTeX Workshop (filename.compile.log). Use this to understand compilation errors and warnings:
+
+${logContent}
+</compile_log>
+
+`
+		}
+
 		return `Review and correct the following LaTeX document. Improve its code quality, fix syntax errors, and ensure it follows LaTeX best practices.
 
 IMPORTANT: You must preserve ALL semantic content, wording, and data values exactly as they are. Only fix LaTeX code structure, syntax, and formatting.
-${errorSection}
-<latex_content>
+${errorSection}${compileLogSection}<latex_content>
 ${content}
 </latex_content>
 
@@ -1266,7 +1291,7 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 
 			// Also cleanup related auxiliary files
 			const basePath = filePath.replace(/\.tex$/, "")
-			const auxExtensions = [".aux", ".log", ".out", ".toc", ".pdf"]
+			const auxExtensions = [".aux", ".log", ".out", ".toc", ".pdf", ".compile.log"]
 			for (const ext of auxExtensions) {
 				const auxFile = basePath + ext
 				try {
@@ -1284,15 +1309,14 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 	}
 
 	/**
-	 * Extracts LaTeX errors from compilation output
+	 * Extracts LaTeX errors from compilation log content
 	 * Uses regex patterns inspired by LaTeX Workshop parser
-	 * @param stdout Standard output from compilation
-	 * @param stderr Standard error from compilation
+	 * @param logContent The content from the .compile.log file generated by LaTeX Workshop
 	 * @returns Array of formatted error strings
 	 */
-	private extractLatexErrors(stdout: string, stderr: string): string[] {
+	private extractLatexErrors(logContent: string): string[] {
 		const errors: string[] = []
-		const combinedOutput = stdout + "\n" + stderr
+		const combinedOutput = logContent
 
 		// Regex patterns for LaTeX errors (inspired by LaTeX Workshop parser)
 		const patterns = {
@@ -1335,23 +1359,27 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 		}
 
 		// Extract fatal errors
-		let match
-		while ((match = patterns.fatalError.exec(combinedOutput)) !== null) {
+		let match: RegExpExecArray | null
+		match = patterns.fatalError.exec(combinedOutput)
+		while (match !== null) {
 			const errorMsg = match[1].trim()
 			// Skip certain non-actionable messages
 			if (!errorMsg.startsWith("==>") && !errorMsg.includes("Here is how much")) {
 				addError(`Fatal Error: ${errorMsg}`)
 			}
+			match = patterns.fatalError.exec(combinedOutput)
 		}
 
 		// Extract file:line errors
 		patterns.fileLineError.lastIndex = 0
-		while ((match = patterns.fileLineError.exec(combinedOutput)) !== null) {
+		match = patterns.fileLineError.exec(combinedOutput)
+		while (match !== null) {
 			const file = path.basename(match[1])
 			const line = match[2]
 			const errorType = match[3] || "Error"
 			const message = match[4]
 			addError(`${file}:${line}: ${errorType}: ${message}`)
+			match = patterns.fileLineError.exec(combinedOutput)
 		}
 
 		// Extract fatal compilation failures
@@ -1361,8 +1389,10 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 
 		// Extract missing character errors
 		patterns.missingChar.lastIndex = 0
-		while ((match = patterns.missingChar.exec(combinedOutput)) !== null) {
+		match = patterns.missingChar.exec(combinedOutput)
+		while (match !== null) {
 			addError(match[1])
+			match = patterns.missingChar.exec(combinedOutput)
 		}
 
 		// Extract undefined control sequence with context
@@ -1385,20 +1415,26 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 
 		// Extract package errors
 		patterns.packageError.lastIndex = 0
-		while ((match = patterns.packageError.exec(combinedOutput)) !== null) {
+		match = patterns.packageError.exec(combinedOutput)
+		while (match !== null) {
 			addError(`Package ${match[1]} Error: ${match[2]}`)
+			match = patterns.packageError.exec(combinedOutput)
 		}
 
 		// Extract missing file errors
 		patterns.missingFile.lastIndex = 0
-		while ((match = patterns.missingFile.exec(combinedOutput)) !== null) {
+		match = patterns.missingFile.exec(combinedOutput)
+		while (match !== null) {
 			addError(`Missing file: ${match[1]}`)
+			match = patterns.missingFile.exec(combinedOutput)
 		}
 
 		// Extract environment errors
 		patterns.environmentError.lastIndex = 0
-		while ((match = patterns.environmentError.exec(combinedOutput)) !== null) {
+		match = patterns.environmentError.exec(combinedOutput)
+		while (match !== null) {
 			addError(`Environment undefined: ${match[1]}`)
+			match = patterns.environmentError.exec(combinedOutput)
 		}
 
 		// Check for emergency stop
@@ -1416,77 +1452,192 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 
 	/**
 	 * Compiles a .tex file to PDF and extracts any compilation errors
-	 * Uses pdflatex for compilation
+	 * Uses LaTeX Workshop for compilation, which generates a .compile.log file
 	 * @param texPath Path to the .tex file to compile
-	 * @returns Object containing pdfPath (if successful), errors array, and full output
+	 * @returns Object containing pdfPath (if successful), errors array, and full output from compile.log
 	 */
 	private async compileTexAndExtractErrors(
 		texPath: string,
 	): Promise<{ pdfPath: string | null; errors: string[]; fullOutput: string }> {
 		const texDir = path.dirname(texPath)
 		const texBasename = path.basename(texPath, ".tex")
-		const texFilename = path.basename(texPath)
-		const pdfPath = path.join(texDir, `${texBasename}.pdf`)
+		const compileLogPath = path.join(texDir, `${texBasename}.compile.log`)
 
-		console.log(`[TaskSectionCreation ${this.sectionId}] Compiling LaTeX file: ${texPath}`)
+		console.log(`[TaskSectionCreation ${this.sectionId}] Compiling LaTeX file with LaTeX Workshop: ${texPath}`)
 
-		return new Promise((resolve) => {
-			// Use pdflatex with nonstopmode to collect all errors
-			const pdflatex = spawn("pdflatex", ["-interaction=nonstopmode", "-output-directory", texDir, texFilename], {
-				cwd: texDir,
-				shell: process.platform === "win32",
-			})
-
-			let stdout = ""
-			let stderr = ""
-
-			pdflatex.stdout.on("data", (data) => {
-				stdout += data.toString()
-			})
-
-			pdflatex.stderr.on("data", (data) => {
-				stderr += data.toString()
-			})
-
-			pdflatex.on("close", async (code) => {
-				console.log(`[TaskSectionCreation ${this.sectionId}] pdflatex completed with code: ${code}`)
-				const fullOutput = stdout + "\n" + stderr
-				const errors = this.extractLatexErrors(stdout, stderr)
-
-				// Log the full output for debugging when compilation fails
-				if (code !== 0) {
-					console.log(`[TaskSectionCreation ${this.sectionId}] === PDFLATEX FULL OUTPUT START ===`)
-					// Log first 2000 chars of stdout to avoid flooding logs
-					const truncatedStdout = stdout.length > 2000 ? stdout.substring(stdout.length - 2000) : stdout
-					console.log(`[TaskSectionCreation ${this.sectionId}] STDOUT (last 2000 chars):\n${truncatedStdout}`)
-					if (stderr.length > 0) {
-						console.log(`[TaskSectionCreation ${this.sectionId}] STDERR:\n${stderr}`)
-					}
-					console.log(`[TaskSectionCreation ${this.sectionId}] === PDFLATEX FULL OUTPUT END ===`)
-					console.log(`[TaskSectionCreation ${this.sectionId}] Extracted ${errors.length} error(s):`, errors)
-				}
-
-				// Check if PDF was created
-				const pdfExists = await fileExistsAtPath(pdfPath)
-
-				if (pdfExists) {
-					console.log(`[TaskSectionCreation ${this.sectionId}] PDF created successfully: ${pdfPath}`)
-					resolve({ pdfPath, errors: [], fullOutput })
-				} else {
-					console.log(`[TaskSectionCreation ${this.sectionId}] PDF not created. Found ${errors.length} errors.`)
-					resolve({ pdfPath: null, errors, fullOutput })
-				}
-			})
-
-			pdflatex.on("error", (err) => {
-				console.error(`[TaskSectionCreation ${this.sectionId}] Error running pdflatex:`, err)
-				resolve({
+		try {
+			// Check if LaTeX Workshop extension is available
+			// biome-ignore lint: LaTeX Workshop extension integration requires direct vscode API access
+			const latexWorkshopExtension = vscode.extensions.getExtension("James-Yu.latex-workshop")
+			if (!latexWorkshopExtension) {
+				console.log(`[TaskSectionCreation ${this.sectionId}] LaTeX Workshop extension not found`)
+				return {
 					pdfPath: null,
-					errors: [`Failed to run pdflatex: ${err.message}. Make sure pdflatex is installed and in your PATH.`],
-					fullOutput: `Error: ${err.message}`,
-				})
-			})
-		})
+					errors: ["LaTeX Workshop extension not found. Please install the LaTeX Workshop extension."],
+					fullOutput: "LaTeX Workshop extension not available",
+				}
+			}
+
+			// Ensure the extension is activated
+			if (!latexWorkshopExtension.isActive) {
+				await latexWorkshopExtension.activate()
+			}
+
+			// Open the document and save it so LaTeX Workshop can detect it
+			const texUri = vscode.Uri.file(texPath)
+			// biome-ignore lint: LaTeX Workshop integration requires opening document to trigger detection
+			const document = await vscode.workspace.openTextDocument(texUri)
+			await document.save()
+
+			// Give LaTeX Workshop time to notice the file
+			await new Promise((resolve) => setTimeout(resolve, 300))
+
+			// Remove existing log files if they exist (to ensure we get fresh logs)
+			const regularLogPath = path.join(texDir, `${texBasename}.log`)
+			try {
+				if (await fileExistsAtPath(compileLogPath)) {
+					await fs.promises.unlink(compileLogPath)
+				}
+				// Also clean up regular .log file to avoid conflicts
+				if (await fileExistsAtPath(regularLogPath)) {
+					await fs.promises.unlink(regularLogPath)
+				}
+			} catch {
+				// Ignore if deletion fails
+			}
+
+			// Trigger LaTeX Workshop build
+			console.log(`[TaskSectionCreation ${this.sectionId}] Triggering LaTeX Workshop build for: ${texPath}`)
+			// biome-ignore lint: LaTeX Workshop build command requires direct executeCommand access
+			await vscode.commands.executeCommand("latex-workshop.build", false, texPath, "latex")
+
+			// Wait for compilation to complete
+			// LaTeX Workshop compiles asynchronously, so we need to poll for completion
+			// We check for both PDF (success) and log files (to extract errors)
+			const timeoutMs = 60_000
+			const stepMs = 500
+			const start = Date.now()
+			let compileLogExists = false
+			let regularLogExists = false
+
+			// Determine PDF path early to check for it
+			const texUriForConfig = vscode.Uri.file(texPath)
+			const cfg = vscode.workspace.getConfiguration("latex-workshop", texUriForConfig)
+			const outDirRaw = cfg.get("latex.outDir") as string | undefined
+
+			let pdfPath = path.join(texDir, `${texBasename}.pdf`)
+			if (outDirRaw && typeof outDirRaw === "string" && outDirRaw.trim()) {
+				let outDir = outDirRaw
+				if (outDir.includes("%DIR%")) {
+					outDir = outDir.replaceAll("%DIR%", texDir)
+				} else if (!path.isAbsolute(outDir)) {
+					outDir = path.join(texDir, outDir)
+				}
+				pdfPath = path.join(outDir, `${texBasename}.pdf`)
+			}
+
+			// Wait for build to complete - check for PDF or log files
+			while (Date.now() - start < timeoutMs) {
+				// Check if PDF was created (build succeeded)
+				const pdfExists = await fileExistsAtPath(pdfPath)
+				if (pdfExists) {
+					// Build succeeded, wait a bit for compile.log to be written
+					await new Promise((resolve) => setTimeout(resolve, 1000))
+					compileLogExists = await fileExistsAtPath(compileLogPath)
+					break
+				}
+
+				// Check for log files (build may have failed)
+				compileLogExists = await fileExistsAtPath(compileLogPath)
+				regularLogExists = await fileExistsAtPath(regularLogPath)
+
+				// If we have either log file, wait a bit more then check again
+				if (compileLogExists || regularLogExists) {
+					await new Promise((resolve) => setTimeout(resolve, 1000))
+					// Re-check PDF one more time
+					if (await fileExistsAtPath(pdfPath)) {
+						compileLogExists = await fileExistsAtPath(compileLogPath)
+						break
+					}
+					// If still no PDF, assume build failed and use available log
+					break
+				}
+
+				await new Promise((resolve) => setTimeout(resolve, stepMs))
+			}
+
+			// Read log file - prefer compile.log, fall back to regular .log
+			let fullOutput = ""
+			let errors: string[] = []
+
+			if (compileLogExists) {
+				try {
+					fullOutput = await fs.promises.readFile(compileLogPath, "utf8")
+					errors = this.extractLatexErrors(fullOutput)
+
+					console.log(`[TaskSectionCreation ${this.sectionId}] Read compile.log (${fullOutput.length} chars)`)
+					console.log(`[TaskSectionCreation ${this.sectionId}] Extracted ${errors.length} error(s):`, errors)
+
+					if (errors.length > 0) {
+						console.log(`[TaskSectionCreation ${this.sectionId}] === COMPILE.LOG ERRORS START ===`)
+						errors.forEach((err, idx) => {
+							console.log(`[TaskSectionCreation ${this.sectionId}] Error ${idx + 1}: ${err}`)
+						})
+						console.log(`[TaskSectionCreation ${this.sectionId}] === COMPILE.LOG ERRORS END ===`)
+					}
+				} catch (err) {
+					const errorMsg = err instanceof Error ? error.message : String(err)
+					console.error(`[TaskSectionCreation ${this.sectionId}] Failed to read compile.log: ${errorMsg}`)
+					fullOutput = `Failed to read compile.log: ${errorMsg}`
+					errors = [`Failed to read compile.log: ${errorMsg}`]
+				}
+			} else if (regularLogExists) {
+				// Fall back to regular .log file if compile.log doesn't exist
+				try {
+					fullOutput = await fs.promises.readFile(regularLogPath, "utf8")
+					errors = this.extractLatexErrors(fullOutput)
+
+					console.log(`[TaskSectionCreation ${this.sectionId}] Read regular .log file (${fullOutput.length} chars)`)
+					console.log(`[TaskSectionCreation ${this.sectionId}] Extracted ${errors.length} error(s):`, errors)
+
+					if (errors.length > 0) {
+						console.log(`[TaskSectionCreation ${this.sectionId}] === LOG ERRORS START ===`)
+						errors.forEach((err, idx) => {
+							console.log(`[TaskSectionCreation ${this.sectionId}] Error ${idx + 1}: ${err}`)
+						})
+						console.log(`[TaskSectionCreation ${this.sectionId}] === LOG ERRORS END ===`)
+					}
+				} catch (err) {
+					const errorMsg = err instanceof Error ? error.message : String(err)
+					console.error(`[TaskSectionCreation ${this.sectionId}] Failed to read regular .log: ${errorMsg}`)
+					fullOutput = `Failed to read regular .log: ${errorMsg}`
+					errors = [`Failed to read regular .log: ${errorMsg}`]
+				}
+			} else {
+				console.warn(`[TaskSectionCreation ${this.sectionId}] No log files found after compilation`)
+				fullOutput = "No log files were generated by LaTeX Workshop - compilation may have failed silently"
+				errors = ["No log files generated - compilation may have failed silently"]
+			}
+
+			// Check if PDF was created
+			const pdfExists = await fileExistsAtPath(pdfPath)
+
+			if (pdfExists) {
+				console.log(`[TaskSectionCreation ${this.sectionId}] PDF created successfully: ${pdfPath}`)
+				return { pdfPath, errors: [], fullOutput }
+			} else {
+				console.log(`[TaskSectionCreation ${this.sectionId}] PDF not created. Found ${errors.length} errors.`)
+				return { pdfPath: null, errors, fullOutput }
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[TaskSectionCreation ${this.sectionId}] Error in compileTexAndExtractErrors: ${errorMsg}`)
+			return {
+				pdfPath: null,
+				errors: [`Compilation failed: ${errorMsg}`],
+				fullOutput: `Error: ${errorMsg}`,
+			}
+		}
 	}
 
 	// =========================================================================
@@ -1518,7 +1669,9 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 
 		// Find insertion point: after last \usepackage, before \begin{document}
 		const beginDocMatch = content.indexOf("\\begin{document}")
-		if (beginDocMatch === -1) return content
+		if (beginDocMatch === -1) {
+			return content
+		}
 
 		// Find last \usepackage before \begin{document}
 		const preamble = content.substring(0, beginDocMatch)
@@ -1651,7 +1804,7 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 	/**
 	 * Runs the task using the new chunked processing flow
 	 */
-	public async runAndWaitForCompletion(prompt: string): Promise<TaskSectionCreationResult> {
+	public async runAndWaitForCompletion(_prompt: string): Promise<TaskSectionCreationResult> {
 		// Use the new section generation flow instead of legacy task execution
 		return this.runSectionGeneration()
 	}
