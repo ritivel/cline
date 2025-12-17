@@ -668,6 +668,18 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 		// Expected output file path
 		const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
 
+		// Determine if this is a Table of Contents section
+		const isTableOfContents = section.classification?.documentTypes?.includes("table of contents") ?? false
+
+		// Get module number for this section
+		let moduleNum: number | undefined
+		for (const module of EAC_NMRA_TEMPLATE.modules) {
+			if (module.sections[sectionId]) {
+				moduleNum = module.moduleNumber
+				break
+			}
+		}
+
 		// Create TaskSectionCreation instance
 		const task = new TaskSectionCreationClass({
 			controller,
@@ -690,6 +702,8 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 			sectionFolderPath,
 			expectedOutputFile,
 			tagsPath,
+			moduleNum,
+			isTableOfContents,
 			onProgress,
 		})
 

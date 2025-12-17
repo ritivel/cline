@@ -13,6 +13,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { ClineDefaultTool } from "@/shared/tools"
 import { Controller } from "../controller"
+import { EAC_NMRA_TEMPLATE } from "../ctd/templates/eac-nmra/definition"
 import { StateManager } from "../storage/StateManager"
 import { Task } from "./index"
 import { DocumentChunk, DocumentContent, DocumentProcessingService, ParsedTagsFile } from "./services/DocumentProcessingService"
@@ -51,6 +52,8 @@ export interface TaskSectionCreationParams {
 	sectionFolderPath: string
 	expectedOutputFile: string
 	tagsPath: string
+	moduleNum?: number
+	isTableOfContents?: boolean
 	onProgress?: (sectionId: string, status: string) => void
 }
 
@@ -90,6 +93,8 @@ export class TaskSectionCreation extends Task {
 	private sectionFolderPath: string
 	private expectedOutputFile: string
 	private tagsPath: string
+	private moduleNum?: number
+	private isTableOfContents: boolean
 	private onProgress?: (sectionId: string, status: string) => void
 
 	// Services
@@ -141,6 +146,8 @@ export class TaskSectionCreation extends Task {
 		this.sectionFolderPath = params.sectionFolderPath
 		this.expectedOutputFile = params.expectedOutputFile
 		this.tagsPath = params.tagsPath
+		this.moduleNum = params.moduleNum
+		this.isTableOfContents = params.isTableOfContents ?? false
 		this.onProgress = params.onProgress
 
 		// Initialize services
@@ -232,6 +239,32 @@ export class TaskSectionCreation extends Task {
 				message: "Starting section generation...",
 			})
 			this.startCompletionMonitoring()
+
+			// Check if this is a Table of Contents section - handle it specially
+			if (this.isTableOfContents && this.moduleNum) {
+				this.reportProgress("Generating Table of Contents...")
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: "Generating Table of Contents table...",
+				})
+				const tocContent = this.generateTOCTable()
+				await this.writeOutputFile(tocContent)
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: `Written to: ${this.expectedOutputFile}`,
+				})
+				this.isCompleted = true
+				this.stopCompletionMonitoring()
+				this.reportProgress("Completed successfully")
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: "✓ Table of Contents generated!",
+				})
+				return {
+					success: true,
+					sectionId: this.sectionId,
+				}
+			}
 
 			// Step 1: Parse tags file
 			this.reportProgress("Parsing tags.md...")
@@ -705,8 +738,174 @@ export class TaskSectionCreation extends Task {
 	}
 
 	/**
-	 * Writes the final content to the output file using write_tex tool
+	 * Generates a Table of Contents LaTeX document for the module
+	 * Creates a fixed-format table listing all sections in the module
 	 */
+	private generateTOCTable(): string {
+		if (!this.moduleNum) {
+			throw new Error("Module number is required to generate Table of Contents")
+		}
+
+		// Find the module
+		const module = EAC_NMRA_TEMPLATE.modules.find((m) => m.moduleNumber === this.moduleNum)
+		if (!module) {
+			throw new Error(`Module ${this.moduleNum} not found in template`)
+		}
+
+		// Build parent-child map to determine hierarchy
+		const parentMap = new Map<string, string | null>()
+		for (const [sectionId, section] of Object.entries(module.sections)) {
+			let parent: string | null = null
+			for (const [potentialParentId, potentialParent] of Object.entries(module.sections)) {
+				if (potentialParent.children?.includes(sectionId)) {
+					parent = potentialParentId
+					break
+				}
+			}
+			parentMap.set(sectionId, parent)
+		}
+
+		// Get all sections in the module, sorted by section ID
+		const allSections = Object.entries(module.sections)
+			.map(([id, section]) => ({ id, section }))
+			.sort((a, b) => {
+				// Sort by section ID numerically (e.g., "5.1" < "5.2" < "5.3.1")
+				const aParts = a.id.split(".").map(Number)
+				const bParts = b.id.split(".").map(Number)
+				for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+					const aVal = aParts[i] ?? 0
+					const bVal = bParts[i] ?? 0
+					if (aVal !== bVal) {
+						return aVal - bVal
+					}
+				}
+				return 0
+			})
+
+		// Helper function to calculate section depth
+		const getDepth = (sectionId: string): number => {
+			return sectionId.split(".").length - 1
+		}
+
+		// Helper function to escape LaTeX special characters
+		const escapeLatex = (text: string): string => {
+			return text
+				.replace(/\\/g, "\\textbackslash{}")
+				.replace(/{/g, "\\{")
+				.replace(/}/g, "\\}")
+				.replace(/#/g, "\\#")
+				.replace(/\$/g, "\\$")
+				.replace(/%/g, "\\%")
+				.replace(/&/g, "\\&")
+				.replace(/_/g, "\\_")
+				.replace(/\^/g, "\\textasciicircum{}")
+				.replace(/~/g, "\\textasciitilde{}")
+		}
+
+		// Escape section title for use in document
+		const escapedSectionTitle = escapeLatex(this.sectionTitle)
+
+		// Generate LaTeX table rows with hierarchical indentation
+		const tableRows: string[] = []
+		for (const { id, section } of allSections) {
+			const depth = getDepth(id)
+			const escapedTitle = escapeLatex(section.title)
+
+			// Calculate indentation: 0.5cm per level for all levels
+			const indentAmount = depth * 0.5
+
+			// Apply bold formatting for top-level (depth 0) sections only
+			const isBold = depth === 0
+			const formattedSectionId = isBold ? `\\textbf{${id}}` : id
+			const formattedTitle = isBold ? `\\textbf{${escapedTitle}}` : escapedTitle
+
+			// Use parbox with hanging indent to maintain indentation on wrapped lines
+			let formattedRequirement: string
+			if (indentAmount > 0) {
+				// Use hangindent to indent all lines, including wrapped text
+				formattedRequirement = `\\hangindent=${indentAmount}cm \\hangafter=0 ${formattedTitle}`
+			} else {
+				formattedRequirement = formattedTitle
+			}
+
+			tableRows.push(`\t\t${formattedSectionId} & ${formattedRequirement} & \\\\[0.3em]`)
+			tableRows.push(`\t\t\\hline`)
+		}
+
+		// Generate the complete LaTeX document
+		const latexDocument = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\usepackage{booktabs}
+\\usepackage{longtable}
+\\usepackage{tabularx}
+\\usepackage{array}
+\\usepackage{graphicx}
+\\usepackage{hyperref}
+\\usepackage{amsmath}
+\\usepackage{amsfonts}
+\\usepackage{siunitx}
+\\usepackage{enumitem}
+\\usepackage{xcolor}
+\\usepackage{fancyhdr}
+\\usepackage{titlesec}
+\\newcolumntype{L}[1]{>{\\raggedright\\arraybackslash}p{#1}}
+\\newcolumntype{C}[1]{>{\\centering\\arraybackslash}p{#1}}
+\\setlength{\\tabcolsep}{4pt}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    pdftitle={CTD Section ${this.sectionId}: ${escapedSectionTitle}},
+    pdfauthor={Regulatory Affairs}
+}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[C]{CTD Section ${this.sectionId}: ${escapedSectionTitle}}
+\\fancyfoot[C]{\\thepage}
+
+\\begin{document}
+
+\\title{${this.sectionId}. ${escapedSectionTitle}}
+\\author{Regulatory Affairs}
+\\date{\\today}
+\\maketitle
+
+\\section*{${escapedSectionTitle}}
+
+\\renewcommand{\\arraystretch}{1.5}
+\\begin{longtable}{|p{2.2cm}|p{11.3cm}|p{1.4cm}|}
+\\hline
+\\textbf{Section} & \\textbf{Requirements} & \\textbf{Page No.} \\\\
+\\hline
+\\endfirsthead
+
+\\multicolumn{3}{|c|}{\\textit{Continued from previous page}} \\\\
+\\hline
+\\textbf{Section} & \\textbf{Requirements} & \\textbf{Page No.} \\\\
+\\hline
+\\endhead
+
+\\hline
+\\multicolumn{3}{|r|}{\\textit{Continued on next page}} \\\\
+\\endfoot
+
+\\hline
+\\endlastfoot
+
+${tableRows.join("\n")}
+
+\\end{longtable}
+
+\\end{document}`
+
+		return latexDocument
+	}
+
 	private async writeOutputFile(content: string): Promise<void> {
 		try {
 			// Strip markdown code block markers if present
