@@ -1586,7 +1586,7 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 						console.log(`[TaskSectionCreation ${this.sectionId}] === COMPILE.LOG ERRORS END ===`)
 					}
 				} catch (err) {
-					const errorMsg = err instanceof Error ? error.message : String(err)
+					const errorMsg = err instanceof Error ? err.message : String(err)
 					console.error(`[TaskSectionCreation ${this.sectionId}] Failed to read compile.log: ${errorMsg}`)
 					fullOutput = `Failed to read compile.log: ${errorMsg}`
 					errors = [`Failed to read compile.log: ${errorMsg}`]
@@ -1608,7 +1608,7 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 						console.log(`[TaskSectionCreation ${this.sectionId}] === LOG ERRORS END ===`)
 					}
 				} catch (err) {
-					const errorMsg = err instanceof Error ? error.message : String(err)
+					const errorMsg = err instanceof Error ? err.message : String(err)
 					console.error(`[TaskSectionCreation ${this.sectionId}] Failed to read regular .log: ${errorMsg}`)
 					fullOutput = `Failed to read regular .log: ${errorMsg}`
 					errors = [`Failed to read regular .log: ${errorMsg}`]

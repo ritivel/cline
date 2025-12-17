@@ -74,8 +74,8 @@ export class CtdClassifierServiceV2 {
 	private dossierTagsService: DossierTagsService | undefined
 
 	constructor(_workspaceRoot?: string) {
-		if (workspaceRoot) {
-			this.dossierTagsService = new DossierTagsService(workspaceRoot)
+		if (_workspaceRoot) {
+			this.dossierTagsService = new DossierTagsService(_workspaceRoot)
 		}
 	}
 

@@ -221,8 +221,70 @@ export class WriteTexToolHandler implements IFullyManagedTool {
 
 	/**
 	 * Applies header and footer format to LaTeX document
+	 *
+	 * NOTE: Header and footer addition is currently disabled/commented out.
+	 * This method now only fixes documentclass duplication issues.
 	 */
 	private async applyDocumentFormat(content: string, texPath: string, config: TaskConfig): Promise<string> {
+		// Fix documentclass duplication issue: remove duplicate \documentclass declarations
+		// The AI might generate content with \documentclass already included, and we need to ensure
+		// it only appears once at the beginning of the document
+
+		const documentBeginMatch = content.match(/\\begin\{document\}/i)
+		const documentEndMatch = content.match(/\\end\{document\}/i)
+
+		if (documentBeginMatch && documentEndMatch) {
+			// Extract preamble (content before \begin{document})
+			const preamble = content.substring(0, documentBeginMatch.index!).trim()
+			const bodyContent = content
+				.substring(documentBeginMatch.index! + documentBeginMatch[0].length, documentEndMatch.index!)
+				.trim()
+			const documentEnd = content.substring(documentEndMatch.index!)
+
+			// Find all documentclass declarations in the preamble
+			const docClassRegex = /\\documentclass(?:\[[^\]]*\])?\{[^}]+\}/g
+			const docClassMatches = preamble.match(docClassRegex)
+
+			if (docClassMatches && docClassMatches.length > 0) {
+				// Use the first documentclass declaration found
+				const documentClass = docClassMatches[0]
+
+				// Remove ALL documentclass declarations from preamble to prevent duplication
+				const cleanedPreamble = preamble.replace(docClassRegex, "").trim()
+
+				// Clean up any extra blank lines that might result from removal
+				const normalizedPreamble = cleanedPreamble.replace(/\n{3,}/g, "\n\n")
+
+				// Reconstruct document with single documentclass at the beginning
+				return `${documentClass}
+${normalizedPreamble}
+
+\\begin{document}
+${bodyContent}
+${documentEnd}`
+			}
+		}
+
+		// If no document environment or no documentclass found, return content as-is
+		return content
+
+		// ============================================================================
+		// HEADER AND FOOTER FUNCTIONALITY - DISABLED/COMMENTED OUT
+		// ============================================================================
+		// The following code was previously used to add headers and footers to LaTeX documents.
+		// It has been disabled per user request to prevent automatic modifications to tex files.
+		//
+		// Original functionality:
+		// - Added company logo to header
+		// - Added document title to header
+		// - Added "Confidential" label and company name to footer
+		// - Added page numbers
+		// - Required packages: graphicx, fancyhdr, lastpage, geometry
+		//
+		// To re-enable, uncomment the code below and modify applyDocumentFormat accordingly.
+		// ============================================================================
+
+		/*
 		// Get workspace root
 		const workspaceRoot = config.workspaceManager?.getPrimaryRoot()?.path || config.cwd
 
@@ -331,6 +393,7 @@ ${bodyContent}
 \\end{document}`
 
 		return formattedContent
+		*/
 	}
 
 	/**
