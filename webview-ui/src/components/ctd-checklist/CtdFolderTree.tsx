@@ -117,29 +117,29 @@ const SectionNode = ({
 				style={{ paddingLeft: `${indent + 8}px` }}>
 				{hasChildren ? (
 					<button
-						className="flex items-center justify-center w-4 h-4 hover:bg-(--vscode-button-hoverBackground) rounded"
+						className="flex items-center justify-center w-5 h-5 hover:bg-(--vscode-button-hoverBackground) rounded"
 						onClick={(e) => {
 							e.stopPropagation()
 							handleToggle()
 						}}>
-						{isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+						{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
 					</button>
 				) : (
-					<div className="w-4" />
+					<div className="w-5" />
 				)}
-				<FileText className="w-4 h-4 text-(--vscode-icon-foreground)" />
-				<span className="font-medium text-sm">{section.id}</span>
-				<span className="text-xs text-(--vscode-descriptionForeground) flex-1 truncate">{section.title}</span>
+				<FileText className="w-5 h-5 text-(--vscode-icon-foreground)" />
+				<span className="font-medium text-base">{section.id}</span>
+				<span className="text-sm text-(--vscode-descriptionForeground) flex-1 truncate">{section.title}</span>
 				{isLeaf && (
 					<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
 						<VSCodeButton
 							appearance="secondary"
 							disabled={isAssessing || isAssessingOutput || isGenerating}
 							onClick={handleAssess}
-							style={{ minWidth: "80px", height: "24px", fontSize: "11px" }}>
+							style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
 							{isAssessing ? (
 								<>
-									<Loader2 className="w-3 h-3 mr-1 animate-spin" />
+									<Loader2 className="w-4 h-4 mr-1 animate-spin" />
 									Assessing...
 								</>
 							) : (
@@ -150,10 +150,10 @@ const SectionNode = ({
 							appearance="secondary"
 							disabled={isAssessing || isAssessingOutput || isGenerating}
 							onClick={handleGenerate}
-							style={{ minWidth: "80px", height: "24px", fontSize: "11px" }}>
+							style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
 							{isGenerating ? (
 								<>
-									<Loader2 className="w-3 h-3 mr-1 animate-spin" />
+									<Loader2 className="w-4 h-4 mr-1 animate-spin" />
 									Generating...
 								</>
 							) : (
@@ -165,10 +165,10 @@ const SectionNode = ({
 								appearance="secondary"
 								disabled={isAssessing || isAssessingOutput || isGenerating}
 								onClick={handleAssessOutput}
-								style={{ minWidth: "80px", height: "24px", fontSize: "11px" }}>
+								style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
 								{isAssessingOutput ? (
 									<>
-										<Loader2 className="w-3 h-3 mr-1 animate-spin" />
+										<Loader2 className="w-4 h-4 mr-1 animate-spin" />
 										Reviewing...
 									</>
 								) : (
@@ -217,7 +217,7 @@ export const CtdFolderTree = ({
 	generatingSections,
 }: CtdFolderTreeProps) => {
 	if (!structure) {
-		return <div className="p-4 text-sm text-(--vscode-descriptionForeground)">Loading CTD structure...</div>
+		return <div className="p-4 text-base text-(--vscode-descriptionForeground)">Loading CTD structure...</div>
 	}
 
 	// Build a map of all sections for quick lookup
@@ -255,10 +255,10 @@ export const CtdFolderTree = ({
 				return (
 					<div className="mb-4" key={module.moduleNumber}>
 						<div className="mb-2 p-2 bg-(--vscode-editor-background) border border-(--vscode-panel-border) rounded">
-							<h3 className="font-semibold text-sm">
+							<h3 className="font-semibold text-base">
 								Module {module.moduleNumber}: {module.title}
 							</h3>
-							<p className="text-xs text-(--vscode-descriptionForeground) mt-1">{module.description}</p>
+							<p className="text-sm text-(--vscode-descriptionForeground) mt-1">{module.description}</p>
 						</div>
 						<div className="space-y-0">
 							{moduleTopLevelSections.map((section) => (
