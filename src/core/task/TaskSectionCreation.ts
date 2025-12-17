@@ -6,7 +6,9 @@ import { showSystemNotification } from "@integrations/notifications"
 import { McpHub } from "@services/mcp/McpHub"
 import { ClineSay } from "@shared/ExtensionMessage"
 import { ClineContent } from "@shared/messages/content"
+import { fileExistsAtPath } from "@utils/fs"
 import { getCwd } from "@utils/path"
+import { spawn } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
 import { ClineDefaultTool } from "@/shared/tools"
@@ -303,13 +305,21 @@ export class TaskSectionCreation extends Task {
 			})
 			const finalContent = await this.generateFinalSection(partialDrafts)
 
-			// Step 6.5: Correct and improve LaTeX code
+			// Step 6.5: Attach the placement PDFs to the section as images
+			this.reportProgress("Attaching placement PDFs to section as images...")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "Attaching placement PDFs to section as images...",
+			})
+			const contentWithPdfs = await this.attachPlacementPdfsAsImages(finalContent)
+
+			// Step 6.6: Correct and improve LaTeX code
 			this.reportProgress("Correcting LaTeX code...")
 			showSystemNotification({
 				subtitle: `Section ${this.sectionId}`,
 				message: "Improving LaTeX code quality...",
 			})
-			const correctedContent = await this.correctLatexCode(finalContent)
+			const correctedContent = await this.correctLatexCode(contentWithPdfs)
 
 			// Step 7: Write output file
 			this.reportProgress("Writing output file...")
@@ -504,24 +514,136 @@ export class TaskSectionCreation extends Task {
 	}
 
 	/**
-	 * Corrects and improves LaTeX code without changing semantic content
+	 * Corrects and improves LaTeX code without changing semantic content.
+	 * Uses an iterative compilation loop to fix errors:
+	 * 1. Write content to a temporary .tex file
+	 * 2. Compile and capture any errors
+	 * 3. If PDF is generated, return the corrected content
+	 * 4. If errors exist, send them to LLM for correction
+	 * 5. Repeat up to 3 times
+	 *
+	 * @param content The LaTeX content to correct
+	 * @returns The corrected LaTeX content
 	 */
 	private async correctLatexCode(content: string): Promise<string> {
-		const prompt = this.buildLatexCorrectionPrompt(content)
+		const MAX_COMPILATION_ATTEMPTS = 3
+		let currentContent = content
+		let tempTexPath: string | null = null
 
-		const result = await this.errorHandler.executeWithContextReduction(async (reductionFactor) => {
-			const adjustedContent = reductionFactor < 1 ? this.reducePromptContent(prompt, reductionFactor) : prompt
+		try {
+			// Ensure section folder exists
+			await fs.promises.mkdir(this.sectionFolderPath, { recursive: true })
 
-			return this.callLLMWithLatexSystemPrompt(adjustedContent)
-		})
+			// Create temporary tex file for compilation testing
+			tempTexPath = await this.createTempTexFile(currentContent)
 
-		if (!result.success || !result.result) {
-			console.warn(`[TaskSectionCreation] LaTeX correction failed: ${result.error?.message}`)
+			for (let attempt = 1; attempt <= MAX_COMPILATION_ATTEMPTS; attempt++) {
+				this.reportProgress(`LaTeX correction attempt ${attempt}/${MAX_COMPILATION_ATTEMPTS}...`)
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: `LaTeX compilation attempt ${attempt}/${MAX_COMPILATION_ATTEMPTS}`,
+				})
+
+				// Compile the temporary file and extract errors
+				const compilationResult = await this.compileTexAndExtractErrors(tempTexPath)
+
+				// Check if PDF was generated successfully
+				if (compilationResult.pdfPath) {
+					console.log(`[TaskSectionCreation ${this.sectionId}] PDF generated successfully on attempt ${attempt}`)
+					showSystemNotification({
+						subtitle: `Section ${this.sectionId}`,
+						message: `LaTeX compiled successfully on attempt ${attempt}`,
+					})
+
+					// Read the current content from temp file (in case LLM made changes)
+					currentContent = await fs.promises.readFile(tempTexPath, "utf8")
+
+					// Cleanup temp file and associated files
+					await this.cleanupTempFile(tempTexPath)
+					return currentContent
+				}
+
+				// If we have errors, ask LLM to fix them
+				if (compilationResult.errors.length > 0) {
+					console.log(
+						`[TaskSectionCreation ${this.sectionId}] Found ${compilationResult.errors.length} compilation errors on attempt ${attempt}`,
+					)
+
+					// Log the errors for debugging
+					compilationResult.errors.forEach((err, idx) => {
+						console.log(`[TaskSectionCreation ${this.sectionId}] Error ${idx + 1}: ${err}`)
+					})
+
+					// Build prompt with errors and current content
+					const prompt = this.buildLatexCorrectionPrompt(currentContent, compilationResult.errors)
+
+					// Call LLM to fix the errors
+					const result = await this.errorHandler.executeWithContextReduction(async (reductionFactor) => {
+						const adjustedPrompt = reductionFactor < 1 ? this.reducePromptContent(prompt, reductionFactor) : prompt
+						return this.callLLMWithLatexSystemPrompt(adjustedPrompt)
+					})
+
+					if (result.success && result.result) {
+						// Strip markdown code blocks if present
+						currentContent = this.stripMarkdownCodeBlocks(result.result)
+
+						// Write the corrected content to the temp file for next compilation attempt
+						await fs.promises.writeFile(tempTexPath, currentContent, "utf8")
+						console.log(`[TaskSectionCreation ${this.sectionId}] Updated temp file with LLM corrections`)
+					} else {
+						console.warn(
+							`[TaskSectionCreation ${this.sectionId}] LLM correction failed on attempt ${attempt}: ${result.error?.message}`,
+						)
+						// Continue with the current content
+					}
+				} else {
+					// No PDF and no specific errors - this is unexpected
+					console.warn(
+						`[TaskSectionCreation ${this.sectionId}] Compilation failed without specific errors on attempt ${attempt}`,
+					)
+
+					// Try a general correction without specific errors
+					const prompt = this.buildLatexCorrectionPrompt(currentContent)
+					const result = await this.errorHandler.executeWithContextReduction(async (reductionFactor) => {
+						const adjustedPrompt = reductionFactor < 1 ? this.reducePromptContent(prompt, reductionFactor) : prompt
+						return this.callLLMWithLatexSystemPrompt(adjustedPrompt)
+					})
+
+					if (result.success && result.result) {
+						currentContent = this.stripMarkdownCodeBlocks(result.result)
+						await fs.promises.writeFile(tempTexPath, currentContent, "utf8")
+					}
+				}
+			}
+
+			// Max attempts reached without successful PDF generation
+			console.warn(
+				`[TaskSectionCreation ${this.sectionId}] Max compilation attempts (${MAX_COMPILATION_ATTEMPTS}) reached without successful PDF generation`,
+			)
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: `LaTeX compilation failed after ${MAX_COMPILATION_ATTEMPTS} attempts. Using last corrected version.`,
+			})
+
+			// Cleanup temp file
+			if (tempTexPath) {
+				await this.cleanupTempFile(tempTexPath)
+			}
+
+			// Return the last corrected content
+			return currentContent
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[TaskSectionCreation ${this.sectionId}] Error in correctLatexCode: ${errorMsg}`)
+
+			// Cleanup temp file on error
+			if (tempTexPath) {
+				await this.cleanupTempFile(tempTexPath)
+			}
+
 			// Fall back to original content
 			return content
 		}
-
-		return result.result
 	}
 
 	/**
@@ -814,6 +936,8 @@ Your task is to improve the LaTeX code quality of a regulatory document WITHOUT 
 - Code organization and readability
 - Ensure document compiles without errors
 - Fix any LaTeX compilation issues
+- Escape special characters properly (e.g., "%" must be escaped as "\\%", "&" as "\\&", "_" as "\\_", etc.). Be very careful about the usage of \\_ and \\% in the content, make sure they are used with a back-slash in the content.
+- Use proper LaTeX math mode for superscripts and subscripts (e.g., "x^2" should be "$x^2$", "H2O" should be "H$_2$O", use braces for multi-character: "$x^{10}$", "$x_{max}$")
 
 ## Output:
 Return the corrected LaTeX code with all semantic content preserved exactly as provided.`
@@ -888,17 +1012,420 @@ Provide a structured analysis that preserves all important details. Do NOT summa
 
 	/**
 	 * Builds the prompt for LaTeX correction
+	 * @param content The LaTeX content to correct
+	 * @param compilationErrors Optional array of compilation errors to include in the prompt
 	 */
-	private buildLatexCorrectionPrompt(content: string): string {
+	private buildLatexCorrectionPrompt(content: string, compilationErrors?: string[]): string {
+		let errorSection = ""
+		if (compilationErrors && compilationErrors.length > 0) {
+			errorSection = `
+<compilation_errors>
+The following compilation errors were found when trying to compile this LaTeX document. Please fix these specific errors:
+
+${compilationErrors.map((err, idx) => `${idx + 1}. ${err}`).join("\n")}
+</compilation_errors>
+
+`
+		}
+
 		return `Review and correct the following LaTeX document. Improve its code quality, fix syntax errors, and ensure it follows LaTeX best practices.
 
 IMPORTANT: You must preserve ALL semantic content, wording, and data values exactly as they are. Only fix LaTeX code structure, syntax, and formatting.
-
+${errorSection}
 <latex_content>
 ${content}
 </latex_content>
 
-Return the corrected LaTeX code with improved syntax and code quality, but with all content and meaning preserved exactly.`
+Return the corrected LaTeX code with improved syntax and code quality, but with all content and meaning preserved exactly.${compilationErrors && compilationErrors.length > 0 ? " Focus especially on fixing the compilation errors listed above." : ""}`
+	}
+
+	// =========================================================================
+	// LATEX COMPILATION AND ERROR EXTRACTION METHODS
+	// =========================================================================
+
+	/**
+	 * Creates a temporary .tex file in the section folder
+	 * @param content The LaTeX content to write
+	 * @returns The path to the created temporary file
+	 */
+	private async createTempTexFile(content: string): Promise<string> {
+		const tempFileName = `_temp_compile_${Date.now()}.tex`
+		const tempFilePath = path.join(this.sectionFolderPath, tempFileName)
+		await fs.promises.writeFile(tempFilePath, content, "utf8")
+		console.log(`[TaskSectionCreation ${this.sectionId}] Created temp tex file: ${tempFilePath}`)
+		return tempFilePath
+	}
+
+	/**
+	 * Cleans up a temporary file
+	 * @param filePath The path to the file to delete
+	 */
+	private async cleanupTempFile(filePath: string): Promise<void> {
+		try {
+			await fs.promises.unlink(filePath)
+			console.log(`[TaskSectionCreation ${this.sectionId}] Cleaned up temp file: ${filePath}`)
+
+			// Also cleanup related auxiliary files
+			const basePath = filePath.replace(/\.tex$/, "")
+			const auxExtensions = [".aux", ".log", ".out", ".toc", ".pdf"]
+			for (const ext of auxExtensions) {
+				const auxFile = basePath + ext
+				try {
+					if (await fileExistsAtPath(auxFile)) {
+						await fs.promises.unlink(auxFile)
+						console.log(`[TaskSectionCreation ${this.sectionId}] Cleaned up auxiliary file: ${auxFile}`)
+					}
+				} catch {
+					// Ignore errors for auxiliary files
+				}
+			}
+		} catch (error) {
+			console.warn(`[TaskSectionCreation ${this.sectionId}] Failed to cleanup temp file: ${error}`)
+		}
+	}
+
+	/**
+	 * Extracts LaTeX errors from compilation output
+	 * Uses regex patterns inspired by LaTeX Workshop parser
+	 * @param stdout Standard output from compilation
+	 * @param stderr Standard error from compilation
+	 * @returns Array of formatted error strings
+	 */
+	private extractLatexErrors(stdout: string, stderr: string): string[] {
+		const errors: string[] = []
+		const combinedOutput = stdout + "\n" + stderr
+
+		// Regex patterns for LaTeX errors (inspired by LaTeX Workshop parser)
+		const patterns = {
+			// Fatal errors starting with !
+			fatalError: /^!\s*(.+)$/gm,
+			// File:line errors
+			fileLineError: /^(.+):(\d+):\s*(?:(.+)\s+Error:)?\s*(.+)$/gm,
+			// Error line context (l.<line number>)
+			lineContext: /^l\.(\d+)\s*(\.\.\.)?(.*)$/gm,
+			// Fatal compilation failure
+			fatalCompilation: /Fatal error occurred, no output PDF file produced!/g,
+			// Missing character errors
+			missingChar: /^\s*(Missing character:.*?!)/gm,
+			// Undefined control sequence
+			undefinedControl: /^!\s*Undefined control sequence\./gm,
+			// Missing package/file
+			missingFile: /^!\s*LaTeX Error:\s*File [`'](.+)' not found\./gm,
+			// Package errors
+			packageError: /^!\s*Package\s+(\w+)\s+Error:\s*(.+)$/gm,
+			// Environment errors
+			environmentError: /^!\s*LaTeX Error:\s*Environment\s+(\w+)\s+undefined\./gm,
+			// Missing \begin{document}
+			missingBeginDoc: /^!\s*LaTeX Error:\s*Missing \\begin\{document\}\./gm,
+			// Emergency stop
+			emergencyStop: /^!\s*Emergency stop\./gm,
+			// Runaway argument
+			runawayArgument: /^Runaway argument\?/gm,
+		}
+
+		// Track seen errors to avoid duplicates
+		const seenErrors = new Set<string>()
+
+		// Helper to add error if not duplicate
+		const addError = (error: string) => {
+			const normalized = error.trim().toLowerCase()
+			if (!seenErrors.has(normalized) && error.trim().length > 0) {
+				seenErrors.add(normalized)
+				errors.push(error.trim())
+			}
+		}
+
+		// Extract fatal errors
+		let match
+		while ((match = patterns.fatalError.exec(combinedOutput)) !== null) {
+			const errorMsg = match[1].trim()
+			// Skip certain non-actionable messages
+			if (!errorMsg.startsWith("==>") && !errorMsg.includes("Here is how much")) {
+				addError(`Fatal Error: ${errorMsg}`)
+			}
+		}
+
+		// Extract file:line errors
+		patterns.fileLineError.lastIndex = 0
+		while ((match = patterns.fileLineError.exec(combinedOutput)) !== null) {
+			const file = path.basename(match[1])
+			const line = match[2]
+			const errorType = match[3] || "Error"
+			const message = match[4]
+			addError(`${file}:${line}: ${errorType}: ${message}`)
+		}
+
+		// Extract fatal compilation failures
+		if (patterns.fatalCompilation.test(combinedOutput)) {
+			addError("Fatal error occurred, no output PDF file produced!")
+		}
+
+		// Extract missing character errors
+		patterns.missingChar.lastIndex = 0
+		while ((match = patterns.missingChar.exec(combinedOutput)) !== null) {
+			addError(match[1])
+		}
+
+		// Extract undefined control sequence with context
+		const lines = combinedOutput.split("\n")
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i]
+			if (line.includes("Undefined control sequence")) {
+				// Look for context in following lines
+				let context = ""
+				for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+					const contextMatch = lines[j].match(/^l\.(\d+)\s*(.*)$/)
+					if (contextMatch) {
+						context = ` at line ${contextMatch[1]}: ${contextMatch[2].trim()}`
+						break
+					}
+				}
+				addError(`Undefined control sequence${context}`)
+			}
+		}
+
+		// Extract package errors
+		patterns.packageError.lastIndex = 0
+		while ((match = patterns.packageError.exec(combinedOutput)) !== null) {
+			addError(`Package ${match[1]} Error: ${match[2]}`)
+		}
+
+		// Extract missing file errors
+		patterns.missingFile.lastIndex = 0
+		while ((match = patterns.missingFile.exec(combinedOutput)) !== null) {
+			addError(`Missing file: ${match[1]}`)
+		}
+
+		// Extract environment errors
+		patterns.environmentError.lastIndex = 0
+		while ((match = patterns.environmentError.exec(combinedOutput)) !== null) {
+			addError(`Environment undefined: ${match[1]}`)
+		}
+
+		// Check for emergency stop
+		if (patterns.emergencyStop.test(combinedOutput)) {
+			addError("Emergency stop - LaTeX could not continue processing")
+		}
+
+		// Check for runaway argument
+		if (patterns.runawayArgument.test(combinedOutput)) {
+			addError("Runaway argument - possibly missing closing brace or end of environment")
+		}
+
+		return errors
+	}
+
+	/**
+	 * Compiles a .tex file to PDF and extracts any compilation errors
+	 * Uses pdflatex for compilation
+	 * @param texPath Path to the .tex file to compile
+	 * @returns Object containing pdfPath (if successful), errors array, and full output
+	 */
+	private async compileTexAndExtractErrors(
+		texPath: string,
+	): Promise<{ pdfPath: string | null; errors: string[]; fullOutput: string }> {
+		const texDir = path.dirname(texPath)
+		const texBasename = path.basename(texPath, ".tex")
+		const texFilename = path.basename(texPath)
+		const pdfPath = path.join(texDir, `${texBasename}.pdf`)
+
+		console.log(`[TaskSectionCreation ${this.sectionId}] Compiling LaTeX file: ${texPath}`)
+
+		return new Promise((resolve) => {
+			// Use pdflatex with nonstopmode to collect all errors
+			const pdflatex = spawn("pdflatex", ["-interaction=nonstopmode", "-output-directory", texDir, texFilename], {
+				cwd: texDir,
+				shell: process.platform === "win32",
+			})
+
+			let stdout = ""
+			let stderr = ""
+
+			pdflatex.stdout.on("data", (data) => {
+				stdout += data.toString()
+			})
+
+			pdflatex.stderr.on("data", (data) => {
+				stderr += data.toString()
+			})
+
+			pdflatex.on("close", async (code) => {
+				console.log(`[TaskSectionCreation ${this.sectionId}] pdflatex completed with code: ${code}`)
+				const fullOutput = stdout + "\n" + stderr
+				const errors = this.extractLatexErrors(stdout, stderr)
+
+				// Log the full output for debugging when compilation fails
+				if (code !== 0) {
+					console.log(`[TaskSectionCreation ${this.sectionId}] === PDFLATEX FULL OUTPUT START ===`)
+					// Log first 2000 chars of stdout to avoid flooding logs
+					const truncatedStdout = stdout.length > 2000 ? stdout.substring(stdout.length - 2000) : stdout
+					console.log(`[TaskSectionCreation ${this.sectionId}] STDOUT (last 2000 chars):\n${truncatedStdout}`)
+					if (stderr.length > 0) {
+						console.log(`[TaskSectionCreation ${this.sectionId}] STDERR:\n${stderr}`)
+					}
+					console.log(`[TaskSectionCreation ${this.sectionId}] === PDFLATEX FULL OUTPUT END ===`)
+					console.log(`[TaskSectionCreation ${this.sectionId}] Extracted ${errors.length} error(s):`, errors)
+				}
+
+				// Check if PDF was created
+				const pdfExists = await fileExistsAtPath(pdfPath)
+
+				if (pdfExists) {
+					console.log(`[TaskSectionCreation ${this.sectionId}] PDF created successfully: ${pdfPath}`)
+					resolve({ pdfPath, errors: [], fullOutput })
+				} else {
+					console.log(`[TaskSectionCreation ${this.sectionId}] PDF not created. Found ${errors.length} errors.`)
+					resolve({ pdfPath: null, errors, fullOutput })
+				}
+			})
+
+			pdflatex.on("error", (err) => {
+				console.error(`[TaskSectionCreation ${this.sectionId}] Error running pdflatex:`, err)
+				resolve({
+					pdfPath: null,
+					errors: [`Failed to run pdflatex: ${err.message}. Make sure pdflatex is installed and in your PATH.`],
+					fullOutput: `Error: ${err.message}`,
+				})
+			})
+		})
+	}
+
+	// =========================================================================
+	// PDF ATTACHMENT METHODS
+	// =========================================================================
+
+	/**
+	 * Gets the submissions path from SubmissionsPaneProvider
+	 */
+	private getSubmissionsPath(): string | undefined {
+		try {
+			const { SubmissionsPaneProvider } = require("@/hosts/vscode/SubmissionsPaneProvider")
+			const submissionsProvider = SubmissionsPaneProvider.getInstance()
+			return submissionsProvider?.getSubmissionsFolder()
+		} catch (error) {
+			console.warn(`[TaskSectionCreation] Failed to get submissions path: ${error}`)
+			return undefined
+		}
+	}
+
+	/**
+	 * Ensures the pdfpages package is included in the LaTeX preamble
+	 */
+	private ensurePdfPagesPackage(content: string): string {
+		// Check if already present
+		if (content.includes("\\usepackage{pdfpages}")) {
+			return content
+		}
+
+		// Find insertion point: after last \usepackage, before \begin{document}
+		const beginDocMatch = content.indexOf("\\begin{document}")
+		if (beginDocMatch === -1) return content
+
+		// Find last \usepackage before \begin{document}
+		const preamble = content.substring(0, beginDocMatch)
+		const lastUsepackageMatch = preamble.lastIndexOf("\\usepackage")
+
+		if (lastUsepackageMatch !== -1) {
+			// Find end of last \usepackage line
+			const afterLastUsepackage = preamble.substring(lastUsepackageMatch)
+			const lineEnd = afterLastUsepackage.indexOf("\n")
+			const insertPos = lastUsepackageMatch + (lineEnd !== -1 ? lineEnd : afterLastUsepackage.length)
+			return content.slice(0, insertPos) + "\n\\usepackage{pdfpages}" + content.slice(insertPos)
+		} else {
+			// No \usepackage found, insert after \documentclass
+			const docClassMatch = preamble.indexOf("\\documentclass")
+			if (docClassMatch !== -1) {
+				const afterDocClass = preamble.substring(docClassMatch)
+				const lineEnd = afterDocClass.indexOf("\n")
+				const insertPos = docClassMatch + (lineEnd !== -1 ? lineEnd : afterDocClass.length)
+				return content.slice(0, insertPos) + "\n\\usepackage{pdfpages}" + content.slice(insertPos)
+			}
+		}
+
+		return content
+	}
+
+	/**
+	 * Attaches placement PDF files to the LaTeX document using pdfpages package.
+	 * Iterates through parsed placement entries, locates PDF files, and inserts
+	 * \includepdf commands before \end{document}.
+	 */
+	private async attachPlacementPdfsAsImages(content: string): Promise<string> {
+		// Early return if no placements
+		if (!this.parsedTags || this.parsedTags.placements.length === 0) {
+			console.log(`[TaskSectionCreation ${this.sectionId}] No placements to attach`)
+			return content
+		}
+
+		// Ensure pdfpages package is included
+		let modifiedContent = this.ensurePdfPagesPackage(content)
+
+		// Get base path for documents
+		const submissionsPath = this.getSubmissionsPath()
+		const workspaceRoot = this.cwd
+		const basePath = submissionsPath || path.join(workspaceRoot, "documents")
+
+		console.log(`[TaskSectionCreation ${this.sectionId}] Attaching ${this.parsedTags.placements.length} placement PDFs`)
+		console.log(`[TaskSectionCreation ${this.sectionId}] Base path: ${basePath}`)
+
+		// Collect PDF inclusions
+		const pdfInclusions: string[] = []
+
+		for (const placement of this.parsedTags.placements) {
+			// Get the folder path from relativePath
+			const folderPath = path.join(basePath, placement.relativePath)
+
+			console.log(`[TaskSectionCreation ${this.sectionId}] Processing placement: ${placement.pdfName}`)
+			console.log(`[TaskSectionCreation ${this.sectionId}] Looking for PDF in folder: ${folderPath}`)
+
+			// Find PDF file in the folder
+			let pdfPath: string | null = null
+			try {
+				const entries = await fs.promises.readdir(folderPath, { withFileTypes: true })
+				for (const entry of entries) {
+					if (entry.isFile() && entry.name.toLowerCase().endsWith(".pdf")) {
+						pdfPath = path.join(folderPath, entry.name)
+						console.log(`[TaskSectionCreation ${this.sectionId}] Found PDF: ${pdfPath}`)
+						break
+					}
+				}
+			} catch (error) {
+				console.warn(`[TaskSectionCreation ${this.sectionId}] Error reading folder ${folderPath}: ${error}`)
+			}
+
+			if (!pdfPath) {
+				console.warn(`[TaskSectionCreation ${this.sectionId}] No PDF found in folder: ${folderPath}`)
+				// Continue to next placement
+				continue
+			}
+
+			// Use absolute path for LaTeX (convert Windows backslashes to forward slashes)
+			const latexPath = pdfPath.replace(/\\/g, "/")
+
+			console.log(`[TaskSectionCreation ${this.sectionId}] LaTeX absolute path: ${latexPath}`)
+
+			// Add inclusion command
+			pdfInclusions.push(`\\includepdf[pages=-]{${latexPath}}`)
+		}
+
+		// Insert PDF inclusions before \end{document}
+		if (pdfInclusions.length > 0) {
+			const endDocIndex = modifiedContent.lastIndexOf("\\end{document}")
+			if (endDocIndex !== -1) {
+				const beforeEndDoc = modifiedContent.substring(0, endDocIndex)
+				const afterEndDoc = modifiedContent.substring(endDocIndex)
+
+				// Add section header and PDF inclusions
+				const inclusionSection = "\n\n\\section*{Placement Documents}\n" + pdfInclusions.join("\n") + "\n\n"
+				modifiedContent = beforeEndDoc + inclusionSection + afterEndDoc
+
+				console.log(`[TaskSectionCreation ${this.sectionId}] Added ${pdfInclusions.length} PDF inclusions`)
+			} else {
+				console.warn(`[TaskSectionCreation ${this.sectionId}] Could not find \\end{document} in LaTeX content`)
+			}
+		}
+
+		return modifiedContent
 	}
 
 	// =========================================================================
