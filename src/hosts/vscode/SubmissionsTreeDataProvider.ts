@@ -145,7 +145,7 @@ export class SubmissionsTreeDataProvider implements vscode.TreeDataProvider<File
 	}
 
 	refresh(): void {
-		this._onDidChangeTreeData.fire()
+		this._onDidChangeTreeData.fire(undefined)
 	}
 
 	getTreeItem(element: FileItem): vscode.TreeItem {
