@@ -792,6 +792,18 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 
 			const tagsPath = path.join(sectionFolderPath, "tags.md")
 
+			// Special handling for section 2.3 - use TaskSection23Preamble (QOS)
+			if (sectionId === "2.3") {
+				return await this.generateSection23Preamble(
+					sectionId,
+					section,
+					sectionFolderPath,
+					tagsPath,
+					controller,
+					onProgress,
+				)
+			}
+
 			// Special handling for section 2.5 - use TaskSection25Preamble
 			if (sectionId === "2.5") {
 				return await this.generateSection25Preamble(
@@ -824,6 +836,93 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 			const errorMsg = `Subagent error for section ${sectionId}: ${error instanceof Error ? error.message : String(error)}`
 			console.error(errorMsg)
 			return { success: false, sectionId, moduleNum, error: errorMsg }
+		}
+	}
+
+	/**
+	 * Generates preamble for section 2.3 using specialized TaskSection23Preamble agent (QOS)
+	 */
+	private async generateSection23Preamble(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		tagsPath: string,
+		controller: Controller,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "preamble.tex")
+
+			// Dynamic import to break circular dependency
+			const { TaskSection23Preamble: TaskSection23PreambleClass } = await import("@/core/task/TaskSection23Preamble")
+			console.log(`[DossierGenerator] TaskSection23Preamble class imported successfully`)
+
+			const stateManager = StateManager.get()
+			const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+			const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+			const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+			const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+			const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+			const defaultTerminalProfile = (stateManager.getGlobalSettingsKey("defaultTerminalProfile") as string) ?? "default"
+
+			// Setup workspace manager
+			const workspaceManager = await setupWorkspaceManager({
+				stateManager,
+				detectRoots: detectWorkspaceRoots,
+			})
+
+			const cwd = workspaceManager?.getPrimaryRoot()?.path || this.workspaceRoot
+			const taskId = `dossier-section23-preamble-${Date.now()}`
+
+			// Acquire task lock
+			const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+			const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+			// Create TaskSection23Preamble instance
+			const task = new TaskSection23PreambleClass({
+				controller,
+				mcpHub: controller.mcpHub,
+				shellIntegrationTimeout,
+				terminalReuseEnabled: terminalReuseEnabled ?? true,
+				terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+				subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+				defaultTerminalProfile,
+				vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+				cwd,
+				stateManager,
+				workspaceManager,
+				task: `Generate QOS preamble for section ${sectionId}`,
+				taskId,
+				taskLockAcquired,
+				sectionFolderPath,
+				expectedOutputFile,
+				tagsPath,
+				ichInstructions: undefined, // Use default ICH QOS instructions
+				onProgress: (status) => onProgress?.(sectionId, status),
+			})
+
+			// Set mode to "act" for subagents
+			stateManager.setGlobalState("mode", "act")
+			stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+			// Run preamble generation
+			const result = await task.runPreambleGeneration()
+
+			return {
+				success: result.success,
+				sectionId,
+				moduleNum: 2,
+				error: result.error,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] Error generating section 2.3 QOS preamble: ${errorMsg}`)
+			return {
+				success: false,
+				sectionId,
+				moduleNum: 2,
+				error: errorMsg,
+			}
 		}
 	}
 
@@ -1025,8 +1124,8 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 		const { sectionId, section, moduleNum } = sectionInfo
 
 		// Check if it's a leaf section (only leaf sections can be generated)
-		// Exception: Section 2.5 can be generated for preamble generation even though it has children
-		if (section.children && section.children.length > 0 && sectionId !== "2.5") {
+		// Exception: Section 2.3 and 2.5 can be generated for preamble generation even though they may have children
+		if (section.children && section.children.length > 0 && sectionId !== "2.3" && sectionId !== "2.5") {
 			return {
 				success: false,
 				error: `Section "${sectionId}: ${section.title}" is not a leaf section (it has ${section.children.length} child sections). Only leaf sections can be generated. Please specify a specific leaf section.`,

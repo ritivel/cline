@@ -37,6 +37,7 @@ import { GenerateExplanationToolHandler } from "./tools/handlers/GenerateExplana
 import { ListCodeDefinitionNamesToolHandler } from "./tools/handlers/ListCodeDefinitionNamesToolHandler"
 import { ListFilesToolHandler } from "./tools/handlers/ListFilesToolHandler"
 import { LoadMcpDocumentationHandler } from "./tools/handlers/LoadMcpDocumentationHandler"
+import { Module3TagsLookupToolHandler } from "./tools/handlers/Module3TagsLookupToolHandler"
 import { Module5TagsLookupToolHandler } from "./tools/handlers/Module5TagsLookupToolHandler"
 import { NewTaskHandler } from "./tools/handlers/NewTaskHandler"
 import { PlanModeRespondHandler } from "./tools/handlers/PlanModeRespondHandler"
@@ -248,6 +249,8 @@ export class ToolExecutor {
 		this.coordinator.register(new Function3Handler())
 		this.coordinator.register(new Function4Handler())
 		this.coordinator.register(new Function5Handler())
+		// Register Module3TagsLookupToolHandler for section 2.3 preamble generation (QOS)
+		this.coordinator.register(new Module3TagsLookupToolHandler(validator))
 		// Register Module5TagsLookupToolHandler for section 2.5 preamble generation
 		this.coordinator.register(new Module5TagsLookupToolHandler(validator))
 	}
