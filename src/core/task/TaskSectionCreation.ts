@@ -76,6 +76,17 @@ interface PartialDraft {
 }
 
 /**
+ * Represents study metadata extracted from PDF/mmd for section 5.2 table
+ */
+interface Section52StudyInfo {
+	serialNo: number
+	studyOfDesign: string
+	referenceDetails: string
+	pdfName: string
+	sectionId: string
+}
+
+/**
  * TaskSectionCreation extends Task to provide specialized behavior for dossier section generation.
  *
  * Key features:
@@ -266,6 +277,21 @@ export class TaskSectionCreation extends Task {
 				}
 			}
 
+			// Check if this is section 5.2 - special aggregation of 5.3 subsection placements
+			if (this.sectionId === "5.2") {
+				return await this.runSection52Generation()
+			}
+
+			// Check if this is a Module 5 section - handle it specially
+			if (this.moduleNum === 5) {
+				return await this.runModule5Generation()
+			}
+
+			// Check if this is a Module 3 section - handle it specially (similar to Module 5)
+			if (this.moduleNum === 3) {
+				return await this.runModule3Generation()
+			}
+
 			// Step 1: Parse tags file
 			this.reportProgress("Parsing tags.md...")
 			showSystemNotification({
@@ -390,6 +416,605 @@ export class TaskSectionCreation extends Task {
 				error: errorMsg,
 			}
 		}
+	}
+
+	/**
+	 * Special generation flow for Module 5 sections.
+	 * Only reads tags file and attaches placements if present, otherwise writes "Not Applicable".
+	 */
+	private async runModule5Generation(): Promise<TaskSectionCreationResult> {
+		try {
+			this.reportProgress("Starting Module 5 special generation")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "Running Module 5 generation flow...",
+			})
+			this.startCompletionMonitoring()
+
+			// Step 1: Parse tags file
+			this.reportProgress("Parsing tags.md...")
+			this.parsedTags = await this.parseTagsFile()
+
+			let content: string
+			if (this.parsedTags.placements && this.parsedTags.placements.length > 0) {
+				this.reportProgress(`Found ${this.parsedTags.placements.length} placements, attaching...`)
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: `Found ${this.parsedTags.placements.length} placements, attaching...`,
+				})
+
+				// Create a basic LaTeX shell
+				const shellContent = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\begin{document}
+\\section*{${this.sectionId}. ${this.sectionTitle}}
+\\end{document}`
+
+				content = await this.attachPlacementPdfsAsImages(shellContent)
+			} else {
+				this.reportProgress("No placements found, writing 'Not Applicable'")
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: "No placements found, writing 'Not Applicable'",
+				})
+				content = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\begin{document}
+\\section*{${this.sectionId}. ${this.sectionTitle}}
+Not Applicable
+\\end{document}`
+			}
+
+			// Step 7: Write output file
+			this.reportProgress("Writing output file...")
+			await this.writeOutputFile(content)
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: `Written to: ${this.expectedOutputFile}`,
+			})
+
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
+			this.reportProgress("Completed successfully")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "✓ Module 5 generation completed!",
+			})
+
+			return {
+				success: true,
+				sectionId: this.sectionId,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			this.reportProgress(`Error in Module 5 flow: ${errorMsg}`)
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
+			return {
+				success: false,
+				sectionId: this.sectionId,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Special generation flow for Module 3 sections.
+	 * Only reads tags file and attaches placements if present, otherwise writes "Not Applicable".
+	 * Similar to Module 5 handling.
+	 */
+	private async runModule3Generation(): Promise<TaskSectionCreationResult> {
+		try {
+			this.reportProgress("Starting Module 3 special generation")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "Running Module 3 generation flow...",
+			})
+			this.startCompletionMonitoring()
+
+			// Step 1: Parse tags file
+			this.reportProgress("Parsing tags.md...")
+			this.parsedTags = await this.parseTagsFile()
+
+			let content: string
+			if (this.parsedTags.placements && this.parsedTags.placements.length > 0) {
+				this.reportProgress(`Found ${this.parsedTags.placements.length} placements, attaching...`)
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: `Found ${this.parsedTags.placements.length} placements, attaching...`,
+				})
+
+				// Create a basic LaTeX shell
+				const shellContent = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\begin{document}
+\\section*{${this.sectionId}. ${this.sectionTitle}}
+\\end{document}`
+
+				content = await this.attachPlacementPdfsAsImages(shellContent)
+			} else {
+				this.reportProgress("No placements found, writing 'Not Applicable'")
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: "No placements found, writing 'Not Applicable'",
+				})
+				content = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\begin{document}
+\\section*{${this.sectionId}. ${this.sectionTitle}}
+Not Applicable
+\\end{document}`
+			}
+
+			// Write output file
+			this.reportProgress("Writing output file...")
+			await this.writeOutputFile(content)
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: `Written to: ${this.expectedOutputFile}`,
+			})
+
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
+			this.reportProgress("Completed successfully")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "✓ Module 3 generation completed!",
+			})
+
+			return {
+				success: true,
+				sectionId: this.sectionId,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			this.reportProgress(`Error in Module 3 flow: ${errorMsg}`)
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
+			return {
+				success: false,
+				sectionId: this.sectionId,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Special generation flow for section 5.2 (Tabular Listing of All Clinical Studies).
+	 * Aggregates placements from all 5.3 subsections and generates a summary table.
+	 */
+	private async runSection52Generation(): Promise<TaskSectionCreationResult> {
+		try {
+			this.reportProgress("Starting Section 5.2 special generation")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "Aggregating clinical studies from 5.3 subsections...",
+			})
+			this.startCompletionMonitoring()
+
+			// Step 1: Collect all subsection IDs under 5.3
+			const subsectionIds = this.collectSection53Subsections()
+			this.reportProgress(`Found ${subsectionIds.length} subsections under 5.3`)
+
+			// Step 2: Aggregate all placements from 5.3 subsections
+			const allPlacements = await this.collectPlacementsFromSubsections(subsectionIds)
+			this.reportProgress(`Found ${allPlacements.length} total placements`)
+
+			let content: string
+			if (allPlacements.length > 0) {
+				// Step 3: Extract study metadata from each placement
+				const studyInfos = await this.extractStudyMetadataFromPlacements(allPlacements)
+				this.reportProgress(`Extracted metadata for ${studyInfos.length} studies`)
+
+				// Step 4: Generate LaTeX table
+				content = this.generateSection52Table(studyInfos)
+			} else {
+				this.reportProgress("No placements found in 5.3 subsections")
+				showSystemNotification({
+					subtitle: `Section ${this.sectionId}`,
+					message: "No clinical studies found, writing 'Not Applicable'",
+				})
+				content = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\begin{document}
+\\section*{${this.sectionId}. ${this.sectionTitle}}
+Not Applicable
+\\end{document}`
+			}
+
+			// Step 5: Write output file
+			this.reportProgress("Writing output file...")
+			await this.writeOutputFile(content)
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: `Written to: ${this.expectedOutputFile}`,
+			})
+
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
+			this.reportProgress("Completed successfully")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "✓ Section 5.2 generation completed!",
+			})
+
+			return {
+				success: true,
+				sectionId: this.sectionId,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			this.reportProgress(`Error in Section 5.2 flow: ${errorMsg}`)
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
+			return {
+				success: false,
+				sectionId: this.sectionId,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Collects all subsection IDs under section 5.3 recursively
+	 */
+	private collectSection53Subsections(): string[] {
+		const module5 = EAC_NMRA_TEMPLATE.modules.find((m) => m.moduleNumber === 5)
+		if (!module5) {
+			return []
+		}
+
+		const subsectionIds: string[] = []
+		const collectChildren = (sectionId: string) => {
+			const section = module5.sections[sectionId]
+			if (!section) return
+
+			// Add this section if it starts with 5.3 (but not 5.3 itself, we want children)
+			if (sectionId.startsWith("5.3.")) {
+				subsectionIds.push(sectionId)
+			}
+
+			// Recursively collect children
+			if (section.children) {
+				for (const childId of section.children) {
+					collectChildren(childId)
+				}
+			}
+		}
+
+		// Start from 5.3
+		const section53 = module5.sections["5.3"]
+		if (section53?.children) {
+			for (const childId of section53.children) {
+				collectChildren(childId)
+			}
+		}
+
+		return subsectionIds
+	}
+
+	/**
+	 * Collects placements from tags.md files of all specified subsections
+	 */
+	private async collectPlacementsFromSubsections(
+		subsectionIds: string[],
+	): Promise<Array<{ placement: { pdfName: string; relativePath: string }; sectionId: string }>> {
+		const allPlacements: Array<{ placement: { pdfName: string; relativePath: string }; sectionId: string }> = []
+
+		// Get base path for sections (derive from current section's folder path)
+		// sectionFolderPath is like: /path/to/dossier/module-5/section-5.2
+		// We need to go up to /path/to/dossier/module-5/ and then into section-5.3.x folders
+		const module5BasePath = path.dirname(this.sectionFolderPath)
+
+		for (const sectionId of subsectionIds) {
+			try {
+				// Build path to this subsection's tags.md
+				// Section IDs like "5.3.1.2" -> folder path "section-5.3/section-5.3.1/section-5.3.1.2"
+				const sectionParts = sectionId.split(".")
+				let sectionPath = module5BasePath
+				let currentPrefix = sectionParts[0]
+				for (let i = 1; i < sectionParts.length; i++) {
+					currentPrefix = `${currentPrefix}.${sectionParts[i]}`
+					sectionPath = path.join(sectionPath, `section-${currentPrefix}`)
+				}
+				const tagsPath = path.join(sectionPath, "tags.md")
+
+				// Check if tags.md exists
+				if (!(await fileExistsAtPath(tagsPath))) {
+					console.log(`[TaskSectionCreation 5.2] No tags.md found for section ${sectionId} at ${tagsPath}`)
+					continue
+				}
+
+				// Parse tags file
+				const parsedTags = await this.documentProcessor.parseTagsFile(tagsPath)
+				if (parsedTags.placements && parsedTags.placements.length > 0) {
+					for (const placement of parsedTags.placements) {
+						allPlacements.push({ placement, sectionId })
+					}
+					this.reportProgress(`Found ${parsedTags.placements.length} placements in section ${sectionId}`)
+				}
+			} catch (error) {
+				console.warn(`[TaskSectionCreation 5.2] Error reading tags for section ${sectionId}: ${error}`)
+				// Continue with next section
+			}
+		}
+
+		return allPlacements
+	}
+
+	/**
+	 * Extracts study metadata from placements by reading .mmd files and calling LLM
+	 */
+	private async extractStudyMetadataFromPlacements(
+		placements: Array<{ placement: { pdfName: string; relativePath: string }; sectionId: string }>,
+	): Promise<Array<{ serialNo: number; studyOfDesign: string; referenceDetails: string; pdfName: string; sectionId: string }>> {
+		const studyInfos: Array<{
+			serialNo: number
+			studyOfDesign: string
+			referenceDetails: string
+			pdfName: string
+			sectionId: string
+		}> = []
+
+		// Get base path for documents
+		const submissionsPath = this.getSubmissionsPath()
+		const workspaceRoot = this.cwd
+		const basePath = submissionsPath || path.join(workspaceRoot, "documents")
+
+		let serialNo = 1
+		for (const { placement, sectionId } of placements) {
+			try {
+				this.reportProgress(`Processing placement ${serialNo}/${placements.length}: ${placement.pdfName}`)
+
+				// Find the .mmd file (sibling to PDF with same basename)
+				const folderPath = path.join(basePath, placement.relativePath)
+				let mmdPath: string | null = null
+				let pdfBasename: string | null = null
+
+				// Find PDF and derive mmd path
+				const entries = await fs.promises.readdir(folderPath, { withFileTypes: true })
+				for (const entry of entries) {
+					if (entry.isFile() && entry.name.toLowerCase().endsWith(".pdf")) {
+						pdfBasename = entry.name.replace(/\.pdf$/i, "")
+						mmdPath = path.join(folderPath, `${pdfBasename}.mmd`)
+						break
+					}
+				}
+
+				if (!mmdPath || !pdfBasename) {
+					console.warn(`[TaskSectionCreation 5.2] No PDF found in ${folderPath}`)
+					studyInfos.push({
+						serialNo: serialNo++,
+						studyOfDesign: "Unable to extract - PDF not found",
+						referenceDetails: "N/A",
+						pdfName: placement.pdfName,
+						sectionId,
+					})
+					continue
+				}
+
+				// Check if .mmd exists
+				if (!(await fileExistsAtPath(mmdPath))) {
+					console.warn(`[TaskSectionCreation 5.2] No .mmd file found at ${mmdPath}`)
+					studyInfos.push({
+						serialNo: serialNo++,
+						studyOfDesign: "Unable to extract - .mmd file not found",
+						referenceDetails: "N/A",
+						pdfName: placement.pdfName,
+						sectionId,
+					})
+					continue
+				}
+
+				// Read .mmd content and extract first 3 pages
+				const mmdContent = await fs.promises.readFile(mmdPath, "utf8")
+				const first3Pages = this.extractFirst3Pages(mmdContent)
+
+				// Call LLM to extract study metadata
+				const metadata = await this.extractMetadataViaLLM(first3Pages, placement.pdfName)
+
+				studyInfos.push({
+					serialNo: serialNo++,
+					studyOfDesign: metadata.studyOfDesign || "Not specified",
+					referenceDetails: metadata.referenceDetails || "Not specified",
+					pdfName: placement.pdfName,
+					sectionId,
+				})
+			} catch (error) {
+				console.warn(`[TaskSectionCreation 5.2] Error processing placement ${placement.pdfName}: ${error}`)
+				studyInfos.push({
+					serialNo: serialNo++,
+					studyOfDesign: `Error: ${error instanceof Error ? error.message : String(error)}`,
+					referenceDetails: "N/A",
+					pdfName: placement.pdfName,
+					sectionId,
+				})
+			}
+		}
+
+		return studyInfos
+	}
+
+	/**
+	 * Extracts the first 3 pages from .mmd content (split on <--- Page Split ---> delimiter)
+	 */
+	private extractFirst3Pages(mmdContent: string): string {
+		const delimiter = "<--- Page Split --->"
+		const pages = mmdContent.split(delimiter)
+		const first3 = pages.slice(0, 3)
+		return first3.join("\n\n--- PAGE BREAK ---\n\n")
+	}
+
+	/**
+	 * Calls LLM to extract study metadata from document text
+	 */
+	private async extractMetadataViaLLM(
+		documentText: string,
+		pdfName: string,
+	): Promise<{ studyOfDesign: string; referenceDetails: string }> {
+		const prompt = `Extract metadata from the following clinical study document.
+
+Document name: ${pdfName}
+
+Document content (first 3 pages):
+${documentText}
+
+Please extract and return a JSON object with exactly these two fields:
+1. "studyOfDesign": A brief 1-2 sentence description of the study design/type (e.g., "Randomized, double-blind, placebo-controlled, parallel-group bioequivalence study comparing test and reference formulations in healthy volunteers under fasting conditions.")
+2. "referenceDetails": Publication/reference information including journal/conference name, DOI/link if available, and author names (e.g., "Published in Journal of Clinical Pharmacology, 2023; DOI: 10.1234/jcp.2023.001; Authors: Smith J, Johnson A, Williams B")
+
+If information is not available, use "Not specified" for that field.
+
+Return ONLY the JSON object, no additional text.`
+
+		try {
+			const stateManager = StateManager.get()
+			const apiConfiguration = stateManager.getApiConfiguration()
+			const currentMode = "act"
+			const apiHandler = buildApiHandler(apiConfiguration, currentMode)
+
+			const systemPrompt = `You are a clinical study document analyzer. Extract study design and reference information from regulatory documents. Always respond with valid JSON containing "studyOfDesign" and "referenceDetails" fields.`
+			const messages = [{ role: "user" as const, content: prompt }]
+
+			// Use json_object response format if supported
+			const stream = apiHandler.createMessage(systemPrompt, messages)
+
+			let response = ""
+			for await (const chunk of stream) {
+				if (chunk.type === "text") {
+					response += chunk.text
+				}
+			}
+
+			// Parse JSON response
+			const jsonMatch = response.match(/\{[\s\S]*\}/)
+			if (jsonMatch) {
+				const parsed = JSON.parse(jsonMatch[0])
+				return {
+					studyOfDesign: parsed.studyOfDesign || "Not specified",
+					referenceDetails: parsed.referenceDetails || "Not specified",
+				}
+			}
+
+			return {
+				studyOfDesign: "Unable to parse LLM response",
+				referenceDetails: "Unable to parse LLM response",
+			}
+		} catch (error) {
+			console.warn(`[TaskSectionCreation 5.2] LLM extraction failed: ${error}`)
+			return {
+				studyOfDesign: "LLM extraction failed",
+				referenceDetails: "LLM extraction failed",
+			}
+		}
+	}
+
+	/**
+	 * Generates LaTeX table for section 5.2
+	 */
+	private generateSection52Table(
+		studyInfos: Array<{
+			serialNo: number
+			studyOfDesign: string
+			referenceDetails: string
+			pdfName: string
+			sectionId: string
+		}>,
+	): string {
+		// Helper function to escape LaTeX special characters
+		const escapeLatex = (text: string): string => {
+			return text
+				.replace(/\\/g, "\\textbackslash{}")
+				.replace(/{/g, "\\{")
+				.replace(/}/g, "\\}")
+				.replace(/#/g, "\\#")
+				.replace(/\$/g, "\\$")
+				.replace(/%/g, "\\%")
+				.replace(/&/g, "\\&")
+				.replace(/_/g, "\\_")
+				.replace(/\^/g, "\\textasciicircum{}")
+				.replace(/~/g, "\\textasciitilde{}")
+		}
+
+		// Generate table rows
+		const tableRows = studyInfos
+			.map((info) => {
+				const escapedStudy = escapeLatex(info.studyOfDesign)
+				const escapedRef = escapeLatex(info.referenceDetails)
+				return `\t\t${info.serialNo} & ${escapedStudy} & ${escapedRef} \\\\
+\t\t\\hline`
+			})
+			.join("\n")
+
+		return `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\usepackage{booktabs}
+\\usepackage{longtable}
+\\usepackage{array}
+\\usepackage{hyperref}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    pdftitle={CTD Section 5.2: Tabular Listing of All Clinical Studies},
+    pdfauthor={Regulatory Affairs}
+}
+
+\\begin{document}
+
+\\section*{5.2. Tabular Listing of All Clinical Studies}
+
+This table provides a comprehensive listing of all clinical studies included in Module 5.3 of this submission.
+
+\\renewcommand{\\arraystretch}{1.5}
+\\begin{longtable}{|p{1.2cm}|p{7cm}|p{7cm}|}
+\\hline
+\\textbf{S.No.} & \\textbf{Study of Design} & \\textbf{Reference Details} \\\\
+\\hline
+\\endfirsthead
+
+\\multicolumn{3}{|c|}{\\textit{Continued from previous page}} \\\\
+\\hline
+\\textbf{S.No.} & \\textbf{Study of Design} & \\textbf{Reference Details} \\\\
+\\hline
+\\endhead
+
+\\hline
+\\multicolumn{3}{|r|}{\\textit{Continued on next page}} \\\\
+\\endfoot
+
+\\hline
+\\endlastfoot
+
+${tableRows}
+
+\\end{longtable}
+
+\\end{document}`
 	}
 
 	/**
@@ -1757,7 +2382,7 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 			console.log(`[TaskSectionCreation ${this.sectionId}] LaTeX absolute path: ${latexPath}`)
 
 			// Add inclusion command
-			pdfInclusions.push(`\\includepdf[pages=-]{${latexPath}}`)
+			pdfInclusions.push(`\\includepdf[pages=-,fitpaper=true]{${latexPath}}`)
 		}
 
 		// Insert PDF inclusions before \end{document}
@@ -1768,7 +2393,8 @@ Return the corrected LaTeX code with improved syntax and code quality, but with 
 				const afterEndDoc = modifiedContent.substring(endDocIndex)
 
 				// Add section header and PDF inclusions
-				const inclusionSection = "\n\n\\section*{Placement Documents}\n" + pdfInclusions.join("\n") + "\n\n"
+				const inclusionSection =
+					"\n\n\\section*{Please find the Documents Enclosed}\n" + pdfInclusions.join("\n") + "\n\n"
 				modifiedContent = beforeEndDoc + inclusionSection + afterEndDoc
 
 				console.log(`[TaskSectionCreation ${this.sectionId}] Added ${pdfInclusions.length} PDF inclusions`)
