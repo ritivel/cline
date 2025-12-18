@@ -61,6 +61,8 @@ const SectionNode = ({
 	const [isExpanded, setIsExpanded] = useState(level < 2) // Auto-expand first 2 levels
 	const isLeaf = !section.children || section.children.length === 0
 	const hasChildren = section.children && section.children.length > 0
+	// Show buttons for leaf sections OR for section 2.5 (which needs preamble generation)
+	const showButtons = isLeaf || section.id === "2.5"
 	const isAssessing = assessingSections?.has(section.id) || false
 	const isAssessingOutput = assessingOutputSections?.has(section.id) || false
 	const isGenerating = generatingSections?.has(section.id) || false
@@ -130,7 +132,7 @@ const SectionNode = ({
 				<FileText className="w-5 h-5 text-(--vscode-icon-foreground)" />
 				<span className="font-medium text-base">{section.id}</span>
 				<span className="text-sm text-(--vscode-descriptionForeground) flex-1 truncate">{section.title}</span>
-				{isLeaf && (
+				{showButtons && (
 					<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
 						<VSCodeButton
 							appearance="secondary"

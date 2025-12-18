@@ -192,7 +192,13 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 			// Automatically switch to checklist view when a section is selected
 			setViewMode("checklist")
 
-			// Try to open the .tex file if it exists
+			// Special handling for section 2.5: always regenerate
+			if (sectionId === "2.5") {
+				await handleGenerate(sectionId)
+				return // Exit early, regeneration will handle the rest
+			}
+
+			// Normal flow for other sections: Try to open the .tex file if it exists
 			if (currentRegulatoryProduct) {
 				const texPath = getSectionTexPath(sectionId, currentRegulatoryProduct)
 				if (texPath) {
@@ -212,7 +218,7 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 				}
 			}
 		},
-		[currentRegulatoryProduct, getSectionTexPath],
+		[currentRegulatoryProduct, getSectionTexPath, handleGenerate],
 	)
 
 	if (!currentRegulatoryProduct) {
