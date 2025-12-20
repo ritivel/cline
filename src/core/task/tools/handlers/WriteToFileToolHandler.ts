@@ -128,7 +128,7 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 				)
 			} else {
 				// Manual approval flow - show notification
-				const notificationMessage = `Cline wants to ${fileExists ? "edit" : "create"} ${getWorkspaceBasename(relPath, "WriteToFile.notification")}`
+				const notificationMessage = `Ritivel wants to ${fileExists ? "edit" : "create"} ${getWorkspaceBasename(relPath, "WriteToFile.notification")}`
 
 				// Show notification
 				showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
@@ -190,7 +190,7 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 			} else {
 				// File is pending approval - return response indicating pending status
 				return formatResponse.toolResult(
-					`File '${relPath}' has been updated and is pending your approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from the command palette to approve or reject the changes.`,
+					`File '${relPath}' has been updated and is pending your approval. Use 'Ritivel: Accept File Changes' or 'Ritivel: Reject File Changes' from the command palette to approve or reject the changes.`,
 				)
 			}
 		} catch (error) {

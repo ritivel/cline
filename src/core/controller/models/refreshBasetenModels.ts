@@ -48,7 +48,7 @@ export async function refreshBasetenModels(controller: Controller): Promise<Reco
 				headers: {
 					Authorization: `Bearer ${cleanApiKey}`,
 					"Content-Type": "application/json",
-					"User-Agent": "Cline-VSCode-Extension",
+					"User-Agent": "Ritivel-VSCode-Extension",
 				},
 				timeout: 10000, // 10 second timeout
 				...getAxiosSettings(),

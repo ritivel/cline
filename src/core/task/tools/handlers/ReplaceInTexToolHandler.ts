@@ -215,7 +215,7 @@ export class ReplaceInTexToolHandler implements IFullyManagedTool {
 					block.isNativeToolCall,
 				)
 			} else {
-				const notificationMessage = `Cline wants to edit ${path.basename(resolvedPath)}`
+				const notificationMessage = `Ritivel wants to edit ${path.basename(resolvedPath)}`
 				showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)
 				await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
 				await config.callbacks.say("tool", completeMessage, undefined, undefined, false)

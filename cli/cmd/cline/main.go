@@ -36,8 +36,8 @@ var (
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "cline [prompt]",
-		Short: "Cline CLI - AI-powered coding assistant",
-		Long: `A command-line interface for interacting with Cline AI coding assistant.
+		Short: "Ritivel CLI - AI-powered regulatory assistant",
+		Long: `A command-line interface for interacting with Ritivel AI regulatory assistant.
 
 Start a new task by providing a prompt:
   cline "Create a new Python script that prints hello world"
@@ -163,7 +163,7 @@ see the manual page: man cline`,
 		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&coreAddress, "address", fmt.Sprintf("localhost:%d", common.DEFAULT_CLINE_CORE_PORT), "Cline Core gRPC address")
+	rootCmd.PersistentFlags().StringVar(&coreAddress, "address", fmt.Sprintf("localhost:%d", common.DEFAULT_CLINE_CORE_PORT), "Ritivel Core gRPC address")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output-format", "F", "rich", "output format (rich|json|plain)")
 

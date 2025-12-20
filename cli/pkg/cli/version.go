@@ -24,9 +24,9 @@ func NewVersionCommand() *cobra.Command {
 				return nil
 			}
 
-			fmt.Printf("Cline CLI\n")
-			fmt.Printf("Cline CLI Version:  %s\n", global.CliVersion)
-			fmt.Printf("Cline Core Version: %s\n", global.Version)
+			fmt.Printf("Ritivel CLI\n")
+			fmt.Printf("Ritivel CLI Version:  %s\n", global.CliVersion)
+			fmt.Printf("Ritivel Core Version: %s\n", global.Version)
 			fmt.Printf("Commit:             %s\n", global.Commit)
 			fmt.Printf("Built:              %s\n", global.Date)
 			fmt.Printf("Built by:           %s\n", global.BuiltBy)

@@ -125,7 +125,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 				if (!shouldAutoApprove) {
 					filesRequiringApproval.push(message.path)
 					showNotificationForApproval(
-						`Cline wants to edit '${message.path}'`,
+						`Ritivel wants to edit '${message.path}'`,
 						config.autoApprovalSettings.enableNotifications,
 					)
 				}
@@ -199,7 +199,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 					responseLines.push(`\n- ${path} (pending approval)`)
 				}
 				responseLines.push(
-					`\nUse 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from the command palette to approve or reject changes.`,
+					`\nUse 'Ritivel: Accept File Changes' or 'Ritivel: Reject File Changes' from the command palette to approve or reject changes.`,
 				)
 
 				// Add info about auto-approved files
@@ -634,7 +634,7 @@ export class ApplyPatchHandler implements IFullyManagedTool {
 			return true
 		}
 
-		showNotificationForApproval(`Cline wants to edit '${message.path}'`, config.autoApprovalSettings.enableNotifications)
+		showNotificationForApproval(`Ritivel wants to edit '${message.path}'`, config.autoApprovalSettings.enableNotifications)
 
 		await config.callbacks.removeLastPartialMessageIfExistsWithType("say", "tool")
 		const { response, text, images, files } = await config.callbacks.ask("tool", completeMessage, false)

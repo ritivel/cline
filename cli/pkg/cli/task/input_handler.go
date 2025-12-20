@@ -282,7 +282,7 @@ func (ih *InputHandler) promptForInput(ctx context.Context) (string, bool, error
 
 	model := output.NewInputModel(
 		output.InputTypeMessage,
-		"Cline is ready for your message...",
+		"Ritivel is ready for your message...",
 		"/plan or /act to switch modes\nctrl+e to open editor",
 		currentMode,
 	)
@@ -294,7 +294,7 @@ func (ih *InputHandler) promptForInput(ctx context.Context) (string, bool, error
 func (ih *InputHandler) promptForApproval(ctx context.Context, msg *types.ClineMessage) (bool, string, error) {
 	// Store the approval message for later use in determining auto-approval action
 	ih.approvalMessage = msg
-	
+
 	model := output.NewInputModel(
 		output.InputTypeApproval,
 		"Let Cline use this tool?",
@@ -394,7 +394,7 @@ func (ih *InputHandler) runInputProgram(ctx context.Context, model output.InputM
 				// Need to collect feedback - will be handled by model state change
 				return "", false, nil
 			}
-			
+
 			// Check if NoAskAgain was selected
 			if result.NoAskAgain && result.Approved && ih.approvalMessage != nil {
 				// Determine which auto-approval action to enable
@@ -410,7 +410,7 @@ func (ih *InputHandler) runInputProgram(ctx context.Context, model output.InputM
 					}
 				}
 			}
-			
+
 			// Store approval state for when feedback comes back
 			ih.feedbackApproval = false
 			ih.feedbackApproved = result.Approved

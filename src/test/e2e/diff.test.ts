@@ -34,10 +34,10 @@ e2e.describe("Diff Editor", () => {
 			await sidebar.getByTestId("send-button").click({ delay: 50 })
 
 			// Wait for the sidebar to load the file edit request
-			await sidebar.waitForSelector('span:has-text("Cline wants to edit this file:")')
+			await sidebar.waitForSelector('span:has-text("Ritivel wants to edit this file:")')
 
-			// Cline Diff Editor should open with the file name and diff
-			await expect(page.getByText("test.ts: Original ↔ Cline's")).toBeVisible()
+			// Ritivel Diff Editor should open with the file name and diff
+			await expect(page.getByText("test.ts: Original ↔ Ritivel's")).toBeVisible()
 
 			// Diff editor should show the original and modified content
 			const diffEditor = page.locator(

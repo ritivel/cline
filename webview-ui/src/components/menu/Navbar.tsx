@@ -1,4 +1,4 @@
-import { HistoryIcon, PlusIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
+import { HistoryIcon, PlusIcon } from "lucide-react"
 import type React from "react"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
@@ -59,16 +59,17 @@ export const Navbar = () => {
 						})
 				},
 			},
-			{
-				id: "mcp",
-				name: "MCP",
-				tooltip: "MCP Servers",
-				icon: McpServerIcon,
-				navigate: () => {
-					console.log("[Navbar] navigateToMcp called")
-					navigateToMcp()
-				},
-			},
+			// Hidden: MCP Servers tab
+			// {
+			// 	id: "mcp",
+			// 	name: "MCP",
+			// 	tooltip: "MCP Servers",
+			// 	icon: McpServerIcon,
+			// 	navigate: () => {
+			// 		console.log("[Navbar] navigateToMcp called")
+			// 		navigateToMcp()
+			// 	},
+			// },
 			{
 				id: "ctdchecklist",
 				name: "CTDChecklist",
@@ -89,26 +90,28 @@ export const Navbar = () => {
 					navigateToHistory()
 				},
 			},
-			{
-				id: "account",
-				name: "Account",
-				tooltip: "Account",
-				icon: UserCircleIcon,
-				navigate: () => {
-					console.log("[Navbar] navigateToAccount called")
-					navigateToAccount()
-				},
-			},
-			{
-				id: "settings",
-				name: "Settings",
-				tooltip: "Settings",
-				icon: SettingsIcon,
-				navigate: () => {
-					console.log("[Navbar] navigateToSettings called")
-					navigateToSettings()
-				},
-			},
+			// Hidden: Account tab
+			// {
+			// 	id: "account",
+			// 	name: "Account",
+			// 	tooltip: "Account",
+			// 	icon: UserCircleIcon,
+			// 	navigate: () => {
+			// 		console.log("[Navbar] navigateToAccount called")
+			// 		navigateToAccount()
+			// 	},
+			// },
+			// Hidden: Settings tab
+			// {
+			// 	id: "settings",
+			// 	name: "Settings",
+			// 	tooltip: "Settings",
+			// 	icon: SettingsIcon,
+			// 	navigate: () => {
+			// 		console.log("[Navbar] navigateToSettings called")
+			// 		navigateToSettings()
+			// 	},
+			// },
 		],
 		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMcp, navigateToSettings, navigateToCtdChecklist],
 	)

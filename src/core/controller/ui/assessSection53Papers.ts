@@ -33,7 +33,7 @@ export async function assessSection53Papers(controller: Controller, request: Str
 			return ProtoString.create({
 				value: JSON.stringify({
 					success: false,
-					error: "OpenAI API key is required. Please configure it in Cline settings (OpenAI Native provider).",
+					error: "OpenAI API key is required. Please configure it in Ritivel settings (OpenAI Native provider).",
 				}),
 			})
 		}

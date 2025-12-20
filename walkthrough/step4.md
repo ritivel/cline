@@ -4,4 +4,4 @@
 
 Go beyond local documents. With the Model Context Protocol (MCP), Ritivel accesses vital context from external datasources like regulatory databases and APIs. It can interact with these platforms and leverage a growing marketplace of specialized, secure tools to tackle complex, real-world regulatory tasks.
 
-![Cline MCP Servers Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-mcp-servers-4_compress.webp)
+![Ritivel MCP Servers Demo](https://storage.googleapis.com/cline_public_images/docs/assets/clines-mcp-servers-4_compress.webp)

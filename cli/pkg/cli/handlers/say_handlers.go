@@ -193,7 +193,7 @@ func (h *SayHandler) handleText(msg *types.ClineMessage, dc *DisplayContext) err
 		output.Printf("%s\n", rendered)
 	} else {
 		// In non-streaming mode, render header + body together
-		markdown := fmt.Sprintf("### Cline responds\n\n%s", msg.Text)
+		markdown := fmt.Sprintf("### Ritivel responds\n\n%s", msg.Text)
 		rendered = dc.Renderer.RenderMarkdown(markdown)
 		output.Printf("\n%s\n", rendered)
 	}
@@ -213,7 +213,7 @@ func (h *SayHandler) handleReasoning(msg *types.ClineMessage, dc *DisplayContext
 		output.Printf("%s\n", rendered)
 	} else {
 		// In non-streaming mode, render header + body together
-		markdown := fmt.Sprintf("### Cline is thinking\n\n%s", msg.Text)
+		markdown := fmt.Sprintf("### Ritivel is thinking\n\n%s", msg.Text)
 		rendered = dc.Renderer.RenderMarkdown(markdown)
 		output.Printf("\n%s\n", rendered)
 	}
@@ -243,14 +243,14 @@ func (h *SayHandler) handleCompletionResult(msg *types.ClineMessage, dc *Display
 
 func formatUserMessage(text string) string {
     lines := strings.Split(text, "\n")
-    
+
     // Wrap each line in backticks
     for i, line := range lines {
         if line != "" {
             lines[i] = fmt.Sprintf("`%s`", line)
         }
     }
-    
+
     return strings.Join(lines, "\n")
 }
 
@@ -473,7 +473,7 @@ func (h *SayHandler) handleClineignoreError(msg *types.ClineMessage, dc *Display
 	if dc.SystemRenderer != nil {
 		return dc.SystemRenderer.RenderInfo(
 			"Access Denied",
-			fmt.Sprintf("Cline tried to access `%s` which is blocked by the .clineignore file.", msg.Text),
+			fmt.Sprintf("Ritivel tried to access `%s` which is blocked by the .clineignore file.", msg.Text),
 		)
 	}
 	return dc.Renderer.RenderMessage("WARNING", fmt.Sprintf("Access Denied - Cline tried to access %s which is blocked by the .clineignore file", msg.Text), true)

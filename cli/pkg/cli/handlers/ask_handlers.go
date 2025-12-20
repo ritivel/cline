@@ -126,7 +126,7 @@ func (h *AskHandler) handlePlanModeRespond(msg *types.ClineMessage, dc *DisplayC
 // showApprovalHint displays a hint in non-interactive mode about how to approve/deny
 func (h *AskHandler) showApprovalHint(dc *DisplayContext) {
 	if !dc.IsInteractive {
-		output.Printf("\n%s\n", dc.Renderer.Dim("Cline is requesting approval to use this tool"))
+		output.Printf("\n%s\n", dc.Renderer.Dim("Ritivel is requesting approval to use this tool"))
 		output.Printf("%s\n", dc.Renderer.Dim("Use cline task send --approve or --deny to respond"))
 	}
 }
@@ -244,7 +244,7 @@ func (h *AskHandler) handleMistakeLimitReached(msg *types.ClineMessage, dc *Disp
 		dc.SystemRenderer.RenderError(
 			"critical",
 			"Mistake Limit Reached",
-			"Cline has made too many consecutive mistakes and needs your guidance to proceed.",
+			"Ritivel has made too many consecutive mistakes and needs your guidance to proceed.",
 			details,
 		)
 		fmt.Printf("\n**Approval required to continue.**\n")
@@ -256,7 +256,7 @@ func (h *AskHandler) handleMistakeLimitReached(msg *types.ClineMessage, dc *Disp
 // handleBrowserActionLaunch handles browser action launch requests
 func (h *AskHandler) handleBrowserActionLaunch(msg *types.ClineMessage, dc *DisplayContext) error {
 	url := strings.TrimSpace(msg.Text)
-	err := dc.Renderer.RenderMessage("BROWSER", fmt.Sprintf("Cline wants to launch browser and navigate to: %s. Approval required.", url), true)
+	err := dc.Renderer.RenderMessage("BROWSER", fmt.Sprintf("Ritivel wants to launch browser and navigate to: %s. Approval required.", url), true)
 	h.showApprovalHint(dc)
 	return err
 }
@@ -288,7 +288,7 @@ func (h *AskHandler) handleUseMcpServer(msg *types.ClineMessage, dc *DisplayCont
 	}
 
 	err := dc.Renderer.RenderMessage("MCP",
-		fmt.Sprintf("Cline wants to %s on the %s MCP server", operation, mcpReq.ServerName), true)
+		fmt.Sprintf("Ritivel wants to %s on the %s MCP server", operation, mcpReq.ServerName), true)
 
 	h.showApprovalHint(dc)
 	return err
@@ -296,12 +296,12 @@ func (h *AskHandler) handleUseMcpServer(msg *types.ClineMessage, dc *DisplayCont
 
 // handleNewTask handles new task creation requests
 func (h *AskHandler) handleNewTask(msg *types.ClineMessage, dc *DisplayContext) error {
-	return dc.Renderer.RenderMessage("NEW TASK", fmt.Sprintf("Cline wants to start a new task: %s. Approval required.", msg.Text), true)
+	return dc.Renderer.RenderMessage("NEW TASK", fmt.Sprintf("Ritivel wants to start a new task: %s. Approval required.", msg.Text), true)
 }
 
 // handleCondense handles conversation condensing requests
 func (h *AskHandler) handleCondense(msg *types.ClineMessage, dc *DisplayContext) error {
-	return dc.Renderer.RenderMessage("CONDENSE", fmt.Sprintf("Cline wants to condense the conversation: %s. Approval required.", msg.Text), true)
+	return dc.Renderer.RenderMessage("CONDENSE", fmt.Sprintf("Ritivel wants to condense the conversation: %s. Approval required.", msg.Text), true)
 }
 
 // handleReportBug handles bug report requests
@@ -315,10 +315,10 @@ func (h *AskHandler) handleReportBug(msg *types.ClineMessage, dc *DisplayContext
 	}
 
 	if err := json.Unmarshal([]byte(msg.Text), &bugData); err != nil {
-		return dc.Renderer.RenderMessage("BUG REPORT", fmt.Sprintf("Cline wants to create a GitHub issue: %s. Approval required.", msg.Text), true)
+		return dc.Renderer.RenderMessage("BUG REPORT", fmt.Sprintf("Ritivel wants to create a GitHub issue: %s. Approval required.", msg.Text), true)
 	}
 
-	err := dc.Renderer.RenderMessage("BUG REPORT", "Cline wants to create a GitHub issue:", true)
+	err := dc.Renderer.RenderMessage("BUG REPORT", "Ritivel wants to create a GitHub issue:", true)
 	if err != nil {
 		return fmt.Errorf("failed to render handleReportBug: %w", err)
 	}

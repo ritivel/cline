@@ -22,7 +22,7 @@ const (
 	platformCLI       = "CLI"
 	platformJetBrains = "JetBrains"
 	platformNA        = "N/A"
-	hostPlatformCLI   = "Cline CLI" // Value returned by host bridge for CLI instances
+	hostPlatformCLI   = "Ritivel CLI" // Value returned by host bridge for CLI instances
 )
 
 // detectInstancePlatform connects to an instance's host bridge and determines its platform

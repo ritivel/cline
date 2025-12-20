@@ -91,7 +91,7 @@ func SelectClineModel(ctx context.Context, manager *task.Manager) error {
 	modelIDs := ConvertModelsMapToSlice(modelMap)
 
 	// Display selection menu
-	selectedModelID, err := DisplayModelSelectionMenu(modelIDs, "Cline")
+	selectedModelID, err := DisplayModelSelectionMenu(modelIDs, "Ritivel")
 	if err != nil {
 		return fmt.Errorf("model selection failed: %w", err)
 	}

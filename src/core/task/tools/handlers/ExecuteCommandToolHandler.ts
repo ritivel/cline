@@ -171,7 +171,7 @@ export class ExecuteCommandToolHandler implements IFullyManagedTool {
 		} else {
 			// Manual approval flow
 			showNotificationForApproval(
-				`Cline wants to execute a command: ${actualCommand}`,
+				`Ritivel wants to execute a command: ${actualCommand}`,
 				config.autoApprovalSettings.enableNotifications,
 			)
 

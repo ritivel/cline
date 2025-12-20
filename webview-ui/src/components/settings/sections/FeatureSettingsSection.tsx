@@ -97,7 +97,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 										className="codicon codicon-warning mr-1"
 										style={{ fontSize: "12px", marginTop: "1px", flexShrink: 0 }}></span>
 									<span>
-										Cline for CLI is required for subagents. Install it with:
+										Ritivel CLI is required for subagents. Install it with:
 										<code
 											className="ml-1 px-1 rounded"
 											style={{
@@ -117,7 +117,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 											}}>
 											cline auth
 										</code>
-										To authenticate with Cline or configure an API provider.
+										To authenticate with Ritivel or configure an API provider.
 									</span>
 								</p>
 								{!isClineCliInstalled && (
@@ -153,7 +153,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 							<p className="text-xs mt-1 mb-0">
 								<span className="text-[var(--vscode-errorForeground)]">Experimental: </span>{" "}
 								<span className="text-description">
-									Allows Cline to spawn subprocesses to handle focused tasks like exploring large codebases,
+									Allows Ritivel to spawn subprocesses to handle focused tasks like exploring large codebases,
 									keeping your main context clean.
 								</span>
 							</p>
@@ -283,7 +283,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 								value={String(focusChainSettings?.remindClineInterval || 6)}
 							/>
 							<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">
-								Interval (in messages) to remind Cline about its focus chain checklist (1-100). Lower values
+								Interval (in messages) to remind Ritivel about its focus chain checklist (1-100). Lower values
 								provide more frequent reminders.
 							</p>
 						</div>
@@ -303,8 +303,8 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 								Enable Dictation
 							</VSCodeCheckbox>
 							<p className="text-xs text-description mt-1">
-								Enables speech-to-text transcription using your Cline account. Uses the Aqua Voice's Avalon model,
-								at $0.0065 credits per minute of audio processed. 5 minutes max per message.
+								Enables speech-to-text transcription using your Ritivel account. Uses the Aqua Voice's Avalon
+								model, at $0.0065 credits per minute of audio processed. 5 minutes max per message.
 							</p>
 						</div>
 					)}
@@ -354,7 +354,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 							</VSCodeCheckbox>
 							<p className="text-xs">
 								<span className="text-(--vscode-errorForeground)">Experimental: </span>{" "}
-								<span className="text-description">Allows cline to work across multiple workspaces.</span>
+								<span className="text-description">Allows Ritivel to work across multiple workspaces.</span>
 							</p>
 						</div>
 					)}

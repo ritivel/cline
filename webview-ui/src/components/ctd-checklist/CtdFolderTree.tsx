@@ -102,6 +102,11 @@ const SectionNode = ({
 	// Section 2.7 has special handling - single generate button
 	const isSection27Parent = section.id === "2.7"
 	const isSection27Child = section.id.startsWith("2.7.") && section.id !== "2.7"
+	// Sections that should never show buttons
+	const isSection1 = section.id === "1" || section.id.startsWith("1.")
+	const isSection24 = section.id === "2.4" || section.id.startsWith("2.4.")
+	const isSection26 = section.id === "2.6" || section.id.startsWith("2.6.")
+	const hideButtonsCompletely = isSection1 || isSection24 || isSection26
 	const showButtons = isLeaf || intermediateSectionsWithButtons.includes(section.id) || isSection53Parent
 	// Hide buttons for 5.3.x, 2.5.x, and 2.7.x subsections (they use parent's generate)
 	const hideButtonsFor53Child = isSection53Child
@@ -273,14 +278,15 @@ const SectionNode = ({
 						</VSCodeButton>
 					</div>
 				)}
-				{/* Regular sections (not 5.3 parent or 5.3.x children or 2.5 parent or 2.5.x children or 2.7 parent or 2.7.x children) show normal buttons */}
+				{/* Regular sections (not 5.3 parent or 5.3.x children or 2.5 parent or 2.5.x children or 2.7 parent or 2.7.x children or sections without buttons) show normal buttons */}
 				{showButtons &&
 					!isSection53Parent &&
 					!hideButtonsFor53Child &&
 					!isSection25Parent &&
 					!hideButtonsFor25Child &&
 					!isSection27Parent &&
-					!hideButtonsFor27Child && (
+					!hideButtonsFor27Child &&
+					!hideButtonsCompletely && (
 						<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
 							<VSCodeButton
 								appearance="secondary"

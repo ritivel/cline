@@ -27,7 +27,12 @@ export async function isClineCliInstalled(): Promise<boolean> {
 
 		// If we get here, the CLI is installed
 		// We could also validate the version if needed
-		return stdout.includes("Cline CLI Version") || stdout.includes("Cline Core Version")
+		return (
+			stdout.includes("Ritivel CLI Version") ||
+			stdout.includes("Ritivel Core Version") ||
+			stdout.includes("Cline CLI Version") ||
+			stdout.includes("Cline Core Version")
+		)
 	} catch (error) {
 		// Command failed, which likely means CLI is not installed
 		// or not in PATH

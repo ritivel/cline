@@ -38,7 +38,7 @@ export async function generateSection25(controller: Controller, request: StringR
 			return ProtoString.create({
 				value: JSON.stringify({
 					success: false,
-					error: "OpenAI API key is required. Please configure it in Cline settings (OpenAI Native provider).",
+					error: "OpenAI API key is required. Please configure it in Ritivel settings (OpenAI Native provider).",
 				}),
 			})
 		}

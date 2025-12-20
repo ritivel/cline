@@ -191,9 +191,9 @@ func ShowAuthMenuWithStatus(isClineAuthenticated bool, hasOrganizations bool, cu
 
 	// Always show Cline authentication status
 	if isClineAuthenticated {
-		title = fmt.Sprintf("Cline Account: %s Authenticated\n", renderer.Green("✓"))
+		title = fmt.Sprintf("Ritivel Account: %s Authenticated\n", renderer.Green("✓"))
 	} else {
-		title = fmt.Sprintf("Cline Account: %s Not authenticated\n", renderer.Red("✗"))
+		title = fmt.Sprintf("Ritivel Account: %s Not authenticated\n", renderer.Red("✗"))
 	}
 
 	// Show active provider and model if configured (regardless of Cline auth status)

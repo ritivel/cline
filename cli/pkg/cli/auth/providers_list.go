@@ -215,7 +215,7 @@ func extractProviderFromState(stateData map[string]interface{}, mode string) *Pr
 // Returns (provider, ok) where ok is false if the provider is unknown
 func mapProviderStringToEnum(providerStr string) (cline.ApiProvider, bool) {
 	normalizedStr := strings.ToLower(providerStr)
-	
+
 	// Map string values to enum values
 	switch normalizedStr {
 	case "anthropic":
@@ -353,7 +353,7 @@ func GetProviderDisplayName(provider cline.ApiProvider) string {
 	case cline.ApiProvider_CEREBRAS:
 		return "Cerebras"
 	case cline.ApiProvider_CLINE:
-		return "Cline (Official)"
+		return "Ritivel (Official)"
 	case cline.ApiProvider_OCA:
 		return "Oracle Code Assist"
 	case cline.ApiProvider_HICAP:

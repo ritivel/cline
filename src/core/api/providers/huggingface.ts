@@ -36,7 +36,7 @@ export class HuggingFaceHandler implements ApiHandler {
 					baseURL: "https://router.huggingface.co/v1",
 					apiKey: this.options.huggingFaceApiKey,
 					defaultHeaders: {
-						"User-Agent": "Cline/1.0",
+						"User-Agent": "Ritivel/1.0",
 					},
 					fetch, // Use configured fetch with proxy support
 				})

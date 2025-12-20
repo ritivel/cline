@@ -88,7 +88,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const webview = (await initialize(context)) as VscodeWebviewProvider
 
-	Logger.log("Cline extension activated")
+	Logger.log("Ritivel extension activated")
 
 	const testModeWatchers = await initializeTestMode(webview)
 	// Initialize test mode and add disposables to context
@@ -338,7 +338,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			.then((module) => {
 				const devTaskCommands = module.registerTaskCommands(webview.controller)
 				context.subscriptions.push(...devTaskCommands)
-				Logger.log("Cline dev task commands registered")
+				Logger.log("Ritivel dev task commands registered")
 			})
 			.catch((error) => {
 				Logger.log("Failed to register dev task commands: " + error)
@@ -749,7 +749,7 @@ function setupHostProvider(context: ExtensionContext) {
 	const createWebview = () => new VscodeWebviewProvider(context)
 	const createDiffView = () => new VscodeDiffViewProvider()
 	const createCommentReview = () => getVscodeCommentReviewController()
-	const outputChannel = vscode.window.createOutputChannel("Cline")
+	const outputChannel = vscode.window.createOutputChannel("Ritivel")
 	context.subscriptions.push(outputChannel)
 
 	const getCallbackUrl = async () => `${vscode.env.uriScheme || "vscode"}://${context.extension.id}`
@@ -796,7 +796,7 @@ async function getBinaryLocation(name: string): Promise<string> {
 
 // This method is called when your extension is deactivated
 export async function deactivate() {
-	Logger.log("Cline extension deactivating, cleaning up resources...")
+	Logger.log("Ritivel extension deactivating, cleaning up resources...")
 
 	tearDown()
 
@@ -814,7 +814,7 @@ export async function deactivate() {
 
 	clearOnboardingModelsCache()
 
-	Logger.log("Cline extension deactivated")
+	Logger.log("Ritivel extension deactivated")
 }
 
 // TODO: Find a solution for automatically removing DEV related content from production builds.

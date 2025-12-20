@@ -270,7 +270,7 @@ export async function assessSection53Papers(
 	if (!openAiApiKey) {
 		return {
 			success: false,
-			error: "OpenAI API key is required. Please configure it in Cline settings.",
+			error: "OpenAI API key is required. Please configure it in Ritivel settings.",
 		}
 	}
 

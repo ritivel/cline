@@ -84,7 +84,7 @@ export class E2ETestHelper {
 
 				try {
 					const title = await frame.title()
-					if (title.startsWith("Cline")) {
+					if (title.startsWith("Ritivel") || title.startsWith("Cline")) {
 						this.cachedFrame = frame
 						return frame
 					}
@@ -118,10 +118,10 @@ export class E2ETestHelper {
 	}
 
 	public async signin(webview: Frame): Promise<void> {
-		await webview.getByRole("button", { name: "Login to Cline" }).click({ delay: 100 })
+		await webview.getByRole("button", { name: "Login to Ritivel" }).click({ delay: 100 })
 
 		// Verify start up page is no longer visible
-		await expect(webview.getByRole("button", { name: "Login to Cline" })).not.toBeVisible()
+		await expect(webview.getByRole("button", { name: "Login to Ritivel" })).not.toBeVisible()
 	}
 
 	public static async openClineSidebar(page: Page): Promise<void> {

@@ -53,7 +53,7 @@ export class ClineHandler implements ApiHandler {
 			try {
 				const defaultHeaders: Record<string, string> = {
 					"HTTP-Referer": "https://cline.bot",
-					"X-Title": "Cline",
+					"X-Title": "Ritivel",
 					"X-Task-ID": this.options.ulid || "",
 				}
 				Object.assign(defaultHeaders, await buildClineExtraHeaders())
@@ -89,7 +89,7 @@ export class ClineHandler implements ApiHandler {
 					},
 				})
 			} catch (error: any) {
-				throw new Error(`Error creating Cline client: ${error.message}`)
+				throw new Error(`Error creating Ritivel client: ${error.message}`)
 			}
 		}
 		// Ensure the client is always using the latest auth token
@@ -126,10 +126,10 @@ export class ClineHandler implements ApiHandler {
 				// openrouter returns an error object instead of the openai sdk throwing an error
 				if ("error" in chunk) {
 					const error = chunk.error as OpenRouterErrorResponse["error"]
-					console.error(`Cline API Error: ${error?.code} - ${error?.message}`)
+					console.error(`Ritivel API Error: ${error?.code} - ${error?.message}`)
 					// Include metadata in the error message if available
 					const metadataStr = error.metadata ? `\nMetadata: ${JSON.stringify(error.metadata, null, 2)}` : ""
-					throw new Error(`Cline API Error ${error.code}: ${error.message}${metadataStr}`)
+					throw new Error(`Ritivel API Error ${error.code}: ${error.message}${metadataStr}`)
 				}
 
 				if (!this.lastGenerationId && chunk.id) {
@@ -143,11 +143,11 @@ export class ClineHandler implements ApiHandler {
 					const choiceWithError = choice as any
 					if (choiceWithError.error) {
 						const error = choiceWithError.error
-						console.error(`Cline Mid-Stream Error: ${error.code || error.type || "Unknown"} - ${error.message}`)
-						throw new Error(`Cline Mid-Stream Error: ${error.code || error.type || "Unknown"} - ${error.message}`)
+						console.error(`Ritivel Mid-Stream Error: ${error.code || error.type || "Unknown"} - ${error.message}`)
+						throw new Error(`Ritivel Mid-Stream Error: ${error.code || error.type || "Unknown"} - ${error.message}`)
 					} else {
 						throw new Error(
-							"Cline Mid-Stream Error: Stream terminated with error status but no error details provided",
+							"Ritivel Mid-Stream Error: Stream terminated with error status but no error details provided",
 						)
 					}
 				}
@@ -174,7 +174,7 @@ export class ClineHandler implements ApiHandler {
 					}
 				}
 
-				/* 
+				/*
 				OpenRouter passes reasoning details that we can pass back unmodified in api requests to preserve reasoning traces for model
 				  - The reasoning_details array in each chunk may contain one or more reasoning objects
 				  - For encrypted reasoning, the content may appear as [REDACTED] in streaming responses
@@ -217,14 +217,14 @@ export class ClineHandler implements ApiHandler {
 
 			// Fallback to generation endpoint if usage chunk not returned
 			if (!didOutputUsage) {
-				console.warn("Cline API did not return usage chunk, fetching from generation endpoint")
+				console.warn("Ritivel API did not return usage chunk, fetching from generation endpoint")
 				const apiStreamUsage = await this.getApiStreamUsage()
 				if (apiStreamUsage) {
 					yield apiStreamUsage
 				}
 			}
 		} catch (error) {
-			console.error("Cline API Error:", error)
+			console.error("Ritivel API Error:", error)
 			throw error
 		}
 	}

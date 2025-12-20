@@ -76,7 +76,7 @@ export class DirectFileOperations {
 			if (requiresApproval) {
 				showSystemNotification({
 					subtitle: "File Changes Pending Approval",
-					message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
+					message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Ritivel: Accept File Changes' or 'Ritivel: Reject File Changes' from command palette.`,
 				})
 			}
 		}
@@ -187,7 +187,7 @@ export class DirectFileOperations {
 			if (requiresApproval) {
 				showSystemNotification({
 					subtitle: "File Changes Pending Approval",
-					message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Cline: Accept File Changes' or 'Cline: Reject File Changes' from command palette.`,
+					message: `Changes to ${this.getFileName(absolutePath)} are pending approval. Use 'Ritivel: Accept File Changes' or 'Ritivel: Reject File Changes' from command palette.`,
 				})
 			}
 		}

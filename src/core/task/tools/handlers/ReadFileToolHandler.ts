@@ -156,7 +156,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 		} else {
 			// Manual approval flow
 			console.log(`${LOG_PREFIX} Waiting for manual approval...`)
-			const notificationMessage = `Cline wants to read ${getWorkspaceBasename(absolutePath, "ReadFileToolHandler.notification")}`
+			const notificationMessage = `Ritivel wants to read ${getWorkspaceBasename(absolutePath, "ReadFileToolHandler.notification")}`
 
 			// Show notification
 			showNotificationForApproval(notificationMessage, config.autoApprovalSettings.enableNotifications)

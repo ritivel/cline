@@ -115,6 +115,21 @@ export class VscodeWebviewProvider extends WebviewProvider implements vscode.Web
 		HostProvider.get().logToChannel("Webview view resolved")
 
 		// Title setting logic removed to allow VSCode to use the container title primarily.
+
+		// Move Ritivel view to the secondary sidebar (right pane) on first activation
+		const hasMovedToSecondarySidebar = this.context.globalState.get<boolean>("ritivel.movedToSecondarySidebar")
+		if (!hasMovedToSecondarySidebar) {
+			// Use a small delay to ensure the view is fully rendered before moving
+			setTimeout(async () => {
+				try {
+					await vscode.commands.executeCommand("workbench.action.moveViewToSecondarySidebar")
+					await this.context.globalState.update("ritivel.movedToSecondarySidebar", true)
+					HostProvider.get().logToChannel("Moved Ritivel to secondary sidebar")
+				} catch (error) {
+					HostProvider.get().logToChannel(`Failed to move Ritivel to secondary sidebar: ${error}`)
+				}
+			}, 500)
+		}
 	}
 
 	/**

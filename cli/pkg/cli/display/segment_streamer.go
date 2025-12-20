@@ -58,7 +58,7 @@ func (ss *StreamingSegment) AppendText(text string) {
 	// Replace buffer with FULL text - msg.Text contains complete accumulated content
 	ss.buffer.Reset()
 	ss.buffer.WriteString(text)
-	
+
 	// No rendering during streaming - we'll render once on Freeze()
 }
 
@@ -73,7 +73,7 @@ func (ss *StreamingSegment) Freeze() {
 
 	ss.frozen = true
 	currentBuffer := ss.buffer.String()
-	
+
 	// Render and print the final markdown
 	ss.renderFinal(currentBuffer)
 }
@@ -150,17 +150,17 @@ func (ss *StreamingSegment) renderFinal(currentBuffer string) {
 func (ss *StreamingSegment) generateRichHeader() string {
 	switch ss.sayType {
 	case string(types.SayTypeReasoning):
-		return "### Cline is thinking\n"
-		
+		return "### Ritivel is thinking\n"
+
 	case string(types.SayTypeText):
-		return "### Cline responds\n"
-		
+		return "### Ritivel responds\n"
+
 	case string(types.SayTypeCompletionResult):
 		return "### Task completed\n"
-		
+
 	case string(types.SayTypeTool):
 		return ss.generateToolHeader()
-		
+
 	case "ask":
 		// Check the specific ask type
 		if ss.msg.Ask == string(types.AskTypePlanModeRespond) {
@@ -183,7 +183,7 @@ func (ss *StreamingSegment) generateRichHeader() string {
 				command = strings.TrimSuffix(command, "REQ_APP")
 				command = strings.TrimSpace(command)
 			}
-			return fmt.Sprintf("### Cline wants to run `%s`\n", command)
+			return fmt.Sprintf("### Ritivel wants to run `%s`\n", command)
 		}
 
 		// For followup questions, show question header
@@ -192,8 +192,8 @@ func (ss *StreamingSegment) generateRichHeader() string {
 		}
 
 		// For other ask types, show generic message
-		return fmt.Sprintf("### Cline is asking (%s)\n", ss.msg.Ask)
-		
+		return fmt.Sprintf("### Ritivel is asking (%s)\n", ss.msg.Ask)
+
 	default:
 		return fmt.Sprintf("### %s\n", ss.prefix)
 	}

@@ -21,8 +21,8 @@ var (
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "cline-host",
-		Short: "Cline Host Bridge Service",
-		Long:  `A simple host bridge service that provides host operations for Cline Core.`,
+		Short: "Ritivel Host Bridge Service",
+		Long:  `A simple host bridge service that provides host operations for Ritivel Core.`,
 		RunE:  runServer,
 	}
 

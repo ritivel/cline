@@ -47,7 +47,7 @@ npm availability, Cline Core connectivity, database integrity, and more.`,
 func runDoctorChecks() error {
 	renderer := display.NewRenderer(global.Config.OutputFormat)
 
-	fmt.Printf("\n%s\n\n", renderer.Bold("Cline Doctor - System Health Check"))
+	fmt.Printf("\n%s\n\n", renderer.Bold("Ritivel Doctor - System Health Check"))
 
 	// Configure terminal keybindings (terminal.go prints its own status)
 	fmt.Printf("%s\n\n", renderer.Dim("━━━ Terminal Configuration ━━━"))

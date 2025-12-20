@@ -22,7 +22,7 @@ func NewToolRenderer(mdRenderer *MarkdownRenderer, outputFormat string) *ToolRen
 	}
 }
 
-// RenderToolApprovalRequest renders a tool approval request ("Cline wants to...")
+// RenderToolApprovalRequest renders a tool approval request ("Ritivel wants to...")
 func (tr *ToolRenderer) RenderToolApprovalRequest(tool *types.ToolMessage) string {
 	var output strings.Builder
 
@@ -42,7 +42,7 @@ func (tr *ToolRenderer) RenderToolApprovalRequest(tool *types.ToolMessage) strin
 	return output.String()
 }
 
-// RenderToolExecution renders a completed tool execution ("Cline is ...ing")
+// RenderToolExecution renders a completed tool execution ("Ritivel is ...ing")
 func (tr *ToolRenderer) RenderToolExecution(tool *types.ToolMessage) string {
 	var output strings.Builder
 
@@ -88,7 +88,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is editing"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeNewFileCreated):
 		if verbTense == "wants to" {
@@ -96,7 +96,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is writing"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeReadFile):
 		if verbTense == "wants to" {
@@ -104,7 +104,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is reading"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeFileDeleted):
 		if verbTense == "wants to" {
@@ -112,7 +112,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is deleting"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeListFilesTopLevel):
 		if verbTense == "wants to" {
@@ -120,7 +120,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is listing files in"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeListFilesRecursive):
 		if verbTense == "wants to" {
@@ -128,7 +128,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is recursively listing files in"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeSearchFiles):
 		if tool.Regex != "" && tool.Path != "" {
@@ -137,19 +137,19 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 			} else {
 				action = "is searching for"
 			}
-			return fmt.Sprintf("### Cline %s `%s` in `%s`", action, tool.Regex, tool.Path)
+			return fmt.Sprintf("### Ritivel %s `%s` in `%s`", action, tool.Regex, tool.Path)
 		} else if tool.Regex != "" {
 			if verbTense == "wants to" {
 				action = "wants to search for"
 			} else {
 				action = "is searching for"
 			}
-			return fmt.Sprintf("### Cline %s `%s`", action, tool.Regex)
+			return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Regex)
 		} else {
 			if verbTense == "wants to" {
-				return "### Cline wants to search files"
+				return "### Ritivel wants to search files"
 			} else {
-				return "### Cline is searching files"
+				return "### Ritivel is searching files"
 			}
 		}
 
@@ -159,7 +159,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is fetching"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeListCodeDefinitionNames):
 		if verbTense == "wants to" {
@@ -167,13 +167,13 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			action = "is listing code definitions in"
 		}
-		return fmt.Sprintf("### Cline %s `%s`", action, tool.Path)
+		return fmt.Sprintf("### Ritivel %s `%s`", action, tool.Path)
 
 	case string(types.ToolTypeSummarizeTask):
 		if verbTense == "wants to" {
-			return "### Cline wants to condense the conversation"
+			return "### Ritivel wants to condense the conversation"
 		} else {
-			return "### Cline condensed the conversation"
+			return "### Ritivel condensed the conversation"
 		}
 
 	default:
@@ -182,7 +182,7 @@ func (tr *ToolRenderer) generateToolHeader(tool *types.ToolMessage, verbTense st
 		} else {
 			verb = "is using"
 		}
-		return fmt.Sprintf("### Cline %s tool: %s", verb, tool.Tool)
+		return fmt.Sprintf("### Ritivel %s tool: %s", verb, tool.Tool)
 	}
 }
 
@@ -284,7 +284,7 @@ func (tr *ToolRenderer) RenderCommandApprovalRequest(command string, autoApprova
 	}
 
 	// Generate header
-	header := fmt.Sprintf("### Cline wants to run `%s`", command)
+	header := fmt.Sprintf("### Ritivel wants to run `%s`", command)
 	rendered := tr.renderMarkdown(header)
 	output.WriteString(rendered)
 	output.WriteString("\n")
@@ -306,7 +306,7 @@ func (tr *ToolRenderer) RenderCommandApprovalRequest(command string, autoApprova
 // RenderCommandExecution renders a command execution announcement
 func (tr *ToolRenderer) RenderCommandExecution(command string) string {
 	command = strings.TrimSpace(command)
-	header := fmt.Sprintf("### Cline is running `%s`", command)
+	header := fmt.Sprintf("### Ritivel is running `%s`", command)
 	rendered := tr.renderMarkdown(header)
 	return "\n" + rendered + "\n"
 }
@@ -369,7 +369,7 @@ func (tr *ToolRenderer) renderMarkdown(markdown string) string {
 
 // GenerateAskFollowupHeader generates the header for followup questions
 func (tr *ToolRenderer) GenerateAskFollowupHeader() string {
-	return "### Cline has a question\n"
+	return "### Ritivel has a question\n"
 }
 
 // GenerateAskFollowupBody generates the body content for followup questions
@@ -410,7 +410,7 @@ func (tr *ToolRenderer) GenerateAskFollowupBody(messageText string) string {
 
 // GeneratePlanModeRespondHeader generates the header for plan mode responses
 func (tr *ToolRenderer) GeneratePlanModeRespondHeader() string {
-	return "### Cline has a plan\n"
+	return "### Ritivel has a plan\n"
 }
 
 // GeneratePlanModeRespondBody generates the body content for plan mode responses

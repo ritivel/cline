@@ -49,8 +49,6 @@ import {
 	validateSlashCommand,
 } from "@/utils/slash-commands"
 import { validateApiConfiguration, validateModelId } from "@/utils/validate"
-import ClineRulesToggleModal from "../cline-rules/ClineRulesToggleModal"
-import ServersToggleModal from "./ServersToggleModal"
 import VoiceRecorder from "./VoiceRecorder"
 
 const { MAX_IMAGES_AND_FILES_PER_MESSAGE } = CHAT_CONSTANTS
@@ -1741,9 +1739,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								</TooltipTrigger>
 							</Tooltip>
 
+							{/* Hidden: MCP Servers, Cline Rules, and Workflows toggles
 							<ServersToggleModal />
-
 							<ClineRulesToggleModal />
+							*/}
 
 							<ModelContainer ref={modelSelectorRef}>
 								<ModelButtonWrapper ref={buttonRef}>
