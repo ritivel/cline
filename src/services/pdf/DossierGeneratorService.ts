@@ -792,9 +792,9 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 
 			const tagsPath = path.join(sectionFolderPath, "tags.md")
 
-			// Special handling for section 2.3 - use TaskSection23Preamble (QOS)
-			if (sectionId === "2.3") {
-				return await this.generateSection23Preamble(
+			// Special handling for section 2.2 - use TaskSection22Introduction
+			if (sectionId === "2.2") {
+				return await this.generateSection22Introduction(
 					sectionId,
 					section,
 					sectionFolderPath,
@@ -802,6 +802,18 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 					controller,
 					onProgress,
 				)
+			}
+
+			// Special handling for section 2.3 - use TaskSection23Preamble (QOS)
+			if (sectionId === "2.3") {
+				// return await this.generateSection23Preamble(
+				return await this.generateSection23(sectionId, section, sectionFolderPath, tagsPath, controller, onProgress)
+			}
+
+			// Special handling for all 2.3.x subsections - use TaskSection23xy
+			// This handles: 2.3.S.1-S.7, 2.3.P.1-P.8, 2.3.A.1-A.3, 2.3.R
+			if (sectionId.startsWith("2.3.") && sectionId !== "2.3") {
+				return await this.generateSection23xy(sectionId, section, sectionFolderPath, tagsPath, controller, onProgress)
 			}
 
 			// Special handling for section 2.5 - use TaskSection25Preamble
@@ -836,6 +848,95 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 			const errorMsg = `Subagent error for section ${sectionId}: ${error instanceof Error ? error.message : String(error)}`
 			console.error(errorMsg)
 			return { success: false, sectionId, moduleNum, error: errorMsg }
+		}
+	}
+
+	/**
+	 * Generates Section 2.2: Introduction to the Summary using specialized TaskSection22Introduction agent
+	 */
+	private async generateSection22Introduction(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		tagsPath: string,
+		controller: Controller,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+
+			// Dynamic import to break circular dependency
+			const { TaskSection22Introduction: TaskSection22IntroductionClass } = await import(
+				"@/core/task/TaskSection22Introduction"
+			)
+			console.log(`[DossierGenerator] TaskSection22Introduction class imported successfully`)
+
+			const stateManager = StateManager.get()
+			const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+			const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+			const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+			const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+			const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+			const defaultTerminalProfile = (stateManager.getGlobalSettingsKey("defaultTerminalProfile") as string) ?? "default"
+
+			// Setup workspace manager
+			const workspaceManager = await setupWorkspaceManager({
+				stateManager,
+				detectRoots: detectWorkspaceRoots,
+			})
+
+			const cwd = workspaceManager?.getPrimaryRoot()?.path || this.workspaceRoot
+			const taskId = `dossier-section22-introduction-${Date.now()}`
+
+			// Acquire task lock
+			const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+			const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+			// Create TaskSection22Introduction instance
+			const task = new TaskSection22IntroductionClass({
+				controller,
+				mcpHub: controller.mcpHub,
+				shellIntegrationTimeout,
+				terminalReuseEnabled: terminalReuseEnabled ?? true,
+				terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+				subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+				defaultTerminalProfile,
+				vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+				cwd,
+				stateManager,
+				workspaceManager,
+				task: `Generate Introduction to the Summary for section ${sectionId}`,
+				taskId,
+				taskLockAcquired,
+				sectionFolderPath,
+				expectedOutputFile,
+				tagsPath,
+				ichInstructions: undefined, // Use default ICH Section 2.2 instructions
+				onProgress: (status) => onProgress?.(sectionId, status),
+			})
+
+			// Set mode to "act" for subagents
+			stateManager.setGlobalState("mode", "act")
+			stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+			// Run introduction generation
+			const result = await task.runIntroductionGeneration()
+
+			return {
+				success: result.success,
+				sectionId,
+				moduleNum: 2,
+				error: result.error,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] Error generating section 2.2 Introduction to the Summary: ${errorMsg}`)
+			return {
+				success: false,
+				sectionId,
+				moduleNum: 2,
+				error: errorMsg,
+			}
 		}
 	}
 
@@ -922,6 +1023,294 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 				sectionId,
 				moduleNum: 2,
 				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Generates section 2.3 by finding and importing the compiled QOS-PD PDF using TaskSection23 agent
+	 * This method finds the "Quality Overall Summary - Product Dossier (QOS-PD)" from all available
+	 * documents in the submissions folder and generates a LaTeX file that imports it using pdfpages.
+	 */
+	private async generateSection23(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		tagsPath: string,
+		controller: Controller,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+
+			// Dynamic import to break circular dependency
+			const { TaskSection23: TaskSection23Class } = await import("@/core/task/TaskSection23")
+			console.log(`[DossierGenerator] TaskSection23 class imported successfully`)
+
+			const stateManager = StateManager.get()
+			const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+			const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+			const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+			const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+			const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+			const defaultTerminalProfile = (stateManager.getGlobalSettingsKey("defaultTerminalProfile") as string) ?? "default"
+
+			// Setup workspace manager
+			const workspaceManager = await setupWorkspaceManager({
+				stateManager,
+				detectRoots: detectWorkspaceRoots,
+			})
+
+			const cwd = workspaceManager?.getPrimaryRoot()?.path || this.workspaceRoot
+			const taskId = `dossier-section23-${Date.now()}`
+
+			// Acquire task lock
+			const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+			const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+			// Create TaskSection23 instance
+			const task = new TaskSection23Class({
+				controller,
+				mcpHub: controller.mcpHub,
+				shellIntegrationTimeout,
+				terminalReuseEnabled: terminalReuseEnabled ?? true,
+				terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+				subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+				defaultTerminalProfile,
+				vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+				cwd,
+				stateManager,
+				workspaceManager,
+				task: `Find and import QOS-PD for section ${sectionId}`,
+				taskId,
+				taskLockAcquired,
+				sectionFolderPath,
+				expectedOutputFile,
+				tagsPath,
+				onProgress: (status) => onProgress?.(sectionId, status),
+			})
+
+			// Set mode to "act" for subagents
+			stateManager.setGlobalState("mode", "act")
+			stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+			// Run section 2.3 generation (find and import QOS-PD)
+			const result = await task.runSection23Generation()
+
+			return {
+				success: result.success,
+				sectionId,
+				moduleNum: 2,
+				error: result.error,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] Error generating section 2.3 QOS-PD import: ${errorMsg}`)
+			return {
+				success: false,
+				sectionId,
+				moduleNum: 2,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Generates section 2.3.S.2 (Manufacture) using specialized TaskSection23S2 agent
+	 */
+	private async generateSection23S2(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		tagsPath: string,
+		controller: Controller,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+
+			// Dynamic import to break circular dependency
+			const { TaskSection23S2: TaskSection23S2Class } = await import("@/core/task/TaskSection23S2")
+			console.log(`[DossierGenerator] TaskSection23S2 class imported successfully`)
+
+			const stateManager = StateManager.get()
+			const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+			const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+			const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+			const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+			const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+			const defaultTerminalProfile = (stateManager.getGlobalSettingsKey("defaultTerminalProfile") as string) ?? "default"
+
+			// Setup workspace manager
+			const workspaceManager = await setupWorkspaceManager({
+				stateManager,
+				detectRoots: detectWorkspaceRoots,
+			})
+
+			const cwd = workspaceManager?.getPrimaryRoot()?.path || this.workspaceRoot
+			const taskId = `dossier-section23s2-${Date.now()}`
+
+			// Acquire task lock
+			const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+			const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+			// Create TaskSection23S2 instance
+			const task = new TaskSection23S2Class({
+				controller,
+				mcpHub: controller.mcpHub,
+				shellIntegrationTimeout,
+				terminalReuseEnabled: terminalReuseEnabled ?? true,
+				terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+				subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+				defaultTerminalProfile,
+				vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+				cwd,
+				stateManager,
+				workspaceManager,
+				task: `Generate section 2.3.S.2 (Manufacture) for ${sectionId}`,
+				taskId,
+				taskLockAcquired,
+				sectionFolderPath,
+				expectedOutputFile,
+				tagsPath,
+				ichInstructions: undefined, // Use default ICH instructions
+				onProgress: (status) => onProgress?.(sectionId, status),
+			})
+
+			// Set mode to "act" for subagents
+			stateManager.setGlobalState("mode", "act")
+			stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+			// Run section generation
+			const result = await task.runSectionGeneration()
+
+			return {
+				success: result.success,
+				sectionId,
+				moduleNum: 2,
+				error: result.error,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] Error generating section 2.3.S.2 (Manufacture): ${errorMsg}`)
+			return {
+				success: false,
+				sectionId,
+				moduleNum: 2,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Generates any section 2.3.x subsection using the generalized TaskSection23xy agent
+	 * Handles: 2.3.S.1-S.7, 2.3.P.1-P.8, 2.3.A.1-A.3, 2.3.R
+	 */
+	private async generateSection23xy(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		tagsPath: string,
+		controller: Controller,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		const startTime = Date.now()
+		console.log(`[DossierGenerator] ========== Starting section ${sectionId} generation ==========`)
+		console.log(`[DossierGenerator] Section: ${sectionId} (${section.title})`)
+		console.log(`[DossierGenerator] Folder: ${sectionFolderPath}`)
+		console.log(`[DossierGenerator] Tags: ${tagsPath}`)
+
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+
+			// Dynamic import to break circular dependency
+			const { TaskSection23xy: TaskSection23xyClass } = await import("@/core/task/TaskSection23xy")
+			console.log(`[DossierGenerator] TaskSection23xy class imported successfully for section ${sectionId}`)
+
+			const stateManager = StateManager.get()
+			const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+			const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+			const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+			const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+			const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+			const defaultTerminalProfile = (stateManager.getGlobalSettingsKey("defaultTerminalProfile") as string) ?? "default"
+
+			// Setup workspace manager
+			const workspaceManager = await setupWorkspaceManager({
+				stateManager,
+				detectRoots: detectWorkspaceRoots,
+			})
+
+			const cwd = workspaceManager?.getPrimaryRoot()?.path || this.workspaceRoot
+			const taskId = `dossier-section23xy-${sectionId.replace(/\./g, "-")}-${Date.now()}`
+
+			// Acquire task lock
+			const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+			const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+			// Create TaskSection23xy instance
+			const task = new TaskSection23xyClass({
+				controller,
+				mcpHub: controller.mcpHub,
+				shellIntegrationTimeout,
+				terminalReuseEnabled: terminalReuseEnabled ?? true,
+				terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+				subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+				defaultTerminalProfile,
+				vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+				cwd,
+				stateManager,
+				workspaceManager,
+				task: `Generate section ${sectionId} (${section.title})`,
+				taskId,
+				taskLockAcquired,
+				sectionId,
+				sectionFolderPath,
+				expectedOutputFile,
+				tagsPath,
+				ichInstructionsOverride: undefined, // Use default ICH instructions from guidelines file
+				onProgress: (status) => onProgress?.(sectionId, status),
+			})
+
+			// Set mode to "act" for subagents
+			stateManager.setGlobalState("mode", "act")
+			stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+			// Run section generation
+			console.log(`[DossierGenerator] Starting runSectionGeneration() for ${sectionId}...`)
+			const result = await task.runSectionGeneration()
+
+			const duration = Math.round((Date.now() - startTime) / 1000)
+			if (result.success) {
+				console.log(`[DossierGenerator] ✓ Section ${sectionId} completed successfully in ${duration}s`)
+			} else {
+				console.error(`[DossierGenerator] ✗ Section ${sectionId} failed after ${duration}s: ${result.error}`)
+			}
+			console.log(`[DossierGenerator] ========== Finished section ${sectionId} ==========`)
+
+			return {
+				success: result.success,
+				sectionId,
+				moduleNum: 2,
+				error: result.error,
+			}
+		} catch (error) {
+			const duration = Math.round((Date.now() - startTime) / 1000)
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] ✗ EXCEPTION generating section ${sectionId} after ${duration}s: ${errorMsg}`)
+			console.error(`[DossierGenerator] Stack:`, error instanceof Error ? error.stack : "No stack")
+			console.log(`[DossierGenerator] ========== Finished section ${sectionId} (with error) ==========`)
+
+			showSystemNotification({
+				subtitle: `Section ${sectionId} - Error`,
+				message: `Failed after ${duration}s: ${errorMsg.substring(0, 80)}`,
+			})
+
+			return {
+				success: false,
+				sectionId,
+				moduleNum: 2,
+				error: `${errorMsg} (after ${duration}s)`,
 			}
 		}
 	}
@@ -1124,8 +1513,14 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 		const { sectionId, section, moduleNum } = sectionInfo
 
 		// Check if it's a leaf section (only leaf sections can be generated)
-		// Exception: Section 2.3 and 2.5 can be generated for preamble generation even though they may have children
-		if (section.children && section.children.length > 0 && sectionId !== "2.3" && sectionId !== "2.5") {
+		// Exception: Section 2.2, 2.3 and 2.5 can be generated for introduction/preamble generation even though they may have children
+		if (
+			section.children &&
+			section.children.length > 0 &&
+			sectionId !== "2.2" &&
+			sectionId !== "2.3" &&
+			sectionId !== "2.5"
+		) {
 			return {
 				success: false,
 				error: `Section "${sectionId}: ${section.title}" is not a leaf section (it has ${section.children.length} child sections). Only leaf sections can be generated. Please specify a specific leaf section.`,

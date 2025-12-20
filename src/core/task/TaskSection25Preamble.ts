@@ -330,15 +330,16 @@ ${this.ichInstructions}
 
    **How to read .mmd files:**
    - Use the \`file_read\` tool to read .mmd files from the documents folder
-   - Path format: \`documents/{relativePath}/{filename}.mmd\` (use the relativePath from module5_tags_lookup results)
+   - **Use the \`mmdFilePath\` field** from module5_tags_lookup results - this is the exact path to use
+   - Example: If mmdFilePath is "documents/study-101/output.mmd", use exactly that path with file_read
    - **CRITICAL**: Only read 1-2 .mmd files maximum, and ONLY if you have a specific objective
    - **DO NOT** read files just because they exist - only read if the summary is insufficient for your specific need
-   - Before reading, state your objective: "I need to read [filename].mmd to [specific reason]"
+   - Before reading, state your objective: "I need to read [filename] to [specific reason]"
 
    **Examples of valid objectives:**
-   - "I need to read Study-101-BE.mmd to get the exact bioequivalence ratio and confidence intervals for the preamble"
-   - "I need to read PK-Study-Phase1.mmd to get the specific pharmacokinetic parameters mentioned in the introduction"
-   - "I need to read Efficacy-Study-202.mmd to get the primary endpoint results for the indication statement"
+   - "I need to read the mmd file at documents/study-101-be/output.mmd to get the exact bioequivalence ratio"
+   - "I need to read the mmd file at documents/pk-study-phase1/output.mmd to get the specific PK parameters"
+   - "I need to read the mmd file at documents/efficacy-study-202/output.mmd to get the primary endpoint results"
 
    **Examples of invalid reasons (DO NOT read):**
    - "I'll read all documents to be thorough" ❌

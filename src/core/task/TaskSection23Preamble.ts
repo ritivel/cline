@@ -345,15 +345,16 @@ ${this.ichInstructions}
 
    **How to read .mmd files:**
    - Use the \`file_read\` tool to read .mmd files from the documents folder
-   - Path format: \`documents/{relativePath}/{filename}.mmd\` (use the relativePath from module3_tags_lookup results)
+   - **Use the \`mmdFilePath\` field** from module3_tags_lookup results - this is the exact path to use
+   - Example: If mmdFilePath is "documents/submission/output.mmd", use exactly that path with file_read
    - **CRITICAL**: Only read 1-2 .mmd files maximum, and ONLY if you have a specific objective
    - **DO NOT** read files just because they exist - only read if the summary is insufficient
-   - Before reading, state your objective: "I need to read [filename].mmd to [specific reason]"
+   - Before reading, state your objective: "I need to read [filename] to [specific reason]"
 
    **Examples of valid objectives:**
-   - "I need to read API-Spec.mmd to get the exact INN and CAS number for the introduction"
-   - "I need to read FPP-Composition.mmd to get the precise dosage form and strength"
-   - "I need to read Manufacturer-Info.mmd to get the company name and site details"
+   - "I need to read the mmd file at documents/api-spec/output.mmd to get the exact INN and CAS number"
+   - "I need to read the mmd file at documents/fpp-composition/output.mmd to get the precise dosage form"
+   - "I need to read the mmd file at documents/manufacturer/output.mmd to get the company name and site details"
 
    **Examples of invalid reasons (DO NOT read):**
    - "I'll read all documents to be thorough" ❌
@@ -374,23 +375,108 @@ ${this.ichInstructions}
    - References Module 3 documents by name when relevant
 
 5. Use the \`write_tex\` tool to write the preamble to: ${this.expectedOutputFile}
-   - The output should be LaTeX format
-   - Include proper document structure with \\documentclass, \\begin{document}, etc.
-   - The preamble content should be placed between \\begin{document} and \\end{document}
+   - Output in LaTeX format following the guidelines below
+
+## LaTeX FORMATTING GUIDELINES - CRITICAL
+
+Follow these LaTeX formatting rules exactly to produce valid, compilable LaTeX code:
+
+### Document Structure
+\`\`\`latex
+\\documentclass[12pt,a4paper]{article}
+
+% Required packages
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage{geometry}
+\\usepackage{setspace}
+\\usepackage{parskip}
+\\usepackage{booktabs}  % For professional tables
+
+% Page setup
+\\geometry{margin=1in}
+\\onehalfspacing
+
+\\begin{document}
+
+% Your preamble content here
+
+\\end{document}
+\`\`\`
+
+### Special Character Escaping - CRITICAL
+You MUST escape these special characters in LaTeX:
+
+| Character | Escape As | Example |
+|-----------|-----------|---------|
+| % | \\% | 50\\% |
+| & | \\& | Smith \\& Co. |
+| $ | \\$ | \\$100 |
+| # | \\# | Item \\#1 |
+| _ | \\_ | drug\\_name |
+| { | \\{ | \\{value\\} |
+| } | \\} | \\{value\\} |
+| ~ | \\textasciitilde{} | ~10 becomes \\textasciitilde{}10 |
+| ^ | \\textasciicircum{} | 10^3 becomes 10\\textasciicircum{}3 |
+
+### Drug Names and Chemical Terms
+- Use \\textit{} for genus/species names: \`\\textit{Staphylococcus aureus}\`
+- Use \\textsuperscript{} for superscripts: \`Ca\\textsuperscript{2+}\`
+- Use \\textsubscript{} for subscripts: \`H\\textsubscript{2}O\`
+- Greek letters in math mode: \`$\\alpha$\`, \`$\\beta$\`, \`$\\gamma$\`
+
+### Quotation Marks
+- Use \`\`text'' for double quotes (two backticks and two single quotes)
+- Use \`text' for single quotes
+- Do NOT use straight quotes " or '
+
+### Dashes
+- Hyphen: - (compound words)
+- En-dash: -- (ranges: "pages 1--10", "2020--2023")
+- Em-dash: --- (parenthetical breaks)
+
+### Tables (if needed)
+\`\`\`latex
+\\begin{table}[htbp]
+\\centering
+\\caption{Table Caption}
+\\begin{tabular}{lcc}
+\\toprule
+Header 1 & Header 2 & Header 3 \\\\
+\\midrule
+Data 1 & Data 2 & Data 3 \\\\
+Data 4 & Data 5 & Data 6 \\\\
+\\bottomrule
+\\end{tabular}
+\\end{table}
+\`\`\`
+
+### Common Mistakes to AVOID
+1. ❌ Unescaped special characters: %, &, $, #, _, {, }
+2. ❌ Straight quotes: "text" (use \`\`text'' instead)
+3. ❌ Undefined commands or packages
+4. ❌ Unclosed environments
+5. ❌ Raw Unicode characters that cause compilation errors
 
 ## Output Requirements
 
 - Write ONLY the preamble/introduction, not the full QOS
 - **Maximum length: 2-3 pages**
-- Use LaTeX format
+- **Format**: Valid, compilable LaTeX
 - Be concise (2-4 paragraphs typically)
 - Include: proprietary name, INN, company name, dosage form, strength, route, indication
 - Reference Module 3 documents by name when relevant
 - Follow ICH guidelines for Quality Overall Summary
 - Use professional regulatory language
-- Use document names and summaries to inform your writing
-- If you read specific .mmd files, use only the relevant information needed for the preamble
-- Do NOT include extensive technical data or full specifications - keep it introductory`
+- All special characters must be properly escaped
+- Do NOT include extensive technical data or full specifications - keep it introductory
+
+## LaTeX Validation Checklist
+- [ ] Document has \\documentclass, \\begin{document}, \\end{document}
+- [ ] All special characters escaped: %, &, $, #, _, {, }
+- [ ] Quotation marks use LaTeX style: \`\`text''
+- [ ] Superscripts/subscripts properly formatted
+- [ ] All environments properly closed`
 	}
 
 	/**
