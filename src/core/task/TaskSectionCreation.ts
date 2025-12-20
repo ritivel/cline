@@ -282,6 +282,11 @@ export class TaskSectionCreation extends Task {
 				return await this.runSection52Generation()
 			}
 
+			// Check if this is a Module 2.6 subsection - always generate "Not Applicable"
+			if (this.isSection26Subsection()) {
+				return await this.runSection26NotApplicable()
+			}
+
 			// Check if this is a Module 5 section - handle it specially
 			if (this.moduleNum === 5) {
 				return await this.runModule5Generation()
@@ -410,6 +415,69 @@ export class TaskSectionCreation extends Task {
 			this.isCompleted = true
 			this.stopCompletionMonitoring()
 
+			return {
+				success: false,
+				sectionId: this.sectionId,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Returns true when section is 2.6 or any 2.6.* subsection.
+	 */
+	private isSection26Subsection(): boolean {
+		return this.sectionId === "2.6" || this.sectionId.startsWith("2.6.")
+	}
+
+	/**
+	 * Special generation flow for Module 2.6 subsections.
+	 * Always writes a LaTeX doc with a single section marked "Not Applicable".
+	 */
+	private async runSection26NotApplicable(): Promise<TaskSectionCreationResult> {
+		try {
+			this.reportProgress("Starting Module 2.6 Not Applicable generation")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "Generating Not Applicable placeholder...",
+			})
+			this.startCompletionMonitoring()
+
+			const content = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\begin{document}
+\\section*{${this.sectionId}. ${this.sectionTitle}}
+Not Applicable
+\\end{document}`
+
+			this.reportProgress("Writing output file...")
+			await this.writeOutputFile(content)
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: `Written to: ${this.expectedOutputFile}`,
+			})
+
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
+			this.reportProgress("Completed successfully")
+			showSystemNotification({
+				subtitle: `Section ${this.sectionId}`,
+				message: "✓ Section 2.6 Not Applicable generated!",
+			})
+
+			return {
+				success: true,
+				sectionId: this.sectionId,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			this.reportProgress(`Error in Section 2.6 flow: ${errorMsg}`)
+			this.isCompleted = true
+			this.stopCompletionMonitoring()
 			return {
 				success: false,
 				sectionId: this.sectionId,
