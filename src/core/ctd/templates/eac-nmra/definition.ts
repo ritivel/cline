@@ -207,11 +207,191 @@ const MODULE_2: CTDModuleDef = {
 		"2.3": {
 			id: "2.3",
 			title: "Quality Overall Summary - Product Dossiers (QOS-PD)",
+			// children: ["2.3.S", "2.3.P", "2.3.A", "2.3.R"],
 			classification: {
 				keywords: ["QOS", "quality overall summary", "quality summary", "QOS-PD"],
 				documentTypes: ["QOS", "quality overall summary"],
 			},
 		},
+		// "2.3.S": {
+		// 	id: "2.3.S",
+		// 	title: "Drug Substance",
+		// 	children: ["2.3.S.1", "2.3.S.2", "2.3.S.3", "2.3.S.4", "2.3.S.5", "2.3.S.6", "2.3.S.7"],
+		// 	classification: {
+		// 		keywords: ["QOS drug substance", "QOS API", "quality summary drug substance"],
+		// 		documentTypes: ["QOS drug substance section"],
+		// 	},
+		// },
+		// "2.3.S.1": {
+		// 	id: "2.3.S.1",
+		// 	title: "General Information",
+		// 	classification: {
+		// 		keywords: ["QOS general information", "drug substance general", "API general"],
+		// 		documentTypes: ["QOS general information"],
+		// 	},
+		// },
+		// "2.3.S.2": {
+		// 	id: "2.3.S.2",
+		// 	title: "Manufacture",
+		// 	classification: {
+		// 		keywords: ["QOS manufacture", "drug substance manufacture", "API manufacture"],
+		// 		documentTypes: ["QOS manufacture"],
+		// 	},
+		// },
+		// "2.3.S.3": {
+		// 	id: "2.3.S.3",
+		// 	title: "Characterisation",
+		// 	classification: {
+		// 		keywords: ["QOS characterisation", "drug substance characterisation", "API characterisation"],
+		// 		documentTypes: ["QOS characterisation"],
+		// 	},
+		// },
+		// "2.3.S.4": {
+		// 	id: "2.3.S.4",
+		// 	title: "Control of Drug Substance",
+		// 	classification: {
+		// 		keywords: ["QOS control", "drug substance control", "API control"],
+		// 		documentTypes: ["QOS control of drug substance"],
+		// 	},
+		// },
+		// "2.3.S.5": {
+		// 	id: "2.3.S.5",
+		// 	title: "Reference Standards or Materials",
+		// 	classification: {
+		// 		keywords: ["QOS reference standards", "drug substance reference standards", "API reference standards"],
+		// 		documentTypes: ["QOS reference standards"],
+		// 	},
+		// },
+		// "2.3.S.6": {
+		// 	id: "2.3.S.6",
+		// 	title: "Container Closure System",
+		// 	classification: {
+		// 		keywords: ["QOS container closure", "drug substance container", "API container"],
+		// 		documentTypes: ["QOS container closure"],
+		// 	},
+		// },
+		// "2.3.S.7": {
+		// 	id: "2.3.S.7",
+		// 	title: "Stability",
+		// 	classification: {
+		// 		keywords: ["QOS stability", "drug substance stability", "API stability"],
+		// 		documentTypes: ["QOS stability"],
+		// 	},
+		// },
+		// "2.3.P": {
+		// 	id: "2.3.P",
+		// 	title: "Drug Product",
+		// 	children: ["2.3.P.1", "2.3.P.2", "2.3.P.3", "2.3.P.4", "2.3.P.5", "2.3.P.6", "2.3.P.7", "2.3.P.8"],
+		// 	classification: {
+		// 		keywords: ["QOS drug product", "QOS FPP", "quality summary drug product"],
+		// 		documentTypes: ["QOS drug product section"],
+		// 	},
+		// },
+		// "2.3.P.1": {
+		// 	id: "2.3.P.1",
+		// 	title: "Description and Composition of the Drug Product",
+		// 	classification: {
+		// 		keywords: ["QOS composition", "drug product composition", "FPP composition"],
+		// 		documentTypes: ["QOS composition"],
+		// 	},
+		// },
+		// "2.3.P.2": {
+		// 	id: "2.3.P.2",
+		// 	title: "Pharmaceutical Development",
+		// 	classification: {
+		// 		keywords: ["QOS pharmaceutical development", "drug product development", "FPP development"],
+		// 		documentTypes: ["QOS pharmaceutical development"],
+		// 	},
+		// },
+		// "2.3.P.3": {
+		// 	id: "2.3.P.3",
+		// 	title: "Manufacture",
+		// 	classification: {
+		// 		keywords: ["QOS manufacture", "drug product manufacture", "FPP manufacture"],
+		// 		documentTypes: ["QOS manufacture"],
+		// 	},
+		// },
+		// "2.3.P.4": {
+		// 	id: "2.3.P.4",
+		// 	title: "Control of Excipients",
+		// 	classification: {
+		// 		keywords: ["QOS excipients", "drug product excipients", "FPP excipients"],
+		// 		documentTypes: ["QOS excipients"],
+		// 	},
+		// },
+		// "2.3.P.5": {
+		// 	id: "2.3.P.5",
+		// 	title: "Control of Drug Product",
+		// 	classification: {
+		// 		keywords: ["QOS control", "drug product control", "FPP control"],
+		// 		documentTypes: ["QOS control of drug product"],
+		// 	},
+		// },
+		// "2.3.P.6": {
+		// 	id: "2.3.P.6",
+		// 	title: "Reference Standards or Materials",
+		// 	classification: {
+		// 		keywords: ["QOS reference standards", "drug product reference standards", "FPP reference standards"],
+		// 		documentTypes: ["QOS reference standards"],
+		// 	},
+		// },
+		// "2.3.P.7": {
+		// 	id: "2.3.P.7",
+		// 	title: "Container Closure System",
+		// 	classification: {
+		// 		keywords: ["QOS container closure", "drug product container", "FPP container"],
+		// 		documentTypes: ["QOS container closure"],
+		// 	},
+		// },
+		// "2.3.P.8": {
+		// 	id: "2.3.P.8",
+		// 	title: "Stability",
+		// 	classification: {
+		// 		keywords: ["QOS stability", "drug product stability", "FPP stability"],
+		// 		documentTypes: ["QOS stability"],
+		// 	},
+		// },
+		// "2.3.A": {
+		// 	id: "2.3.A",
+		// 	title: "Appendices",
+		// 	children: ["2.3.A.1", "2.3.A.2", "2.3.A.3"],
+		// 	classification: {
+		// 		keywords: ["QOS appendices", "quality summary appendices"],
+		// 		documentTypes: ["QOS appendices"],
+		// 	},
+		// },
+		// "2.3.A.1": {
+		// 	id: "2.3.A.1",
+		// 	title: "Facilities and Equipment",
+		// 	classification: {
+		// 		keywords: ["QOS facilities", "QOS equipment", "manufacturing facilities"],
+		// 		documentTypes: ["QOS facilities and equipment"],
+		// 	},
+		// },
+		// "2.3.A.2": {
+		// 	id: "2.3.A.2",
+		// 	title: "Adventitious Agents Safety Evaluation",
+		// 	classification: {
+		// 		keywords: ["QOS adventitious agents", "safety evaluation", "viral safety"],
+		// 		documentTypes: ["QOS adventitious agents"],
+		// 	},
+		// },
+		// "2.3.A.3": {
+		// 	id: "2.3.A.3",
+		// 	title: "Excipients",
+		// 	classification: {
+		// 		keywords: ["QOS excipients appendix", "excipient information"],
+		// 		documentTypes: ["QOS excipients appendix"],
+		// 	},
+		// },
+		// "2.3.R": {
+		// 	id: "2.3.R",
+		// 	title: "Regional Information",
+		// 	classification: {
+		// 		keywords: ["QOS regional", "regional information", "country-specific QOS"],
+		// 		documentTypes: ["QOS regional information"],
+		// 	},
+		// },
 		"2.4": {
 			id: "2.4",
 			title: "Nonclinical Overview for New Chemical Entities",

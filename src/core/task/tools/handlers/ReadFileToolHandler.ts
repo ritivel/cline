@@ -3,6 +3,8 @@ import type { ToolUse } from "@core/assistant-message"
 import { formatResponse } from "@core/prompts/responses"
 import { getWorkspaceBasename, resolveWorkspacePath } from "@core/workspace"
 import { extractFileContent } from "@integrations/misc/extract-file-content"
+import { showSystemNotification } from "@integrations/notifications"
+import { fileExistsAtPath } from "@utils/fs"
 import { arePathsEqual, getReadablePath, isLocatedInWorkspace } from "@utils/path"
 import { telemetryService } from "@/services/telemetry"
 import { ClineSayTool } from "@/shared/ExtensionMessage"
@@ -14,6 +16,9 @@ import type { ToolValidator } from "../ToolValidator"
 import type { TaskConfig } from "../types/TaskConfig"
 import type { StronglyTypedUIHelpers } from "../types/UIHelpers"
 import { ToolResultUtils } from "../utils/ToolResultUtils"
+
+// Logging prefix for easy identification in console
+const LOG_PREFIX = "[📖 ReadFile]"
 
 export class ReadFileToolHandler implements IFullyManagedTool {
 	readonly name = ClineDefaultTool.FILE_READ
@@ -52,6 +57,15 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 	async execute(config: TaskConfig, block: ToolUse): Promise<ToolResponse> {
 		const relPath: string | undefined = block.params.path
 
+		console.log(`${LOG_PREFIX} ========== TOOL CALL START ==========`)
+		console.log(`${LOG_PREFIX} Requested path: "${relPath || "MISSING"}"`)
+		console.log(`${LOG_PREFIX} CWD: ${config.cwd}`)
+
+		showSystemNotification({
+			subtitle: "ReadFile",
+			message: `Reading: ${relPath || "MISSING PATH"}`,
+		})
+
 		// Extract provider information for telemetry
 		const apiConfig = config.services.stateManager.getApiConfiguration()
 		const currentMode = config.services.stateManager.getGlobalSettingsKey("mode")
@@ -60,6 +74,11 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 		// Validate required parameters
 		const pathValidation = this.validator.assertRequiredParams(block, "path")
 		if (!pathValidation.ok) {
+			console.error(`${LOG_PREFIX} ❌ ERROR: Missing path parameter`)
+			showSystemNotification({
+				subtitle: "ReadFile - Error",
+				message: "Missing path parameter",
+			})
 			config.taskState.consecutiveMistakeCount++
 			return await config.callbacks.sayAndCreateMissingParamError(this.name, "path")
 		}
@@ -67,6 +86,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 		// Check clineignore access
 		const accessValidation = this.validator.checkClineIgnorePath(relPath!)
 		if (!accessValidation.ok) {
+			console.error(`${LOG_PREFIX} ❌ ERROR: Path blocked by .clineignore: ${relPath}`)
 			await config.callbacks.say("clineignore_error", relPath)
 			return formatResponse.toolError(formatResponse.clineIgnoreError(relPath!))
 		}
@@ -77,6 +97,25 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 		const pathResult = resolveWorkspacePath(config, relPath!, "ReadFileToolHandler.execute")
 		const { absolutePath, displayPath } =
 			typeof pathResult === "string" ? { absolutePath: pathResult, displayPath: relPath! } : pathResult
+
+		console.log(`${LOG_PREFIX} ✓ Path resolution:`)
+		console.log(`${LOG_PREFIX}   - Relative path: "${relPath}"`)
+		console.log(`${LOG_PREFIX}   - Absolute path: "${absolutePath}"`)
+		console.log(`${LOG_PREFIX}   - Display path: "${displayPath}"`)
+
+		// Check if file exists BEFORE approval flow
+		const fileExists = await fileExistsAtPath(absolutePath)
+		console.log(`${LOG_PREFIX}   - File exists: ${fileExists ? "YES ✓" : "NO ❌"}`)
+
+		if (!fileExists) {
+			console.error(`${LOG_PREFIX} ❌ ERROR: File not found: ${absolutePath}`)
+			showSystemNotification({
+				subtitle: "ReadFile - Error",
+				message: `File not found: ${relPath}`,
+			})
+			console.log(`${LOG_PREFIX} ========== TOOL CALL END (FILE NOT FOUND) ==========`)
+			return formatResponse.toolError(`Error executing read_file: File not found: ${absolutePath}`)
+		}
 
 		// Determine workspace context for telemetry
 		const fallbackAbsolutePath = path.resolve(config.cwd, relPath ?? "")
@@ -99,6 +138,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 
 		if (await config.callbacks.shouldAutoApproveToolWithPath(block.name, relPath)) {
 			// Auto-approval flow
+			console.log(`${LOG_PREFIX} Auto-approved`)
 			await config.callbacks.removeLastPartialMessageIfExistsWithType("ask", "tool")
 			await config.callbacks.say("tool", completeMessage, undefined, undefined, false)
 
@@ -115,6 +155,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 			)
 		} else {
 			// Manual approval flow
+			console.log(`${LOG_PREFIX} Waiting for manual approval...`)
 			const notificationMessage = `Cline wants to read ${getWorkspaceBasename(absolutePath, "ReadFileToolHandler.notification")}`
 
 			// Show notification
@@ -124,6 +165,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 
 			const didApprove = await ToolResultUtils.askApprovalAndPushFeedback("tool", completeMessage, config)
 			if (!didApprove) {
+				console.log(`${LOG_PREFIX} ⚠️ User denied read operation`)
 				telemetryService.captureToolUsage(
 					config.ulid,
 					block.name,
@@ -136,6 +178,7 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 				)
 				return formatResponse.toolDenied()
 			} else {
+				console.log(`${LOG_PREFIX} ✓ User approved read operation`)
 				telemetryService.captureToolUsage(
 					config.ulid,
 					block.name,
@@ -156,12 +199,14 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 		} catch (error) {
 			const { PreToolUseHookCancellationError } = await import("@core/hooks/PreToolUseHookCancellationError")
 			if (error instanceof PreToolUseHookCancellationError) {
+				console.log(`${LOG_PREFIX} ⚠️ PreToolUse hook cancelled the operation`)
 				return formatResponse.toolDenied()
 			}
 			throw error
 		}
 
 		// Execute the actual file read operation
+		console.log(`${LOG_PREFIX} Reading file content...`)
 		const supportsImages = config.api.getModel().info.supportsImages ?? false
 		const fileContent = await extractFileContent(absolutePath, supportsImages)
 
@@ -170,8 +215,20 @@ export class ReadFileToolHandler implements IFullyManagedTool {
 
 		// Handle image blocks separately - they need to be pushed to userMessageContent
 		if (fileContent.imageBlock) {
+			console.log(`${LOG_PREFIX} ✓ File contains image, adding to user message content`)
 			config.taskState.userMessageContent.push(fileContent.imageBlock)
 		}
+
+		const contentPreview = fileContent.text.substring(0, 100).replace(/\n/g, "\\n")
+		console.log(`${LOG_PREFIX} ✓ Read ${fileContent.text.length} characters`)
+		console.log(`${LOG_PREFIX}   Preview: "${contentPreview}..."`)
+
+		showSystemNotification({
+			subtitle: "ReadFile - Success",
+			message: `Read ${fileContent.text.length} chars from ${relPath}`,
+		})
+
+		console.log(`${LOG_PREFIX} ========== TOOL CALL END (SUCCESS) ==========`)
 
 		return fileContent.text
 	}

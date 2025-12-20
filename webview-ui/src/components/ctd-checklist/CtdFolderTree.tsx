@@ -61,8 +61,9 @@ const SectionNode = ({
 	const [isExpanded, setIsExpanded] = useState(level < 2) // Auto-expand first 2 levels
 	const isLeaf = !section.children || section.children.length === 0
 	const hasChildren = section.children && section.children.length > 0
-	// Show buttons for leaf sections OR for section 2.5 (which needs preamble generation)
-	const showButtons = isLeaf || section.id === "2.5"
+	// Sections that should show buttons even if they're not leaf nodes
+	const intermediateSectionsWithButtons = ["2.3", "2.5"]
+	const showButtons = isLeaf || intermediateSectionsWithButtons.includes(section.id)
 	const isAssessing = assessingSections?.has(section.id) || false
 	const isAssessingOutput = assessingOutputSections?.has(section.id) || false
 	const isGenerating = generatingSections?.has(section.id) || false

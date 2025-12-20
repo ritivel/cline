@@ -22,6 +22,9 @@ import { applyModelContentFixes } from "../utils/ModelContentProcessor"
 import { ToolDisplayUtils } from "../utils/ToolDisplayUtils"
 import { ToolResultUtils } from "../utils/ToolResultUtils"
 
+// Logging prefix for path diagnostics
+const LOG_PREFIX = "[✍️ write_tex]"
+
 /**
  * Handler for write_tex tool that creates LaTeX files, compiles them to PDF,
  * and displays the PDF while hiding the .tex file.
@@ -80,6 +83,27 @@ export class WriteTexToolHandler implements IFullyManagedTool {
 				typeof pathResult === "string"
 					? { absolutePath: pathResult, resolvedPath: texPath }
 					: { absolutePath: pathResult.absolutePath, resolvedPath: pathResult.resolvedPath }
+
+			// Log and notify the resolved paths for diagnostics
+			console.log(
+				`${LOG_PREFIX} path resolved | raw='${rawRelPath}' | resolved='${resolvedPath}' | absolute='${absolutePath}' | cwd='${cwd}'`,
+			)
+			showSystemNotification({
+				subtitle: "write_tex path",
+				message: `raw='${rawRelPath}'\nresolved='${resolvedPath}'\nabsolute='${absolutePath}'`,
+			})
+
+			// Heuristic warning: for 2.3.* sections we expect two occurrences of "section-2.3."
+			const section23Occurrences = (absolutePath.match(/section-2\.3\./g) || []).length
+			if (section23Occurrences < 2) {
+				console.warn(
+					`${LOG_PREFIX} ⚠️ Unexpected path depth for 2.3.* section (found ${section23Occurrences} occurrences of 'section-2.3.'): ${absolutePath}`,
+				)
+				showSystemNotification({
+					subtitle: "write_tex warning",
+					message: `Path may be missing an intermediate folder:\n${absolutePath}`,
+				})
+			}
 
 			// Check clineignore access
 			const accessValidation = this.validator.checkClineIgnorePath(resolvedPath)
@@ -222,10 +246,16 @@ export class WriteTexToolHandler implements IFullyManagedTool {
 	/**
 	 * Applies header and footer format to LaTeX document
 	 *
-	 * NOTE: Header and footer addition is currently disabled/commented out.
-	 * This method now only fixes documentclass duplication issues.
+	 * Adds fancyhdr header/footer configuration if not already present.
+	 * Also fixes documentclass duplication issues.
 	 */
 	private async applyDocumentFormat(content: string, texPath: string, config: TaskConfig): Promise<string> {
+		// DEBUG: Log entry
+		showSystemNotification({
+			subtitle: "DEBUG: applyDocumentFormat",
+			message: `Called for: ${texPath}, content length: ${content.length}`,
+		})
+
 		// Fix documentclass duplication issue: remove duplicate \documentclass declarations
 		// The AI might generate content with \documentclass already included, and we need to ensure
 		// it only appears once at the beginning of the document
@@ -233,9 +263,15 @@ export class WriteTexToolHandler implements IFullyManagedTool {
 		const documentBeginMatch = content.match(/\\begin\{document\}/i)
 		const documentEndMatch = content.match(/\\end\{document\}/i)
 
+		// DEBUG: Check if document structure found
+		showSystemNotification({
+			subtitle: "DEBUG: Document Structure",
+			message: `beginMatch: ${!!documentBeginMatch}, endMatch: ${!!documentEndMatch}`,
+		})
+
 		if (documentBeginMatch && documentEndMatch) {
 			// Extract preamble (content before \begin{document})
-			const preamble = content.substring(0, documentBeginMatch.index!).trim()
+			let preamble = content.substring(0, documentBeginMatch.index!).trim()
 			const bodyContent = content
 				.substring(documentBeginMatch.index! + documentBeginMatch[0].length, documentEndMatch.index!)
 				.trim()
@@ -245,27 +281,87 @@ export class WriteTexToolHandler implements IFullyManagedTool {
 			const docClassRegex = /\\documentclass(?:\[[^\]]*\])?\{[^}]+\}/g
 			const docClassMatches = preamble.match(docClassRegex)
 
+			let documentClass = "\\documentclass{article}"
 			if (docClassMatches && docClassMatches.length > 0) {
 				// Use the first documentclass declaration found
-				const documentClass = docClassMatches[0]
+				documentClass = docClassMatches[0]
 
 				// Remove ALL documentclass declarations from preamble to prevent duplication
-				const cleanedPreamble = preamble.replace(docClassRegex, "").trim()
+				preamble = preamble.replace(docClassRegex, "").trim()
+			}
 
-				// Clean up any extra blank lines that might result from removal
-				const normalizedPreamble = cleanedPreamble.replace(/\n{3,}/g, "\n\n")
+			// Clean up any extra blank lines that might result from removal
+			preamble = preamble.replace(/\n{3,}/g, "\n\n")
 
-				// Reconstruct document with single documentclass at the beginning
-				return `${documentClass}
-${normalizedPreamble}
+			// Check if fancyhdr package and pagestyle are already configured
+			const hasFancyhdr = /\\usepackage(\[[^\]]*\])?\{fancyhdr\}/i.test(preamble)
+			const hasFancyPagestyle = /\\pagestyle\{fancy\}/i.test(preamble)
 
+			// DEBUG: Log fancyhdr check
+			showSystemNotification({
+				subtitle: "DEBUG: FancyHdr Check",
+				message: `hasFancyhdr: ${hasFancyhdr}, hasFancyPagestyle: ${hasFancyPagestyle}`,
+			})
+
+			// Build header/footer config if missing
+			let headerFooterConfig = ""
+			if (!hasFancyhdr || !hasFancyPagestyle) {
+				headerFooterConfig = `
+${!hasFancyhdr ? "\\usepackage{fancyhdr}" : ""}
+
+% Header and footer configuration
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0.4pt}
+\\renewcommand{\\footrulewidth}{0.4pt}
+% Header: Logo on left, title on right
+\\fancyhead[L]{}
+\\fancyhead[R]{Aspirin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
+% Footer: Confidential on left, page number in center, company name on right
+\\fancyfoot[L]{Confidential}
+\\fancyfoot[C]{\\thepage}
+\\fancyfoot[R]{YC LifeSciences Ltd}
+% Apply the same style to the first page (plain style)
+\\fancypagestyle{plain}{%
+  \\fancyhf{}
+  \\renewcommand{\\headrulewidth}{0.4pt}
+  \\renewcommand{\\footrulewidth}{0.4pt}
+  \\fancyhead[L]{}
+  \\fancyhead[R]{Aspirin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
+  \\fancyfoot[L]{Confidential}
+  \\fancyfoot[C]{\\thepage}
+  \\fancyfoot[R]{YC LifeSciences Ltd}
+}
+`
+				// DEBUG: Log that we're adding header/footer
+				showSystemNotification({
+					subtitle: "DEBUG: Adding Header/Footer",
+					message: `Config length: ${headerFooterConfig.length} chars`,
+				})
+			}
+
+			// Reconstruct document with single documentclass at the beginning + header/footer config
+			const result = `${documentClass}
+${preamble}
+${headerFooterConfig}
 \\begin{document}
 ${bodyContent}
 ${documentEnd}`
-			}
+
+			// DEBUG: Log final result
+			showSystemNotification({
+				subtitle: "DEBUG: Final Result",
+				message: `Result length: ${result.length}, has fancyhdr in result: ${result.includes("\\pagestyle{fancy}")}`,
+			})
+
+			return result
 		}
 
-		// If no document environment or no documentclass found, return content as-is
+		// If no document environment found, return content as-is
+		showSystemNotification({
+			subtitle: "DEBUG: No Document Env",
+			message: "Returning content as-is (no \\begin{document} found)",
+		})
 		return content
 
 		// ============================================================================

@@ -2197,21 +2197,83 @@ export class Task {
 			// saves task history item which we use to keep track of conversation history deleted range
 		}
 
+		// Log context size for debugging stuck requests
+		const truncatedHistory = contextManagementMetadata.truncatedConversationHistory
+		const historyMessages = truncatedHistory.length
+		const historyChars = JSON.stringify(truncatedHistory).length
+		const systemPromptChars = systemPrompt.length
+		const totalContextChars = historyChars + systemPromptChars
+		const estimatedTokens = Math.round(totalContextChars / 4) // rough estimate: 4 chars per token
+
+		console.log(
+			`[Task ${this.taskId}] API Request Context: ${historyMessages} messages, ~${Math.round(historyChars / 1000)}k history chars, ~${Math.round(systemPromptChars / 1000)}k system prompt chars, ~${estimatedTokens} estimated tokens`,
+		)
+
+		// Warn if context is very large (potential timeout risk)
+		if (estimatedTokens > 100000) {
+			console.warn(`[Task ${this.taskId}] ⚠️ LARGE CONTEXT WARNING: ~${estimatedTokens} tokens. May cause provider timeout.`)
+		}
+
 		// Response API requires native tool calls to be enabled
 		const stream = this.api.createMessage(systemPrompt, contextManagementMetadata.truncatedConversationHistory, tools)
 
 		const iterator = stream[Symbol.asyncIterator]()
 
+		// Add a periodic logger to show we're still waiting for first chunk
+		const firstChunkStartTime = Date.now()
+		const FIRST_CHUNK_HARD_TIMEOUT_SECONDS = 300 // 5 minutes - should be handled by task-level timeout
+		const firstChunkLogger = setInterval(() => {
+			const elapsed = Math.round((Date.now() - firstChunkStartTime) / 1000)
+			console.warn(`[Task ${this.taskId}] Still waiting for first chunk... ${elapsed}s elapsed`)
+
+			// Warn at 60s intervals
+			if (elapsed >= 60 && elapsed % 60 === 0 && elapsed < FIRST_CHUNK_HARD_TIMEOUT_SECONDS) {
+				const remaining = FIRST_CHUNK_HARD_TIMEOUT_SECONDS - elapsed
+				showSystemNotification({
+					subtitle: `Task ${this.taskId.substring(0, 8)}... - Slow Response`,
+					message: `Waiting ${elapsed}s for API response. Auto-abort in ${remaining}s if stuck.`,
+				})
+			}
+
+			// Critical warning at 240s (4 minutes)
+			if (elapsed >= 240 && elapsed < FIRST_CHUNK_HARD_TIMEOUT_SECONDS) {
+				const remaining = FIRST_CHUNK_HARD_TIMEOUT_SECONDS - elapsed
+				console.error(`[Task ${this.taskId}] ⚠️ CRITICAL: First chunk wait at ${elapsed}s - will timeout in ${remaining}s`)
+			}
+		}, 15000) // Log every 15 seconds
+
 		try {
 			// awaiting first chunk to see if it will throw an error
 			this.taskState.isWaitingForFirstChunk = true
+			console.log(`[Task ${this.taskId}] Waiting for first chunk from API...`)
 			const firstChunk = await iterator.next()
+			const firstChunkDuration = Date.now() - firstChunkStartTime
+			console.log(`[Task ${this.taskId}] First chunk received after ${firstChunkDuration}ms`)
+			clearInterval(firstChunkLogger)
 			yield firstChunk.value
 			this.taskState.isWaitingForFirstChunk = false
 		} catch (error) {
+			clearInterval(firstChunkLogger)
+			// Log first chunk error for debugging
+			const firstChunkErrorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[Task ${this.taskId}] FIRST CHUNK ERROR: ${firstChunkErrorMsg}`)
+			console.error(`[Task ${this.taskId}] First chunk error stack:`, error instanceof Error ? error.stack : "No stack")
+
+			// Show system notification for first chunk failures
+			showSystemNotification({
+				subtitle: `Task ${this.taskId.substring(0, 8)}... - First Chunk Error`,
+				message: firstChunkErrorMsg.substring(0, 100),
+			})
+
 			const isContextWindowExceededError = checkContextWindowExceededError(error)
 			const { model, providerId } = this.getCurrentProviderInfo()
 			const clineError = ErrorService.get().toClineError(error, model.id, providerId)
+
+			if (isContextWindowExceededError) {
+				console.error(
+					`[Task ${this.taskId}] Context window exceeded! This is likely due to too many tool calls/file reads.`,
+				)
+			}
 
 			// Capture provider failure telemetry using clineError
 			ErrorService.get().logMessage(clineError.message)
@@ -3006,9 +3068,21 @@ export class Task {
 				}
 			} catch (error) {
 				// abandoned happens when extension is no longer waiting for the cline instance to finish aborting (error is thrown here when any function in the for loop throws due to this.abort)
+				const errorMsg = error instanceof Error ? error.message : String(error)
+				console.error(`[Task ${this.taskId}] STREAMING ERROR: ${errorMsg}`)
+				console.error(`[Task ${this.taskId}] Error stack:`, error instanceof Error ? error.stack : "No stack")
+
+				// Show system notification for streaming failures (helps debug stuck requests)
+				showSystemNotification({
+					subtitle: `Task ${this.taskId.substring(0, 8)}... - API Error`,
+					message: errorMsg.substring(0, 100),
+				})
+
 				if (!this.taskState.abandoned) {
 					const clineError = ErrorService.get().toClineError(error, this.api.getModel().id)
 					const errorMessage = clineError.serialize()
+					console.error(`[Task ${this.taskId}] Serialized error: ${errorMessage}`)
+
 					// Auto-retry for streaming failures (always enabled)
 					if (this.taskState.autoRetryAttempts < 3) {
 						this.taskState.autoRetryAttempts++
@@ -3036,6 +3110,7 @@ export class Task {
 							}
 						})
 					} else if (this.taskState.autoRetryAttempts >= 3) {
+						console.error(`[Task ${this.taskId}] All ${3} retry attempts exhausted. Task will be aborted.`)
 						// Show error_retry with failed flag to indicate all retries exhausted
 						await this.say(
 							"error_retry",
@@ -3048,6 +3123,9 @@ export class Task {
 						)
 					}
 
+					console.error(
+						`[Task ${this.taskId}] Aborting task due to streaming failure. Attempts: ${this.taskState.autoRetryAttempts}`,
+					)
 					// needs to happen after the say, otherwise the say would fail
 					this.abortTask() // if the stream failed, there's various states the task could be in (i.e. could have streamed some tools the user may have executed), so we just resort to replicating a cancel task
 
