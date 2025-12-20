@@ -2,6 +2,7 @@ import path from "node:path"
 import type { ToolUse } from "@core/assistant-message"
 import { constructNewFileContent } from "@core/assistant-message/diff"
 import { formatResponse } from "@core/prompts/responses"
+import { StateManager } from "@core/storage/StateManager"
 import { getWorkspaceBasename, resolveWorkspacePath } from "@core/workspace"
 import { showSystemNotification } from "@integrations/notifications"
 import { ClineSayTool } from "@shared/ExtensionMessage"
@@ -331,6 +332,11 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 
 			// Apply model-specific fixes (llama, gemini, and other models may add escape characters)
 			newContent = applyModelContentFixes(newContent, config.api.getModel().id, resolvedPath)
+
+			// For .tex files, apply header/footer configuration
+			if (resolvedPath.endsWith(".tex")) {
+				newContent = this.applyTexHeaderFooter(newContent, resolvedPath)
+			}
 		} else {
 			// can't happen, since we already checked for content/diff above. but need to do this for type error
 			return
@@ -348,5 +354,145 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 		const providerId = (currentMode === "plan" ? apiConfig.planModeApiProvider : apiConfig.actModeApiProvider) as string
 		const modelId = config.api.getModel().id
 		return { providerId, modelId }
+	}
+
+	/**
+	 * Applies header and footer configuration to LaTeX content if not already present.
+	 */
+	private applyTexHeaderFooter(content: string, texPath: string): string {
+		const documentBeginMatch = content.match(/\\begin\{document\}/i)
+		const documentEndMatch = content.match(/\\end\{document\}/i)
+
+		if (documentBeginMatch && documentEndMatch) {
+			// Extract preamble (content before \begin{document})
+			let preamble = content.substring(0, documentBeginMatch.index!).trim()
+			const bodyContent = content
+				.substring(documentBeginMatch.index! + documentBeginMatch[0].length, documentEndMatch.index!)
+				.trim()
+			const documentEnd = content.substring(documentEndMatch.index!)
+
+			// Find all documentclass declarations in the preamble
+			const docClassRegex = /\\documentclass(?:\[[^\]]*\])?\{[^}]+\}/g
+			const docClassMatches = preamble.match(docClassRegex)
+
+			let documentClass = "\\documentclass{article}"
+			if (docClassMatches && docClassMatches.length > 0) {
+				documentClass = docClassMatches[0]
+				preamble = preamble.replace(docClassRegex, "").trim()
+			}
+
+			// Clean up any extra blank lines
+			preamble = preamble.replace(/\n{3,}/g, "\n\n")
+
+			// Check if fancyhdr package and pagestyle are already configured
+			const hasFancyhdr = /\\usepackage(\[[^\]]*\])?\{fancyhdr\}/i.test(preamble)
+			const hasFancyPagestyle = /\\pagestyle\{fancy\}/i.test(preamble)
+
+			// Build header/footer config if missing
+			let headerFooterConfig = ""
+			if (!hasFancyhdr || !hasFancyPagestyle) {
+				// Get drug name and company name from current regulatory product
+				const stateManager = StateManager.get()
+				const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as
+					| { drugName?: string; companyName?: string }
+					| undefined
+				const drugName = currentProduct?.drugName || "Drug Product"
+				const companyName = currentProduct?.companyName || ""
+
+				// Determine module info from the tex path
+				let moduleInfo = "Module 5: Clinical Study Reports"
+				if (
+					texPath.includes("/5.") ||
+					texPath.includes("\\5.") ||
+					texPath.includes("module5") ||
+					texPath.includes("Module5")
+				) {
+					moduleInfo = "Module 5: Clinical Study Reports"
+				} else if (
+					texPath.includes("/2.") ||
+					texPath.includes("\\2.") ||
+					texPath.includes("module2") ||
+					texPath.includes("Module2")
+				) {
+					moduleInfo = "Module 2: Overview and Summary"
+				} else if (
+					texPath.includes("/3.") ||
+					texPath.includes("\\3.") ||
+					texPath.includes("module3") ||
+					texPath.includes("Module3")
+				) {
+					moduleInfo = "Module 3: Quality"
+				} else if (
+					texPath.includes("/4.") ||
+					texPath.includes("\\4.") ||
+					texPath.includes("module4") ||
+					texPath.includes("Module4")
+				) {
+					moduleInfo = "Module 4: Nonclinical Study Reports"
+				}
+
+				// Escape LaTeX special characters
+				const escapeLatex = (text: string): string => {
+					return text
+						.replace(/\\/g, "\\textbackslash{}")
+						.replace(/{/g, "\\{")
+						.replace(/}/g, "\\}")
+						.replace(/#/g, "\\#")
+						.replace(/\$/g, "\\$")
+						.replace(/%/g, "\\%")
+						.replace(/&/g, "\\&")
+						.replace(/_/g, "\\_")
+						.replace(/\^/g, "\\textasciicircum{}")
+						.replace(/~/g, "\\textasciitilde{}")
+				}
+
+				const escapedDrugName = escapeLatex(drugName)
+				const escapedCompanyName = escapeLatex(companyName)
+
+				headerFooterConfig = `
+${!hasFancyhdr ? "\\usepackage{fancyhdr}" : ""}
+
+% Header and footer configuration
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0.4pt}
+\\renewcommand{\\footrulewidth}{0.4pt}
+% Header: Logo on left, title on right
+\\fancyhead[L]{}
+\\fancyhead[R]{${escapedDrugName}\\\\${moduleInfo}}
+% Footer: Confidential on left, page number in center, company name on right
+\\fancyfoot[L]{Confidential}
+\\fancyfoot[C]{\\thepage}
+\\fancyfoot[R]{${escapedCompanyName}}
+% Apply the same style to the first page (plain style)
+\\fancypagestyle{plain}{%
+  \\fancyhf{}
+  \\renewcommand{\\headrulewidth}{0.4pt}
+  \\renewcommand{\\footrulewidth}{0.4pt}
+  \\fancyhead[L]{}
+  \\fancyhead[R]{${escapedDrugName}\\\\${moduleInfo}}
+  \\fancyfoot[L]{Confidential}
+  \\fancyfoot[C]{\\thepage}
+  \\fancyfoot[R]{${escapedCompanyName}}
+}
+`
+				// DEBUG notification
+				showSystemNotification({
+					subtitle: "DEBUG: Adding Header/Footer",
+					message: `WriteToFileToolHandler adding fancyhdr config to .tex file`,
+				})
+			}
+
+			// Reconstruct document
+			return `${documentClass}
+${preamble}
+${headerFooterConfig}
+\\begin{document}
+${bodyContent}
+${documentEnd}`
+		}
+
+		// If no document environment found, return content as-is
+		return content
 	}
 }

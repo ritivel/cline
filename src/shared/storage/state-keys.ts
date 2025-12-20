@@ -38,6 +38,7 @@ export interface RegulatoryProductConfig {
 	submissionsPath: string
 	drugName: string
 	marketName: string
+	companyName?: string
 }
 
 export interface GlobalState {

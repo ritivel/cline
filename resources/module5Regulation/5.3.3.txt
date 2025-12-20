@@ -1,0 +1,51 @@
+5.3.3 Reports of Human Pharmacokinetic (PK) Studies
+Assessment of the PK of a drug in healthy subjects and/or patients is considered critical to
+designing dosing strategies and titration steps, to anticipating the effects of concomitant drug
+use, and to interpreting observed pharmacodynamic differences. These assessments should
+provide a description of the body's handling of a drug over time, focusing on maximum
+plasma concentrations (peak exposure), area-under-curve (total exposure), clearance, and
+accumulation of the parent drug and its metabolite(s), in particular those that have
+pharmacological activity.
+49
+The Common Technical Document – Efficacy
+The PK studies whose reports should be included in Sections 5.3.3.1 and 5.3.3.2 are generally
+designed to (1) measure plasma drug and metabolite concentrations over time, (2) measure
+drug and metabolite concentrations in urine or faeces when useful or necessary, and/or (3)
+measure drug and metabolite binding to protein or red blood cells.
+On occasion, PK studies may include measurement of drug distribution into other body
+tissues, body organs, or fluids (e.g., synovial fluid or cerebrospinal fluid), and the results of
+these tissue distribution studies should be included in Section 5.3.3.1 to 5.3.3.2, as
+appropriate. These studies should characterise the drug's PK and provide information about
+the absorption, distribution, metabolism, and excretion of a drug and any active metabolites in
+healthy subjects and/or patients. Studies of mass balance and changes in PK related to dose
+(e.g., determination of dose proportionality) or time (e.g., due to enzyme induction or
+formation of antibodies) are of particular interest and should be included in Sections 5.3.3.1
+and/or 5.3.3.2. Apart from describing mean PK in normal and patient volunteers, PK studies
+should also describe the range of individual variability. In the ICH E5 guideline on Ethnic
+Factors in the Acceptance of Foreign Data, factors that may result in different responses to a
+drug in different populations are categorised as intrinsic ethnic factors or extrinsic ethnic
+factors. In this document, these categories are referred to as intrinsic factors and extrinsic
+factors, respectively. Additional studies can also assess differences in systemic exposure as a
+result of changes in PK due to intrinsic (e.g., age, gender, racial, weight, height, disease,
+genetic polymorphism, and organ dysfunction) and extrinsic (e.g., drug-drug interactions,
+diet, smoking, and alcohol use) factors. Reports of PK studies examining the influence of
+intrinsic and extrinsic factors on exposure should be organised in Sections 5.3.3.3 and 5.3.3.4,
+respectively.
+In addition to standard multiple-sample PK studies, population PK analyses based on sparse
+sampling during clinical studies can also address questions about the contributions of intrinsic
+and extrinsic factors to the variability in the dose-PK-response relationship. Because the
+methods used in population PK studies are substantially different from those used in standard
+PK studies, these studies should be placed in Section 5.3.3.5.
+5.3.3.1 Healthy Subject PK and Initial Tolerability Study Reports
+Reports of PK and initial tolerability studies in healthy subjects should be placed in this
+section.
+5.3.3.2 Patient PK and Initial Tolerability Study Reports
+Reports of PK and initial tolerability studies in patients should be placed in this section.
+5.3.3.3 Intrinsic Factor PK Study Reports
+Reports of PK studies to assess effects of intrinsic factors, should be placed in this section.
+5.3.3.4 Extrinsic Factor PK Study Reports
+Reports of PK studies to assess effects of extrinsic factors, should be placed in this section.
+5.3.3.5 Population PK Study Reports
+Reports of population PK studies based on sparse samples obtained in clinical trials including
+efficacy and safety trials, should be placed in this section.
+

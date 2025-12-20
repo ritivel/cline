@@ -1,0 +1,4 @@
+2.5.2 Overview of Biopharmaceutics
+
+The purpose of this section is to present a critical analysis of any important issues related to bioavailability that might affect efficacy and/or safety of the to-be-marketed formulation(s) (e.g., dosage form/strength proportionality, differences between the to-be-marketed formulation and the formulation(s) used in clinical trials, and influence of food on exposure).
+

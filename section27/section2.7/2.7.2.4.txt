@@ -1,0 +1,38 @@
+2.7.2.4 Special Studies
+This section should include studies that provide special types of data relevant to specific types
+of medicinal products. For immunogenicity studies and other studies in which data may
+correlate with PK, PD, safety, and/or efficacy data, explanations of such correlations should
+be summarised here. Any observed or potential effects on PK, PD, safety and/or efficacy
+should be considered in other appropriate sections of the Clinical Summary as well, with
+cross-referencing to this section. Human studies that address a specific safety issue should not
+be reported here, but instead should be reported in the Summary of Clinical Safety (section
+2.7.4).
+Example 1: Immunogenicity
+For protein products and other products to which specific immunological reactions have been
+measured, data regarding immunogenicity should be summarised in this section. For vaccines
+or other products intended to induce specific immune reactions, immunogenicity data should
+be described in the efficacy section 2.7.3. Assays used should be briefly described and
+information about their performance (e.g., sensitivity, specificity, reliability, validity) should
+be summarised; the location in the application of detailed information should be crossreferenced.
+Data regarding the incidence, titre, timing of onset and duration of antibody responses should
+be summarised for each type of antibody assay used (e.g., IgG by ELISA, neutralisation).
+Relationships of antibody formation to underlying disease, concomitant medication, dose,
+duration, regimen, and formulation should be explored and summarised. For drugs intended
+to be given as chronic, continuous therapy, any data on the impact of interruptions of therapy
+on antigenicity should be analysed and summarised.
+It is particularly important to summarise analyses of potential clinically relevant correlates of
+immunogenicity, e.g., to determine the extent to which the presence of antibodies of a
+particular type or titer appears to correlate with alterations of PK, changes in PD, loss of
+efficacy, loss of adverse event profile, or development of adverse events. Particular attention
+should be paid to events that might be immunologically mediated (e.g., serum sickness) and
+events that might result from binding of cross-reactive endogenous substances by antibodies
+to the administered drug.
+Example 2: Clinical microbiology
+For antimicrobial or antiviral medicinal products, in vitro studies to characterise the spectrum
+of activity are an important part of the programme of studies relevant to clinical efficacy.
+Clinical efficacy studies that include characterisation of the susceptibility of the clinical
+isolates as a part of the efficacy determination should be included in Section 2.7.3, Summary
+of Clinical Efficacy. However, studies that evaluate such findings as the pattern of in vitro
+susceptibility of strains of bacteria from different parts of the world (not in the context of
+clinical efficacy study) would be included here.
+

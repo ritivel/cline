@@ -1,0 +1,5 @@
+5.3.7 Case Report Forms and Individual Patient Listings
+Case report forms and individual patient data listings that are described as appendices 16.3
+and 16.4 in the ICH clinical study report guideline, should be placed in this section when
+submitted, in the same order as the clinical study reports and indexed by study.
+

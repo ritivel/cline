@@ -1,0 +1,32 @@
+5.3.4 Reports of Human Pharmacodynamic (PD) Studies
+Reports of studies with a primary objective of determining the PD effects of a drug product in
+humans should be placed in this section. Reports of studies whose primary objective is to
+establish efficacy or to accumulate safety data, however, should be placed in Section 5.3.5.
+This section should include reports of 1) studies of pharmacologic properties known or
+thought to be related to the desired clinical effects (biomarkers), 2) short-term studies of the
+main clinical effect, and 3) PD studies of other properties not related to the desired clinical
+effect. Because a quantitative relationship of these pharmacological effects to dose and/or
+plasma drug and metabolite concentrations is usually of interest, PD information is frequently
+collected in dose response studies or together with drug concentration information in PK
+studies (concentration-response or PK/PD studies). Relationships between PK and PD effects
+that are not obtained in well-controlled studies are often evaluated using an appropriate model
+and used as a basis for designing further dose-response studies or, in some cases, for
+interpreting effects of concentration differences in population subsets.
+Dose-finding, PD and/or PK-PD studies can be conducted in healthy subjects and/or patients,
+and can also be incorporated into the studies that evaluate safety and efficacy in a clinical
+indication. Reports of dose-finding, PD and/or PK/PD studies conducted in healthy subjects
+should be placed in Section 5.3.4.1, and the reports for those studies conducted in patients
+should be placed in Section 5.3.4.2.
+In some cases, the short-term PD, dose-finding, and/or PK-PD information found in
+pharmacodynamic studies conducted in patients will provide data that contribute to
+assessment of efficacy, either because they show an effect on an acceptable surrogate marker
+(e.g., blood pressure) or on a clinical benefit endpoint (e.g., pain relief). Similarly, a PD
+study may contain important clinical safety information. When these studies are part of the
+efficacy or safety demonstration, they are considered clinical efficacy and safety studies that
+should be included in Section 5.3.5, not in Section 5.3.4.
+5.3.4.1 Healthy Subject PD and PK/PD Study Reports
+PD and/or PK/PD studies having non-therapeutic objectives in healthy subjects should be
+placed in this section
+5.3.4.2 Patient PD and PK/PD Study Reports
+PD and/or PK/PD studies in patients should be submitted in this section.
+

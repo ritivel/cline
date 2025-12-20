@@ -1,0 +1,13 @@
+2.7.6 Synopses of Individual Studies
+The ICH E3 guideline (Structure and Content of Clinical Study Reports) suggests inclusion of
+a study synopsis with each clinical study report, and provides one example of a format for
+such synopses.
+This section should include the table entitled Listing of Clinical Studies, described in
+guidance for Module 5, followed by all individual study synopses organised in the same
+sequence as the study reports in Module 5.
+It is expected that one synopsis will be prepared per study for use in all regions, and that the
+same synopsis will be included in this section and as part of the clinical study report in
+Module 5. The length of a synopsis will usually be up to 3 pages, but a synopsis for a more
+complex and important study may be longer, e.g. 10 pages. Within the individual synopsis,
+tables and figures should be used as appropriate to aid clarity.
+

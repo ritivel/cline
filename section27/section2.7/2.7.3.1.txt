@@ -1,0 +1,17 @@
+2.7.3.1 Background and Overview of Clinical Efficacy
+This section should describe the program of controlled studies and other pertinent studies in
+the application that evaluated efficacy specific to the indication(s) sought. Any results of these
+studies that are pertinent to evaluation of safety should be discussed in Section 2.7.4,
+Summary of Clinical Safety.
+The section should begin with a brief overview of the design of the controlled studies that
+were conducted to evaluate efficacy. These studies include dose-response, comparative
+efficacy, long-term efficacy, and efficacy studies in population subsets. Critical features of
+study design should be discussed, e.g., randomisation, blinding, choices of control treatment,
+choice of patient population, unusual design features such as crossover or randomised
+withdrawal designs, use of run-in periods, other methods of "enrichment", study endpoints,
+study duration, and prespecified plans for analysis of the study results. Although this section is
+intended to focus on clinical investigations, nonclinical data and clinical pharmacology data
+may also be referenced as appropriate to provide a comprehensive summary of human
+experience related to efficacy. This section should not include detailed information about
+individual studies.
+

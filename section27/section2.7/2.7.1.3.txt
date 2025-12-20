@@ -1,0 +1,29 @@
+2.7.1.3 Comparison and Analyses of Results Across Studies
+This section should provide a factual summary of all in vitro dissolution, BA, and
+comparative BA studies carried out with the drug substance or drug product, with particular
+attention to differences in results across studies. This overview should typically summarise the
+findings in text and tables (see 2.7.1.4 Appendix) and should consider the following:
+• evidence of the effects of formulation and manufacturing changes on in vitro dissolution
+and BA and conclusions regarding BE. When manufacturing or formulation changes are
+made for products containing complex drug substances (e.g., a protein), pharmacokinetic
+(PK) studies comparing the product before and after the changes may be performed to
+ensure that the PK characteristics have not changed as a result of product changes.
+Although such studies are sometimes referred to as BE studies, they generally do not focus
+on assessing release of drug substance from drug product. Nonetheless, such studies
+should be reported in this section. Note also that PK studies alone may not be sufficient to
+assure similarity between such drug products. In many situations, pharmacodynamic (PD)
+studies or clinical trials may be necessary. Additionally, depending on the circumstances,
+antigenicity data may also be needed. Results of these other types of studies, when they
+are needed, should be reported in the appropriate places in the dossier.
+• evidence of the extent of food effects on BA and conclusions regarding BE with respect to
+meal type or timing of the meal (where appropriate).
+• evidence of correlations between in vitro dissolution and BA, including the effects of pH
+on dissolution, and conclusions regarding dissolution specifications.
+• comparative bioavailability, including BE conclusions, for different dosage form
+strengths.
+
+comparative BA of the clinical study formulations (for clinical studies providing
+substantial evidence of efficacy) and the formulations to be marketed.
+• the source and magnitude of observed inter- and intrasubject variability for each
+formulation in a comparative BA study.
+

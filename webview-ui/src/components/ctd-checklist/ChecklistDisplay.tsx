@@ -1,8 +1,9 @@
 import { StringRequest } from "@shared/proto/cline/common"
 import type { RegulatoryProductConfig } from "@shared/storage/state-keys"
 import { CheckCircle2, Circle, Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { UiServiceClient } from "@/services/grpc-client"
+import { Section52ClinicalStudies } from "./Section52ClinicalStudies"
 
 interface ChecklistFeature {
 	text: string
@@ -26,24 +27,18 @@ export const ChecklistDisplay = ({ sectionId, product, onRefresh }: ChecklistDis
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
-	useEffect(() => {
-		if (sectionId && product) {
-			loadChecklist(sectionId, product)
-		} else {
-			setChecklist(null)
-			setError(null)
-		}
-	}, [sectionId, product])
+	// Check if this is section 5.2 (special handling)
+	const isSection52 = sectionId === "5.2"
 
-	const loadChecklist = async (sectionId: string, product: RegulatoryProductConfig) => {
+	const loadChecklist = useCallback(async (secId: string, prod: RegulatoryProductConfig) => {
 		setLoading(true)
 		setError(null)
 		try {
 			const response = await UiServiceClient.readChecklistFile(
 				StringRequest.create({
 					value: JSON.stringify({
-						sectionId,
-						product,
+						sectionId: secId,
+						product: prod,
 					}),
 				}),
 			)
@@ -63,15 +58,34 @@ export const ChecklistDisplay = ({ sectionId, product, onRefresh }: ChecklistDis
 		} finally {
 			setLoading(false)
 		}
-	}
+	}, [])
 
-	const handleRefresh = () => {
+	useEffect(() => {
+		// Skip loading checklist for section 5.2 (uses different data source)
+		if (isSection52) {
+			return
+		}
+
+		if (sectionId && product) {
+			loadChecklist(sectionId, product)
+		} else {
+			setChecklist(null)
+			setError(null)
+		}
+	}, [sectionId, product, isSection52, loadChecklist])
+
+	const handleRefresh = useCallback(() => {
 		if (sectionId && product) {
 			loadChecklist(sectionId, product)
 			if (onRefresh) {
 				onRefresh()
 			}
 		}
+	}, [sectionId, product, loadChecklist, onRefresh])
+
+	// Section 5.2 uses a dedicated component for clinical studies table
+	if (isSection52 && product) {
+		return <Section52ClinicalStudies product={product} />
 	}
 
 	if (!sectionId) {

@@ -1,0 +1,73 @@
+2.7.4.1 Exposure to the Drug
+2.7.4.1.1 Overall Safety Evaluation Plan and Narratives of Safety Studies
+The overall safety evaluation plan should be described briefly, including special
+considerations and observations concerning the nonclinical data, any relevant pharmacological
+class effects, and the sources of the safety data (controlled trials, open studies, etc). A tabular
+listing of all clinical studies that provided safety data, grouped appropriately, should generally
+be provided (see the section 2.7.4.7 Appendix). In addition to studies that evaluated efficacy
+and safety, and uncontrolled studies that generate safety information, this section includes
+studies that consider special safety issues. Examples would include studies to compare
+particular adverse event rates for two therapies, to assess safety in particular demographic
+subsets, to evaluate withdrawal or rebound phenomena, or to evaluate particular adverse
+events (e.g., sedation, sexual function, effects on driving, absence of a class adverse effect).
+Studies in indications for which approval is not being sought in the current application and
+ongoing studies would also be included here if they contribute to the safety analysis.
+Narrative descriptions of these studies should be provided here, except that narrative
+descriptions for studies that contributed both efficacy and safety data should be included in
+Section 2.7.3.2 and cross-referenced here. The narratives should provide enough detail to
+allow the reviewer to understand the exposure of study subjects to the test drug or control
+agent, and how safety data were collected (including the methods used and the extent of safety
+monitoring of the subjects enrolled in the individual studies). If some studies are not analysed
+separately but are grouped for safety analysis, that should be noted, and a single narrative
+description can be provided.
+2.7.4.1.2 Overall Extent of Exposure
+A table (see example provided in the section 2.7.4.7 Appendix) and appropriate text should be
+generated to summarise the overall extent of drug exposure from all phases of the clinical
+study development programme. The table should indicate the numbers of subjects exposed in
+studies of different types and at various doses, routes, and durations. If a large number of
+different doses and/or durations of exposure were used, these can be grouped in a manner
+appropriate for the drug. Thus, for any dose or range of doses, duration of exposure can be
+summarised by the number of subjects exposed for specific periods of time, such as 1 day or
+less, 2 days to 1 week, 1 week to 1 month, 1 month to 6 months, 6 months to 1 year, more
+than 1 year (ICH E3). In some applications it may be important to identify diagnostic
+subgroups and/or groups receiving specific concomitant therapies deemed particularly
+relevant to safety assessment in the intended use.
+The dose levels used for each subject in this presentation could be the maximum dose
+received by that subject, the dose with longest exposure, and/or the mean daily dose, as
+appropriate. In some cases, cumulative dose may be pertinent. Dosage may be given as the
+actual daily dose or on a mg/kg or mg/m2 basis, as appropriate. If available, drug
+concentration data (e.g., concentration at the time of an adverse event, maximum plasma
+concentration, area under curve) may be helpful in individual subjects for correlation with
+adverse events or changes in laboratory variables.
+It is assumed that all subjects who were enrolled and received at least one dose of the
+treatment are included in the safety analysis; if that is not so, an explanation should be
+provided. 
+
+2.7.4.1.3 Demographic and Other Characteristics of Study Population
+A summary table should provide the reader with an overview of the demographic
+characteristics (Table 2.7.4.2) of the population that was exposed to the therapeutic agent
+during its development. Choice of age ranges used should take into account considerations
+discussed in ICH E7 [Studies in Support of Special Populations: Geriatrics] and ICH E11
+[Clinical Investigation of Medicinal Products in the Paediatric Population]. If the relative
+exposure of demographic groups in the controlled trials differed from overall exposure, it may
+be useful to provide separate tables.
+In addition, one or more tables should show the relevant characteristics of the study
+population, and the numbers of subjects with special characteristics. Such characteristics
+could include:
+– Severity of disease
+– Hospitalisation
+– Impaired renal function
+– Concomitant illnesses
+– Concomitant use of particular medications
+– Geographical location
+If these characteristics are distributed differently in controlled trials versus the overall
+database, it will generally be useful to present tables on both groupings.
+The text accompanying the table(s) should mention any imbalance(s) between the drug and
+placebo and/or comparator regarding any of the above demographic characteristics,
+particularly if they could lead to differences in safety outcomes.
+If certain subjects were excluded from studies (concomitant illness, severity of illness,
+concomitant medications), this fact should be noted.
+Separate demographic tables should be provided for every indication, although closely related
+indications can be considered together, if study subject characteristics are such that risks are
+believed to be the same.
+

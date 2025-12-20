@@ -297,6 +297,9 @@ service UiService {
   // Deletes a regulatory product from the stored list
   rpc deleteRegulatoryProduct(StringRequest) returns (Empty);
 
+  // Updates an existing regulatory product (e.g., drug name, market name)
+  rpc updateRegulatoryProduct(StringRequest) returns (Empty);
+
   // Gets the current workspace folder from the left pane
   rpc getCurrentWorkspaceFolder(EmptyRequest) returns (String);
 
@@ -317,4 +320,19 @@ service UiService {
 
   // Executes a slash command programmatically
   rpc executeSlashCommand(StringRequest) returns (String);
+
+  // Assesses Section 5.3 papers for a drug - searches PubMed and returns papers grouped by subsection
+  rpc assessSection53Papers(StringRequest) returns (String);
+
+  // Gets cached Section 5.3 papers result for a regulatory product
+  rpc getSection53Papers(StringRequest) returns (String);
+
+  // Generates Section 5.3 LaTeX document with papers
+  rpc generateSection53(StringRequest) returns (String);
+
+  // Generates Section 2.5 (Clinical Overview) LaTeX document - requires Section 5.3 to be assessed first
+  rpc generateSection25(StringRequest) returns (String);
+
+  // Generates Section 2.7 (Clinical Summary) LaTeX document - requires Section 5.3 to be assessed first
+  rpc generateSection27(StringRequest) returns (String);
 }

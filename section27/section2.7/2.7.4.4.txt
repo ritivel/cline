@@ -1,0 +1,11 @@
+2.7.4.4 Vital Signs, Physical Findings, and Other Observations Related to Safety
+The manner of presenting cross-study observations and comparisons of vital signs (e.g., heart
+rate, blood pressure, temperature, respiratory rate), weight and other data (e.g.,
+electrocardiograms, X-rays) related to safety should be similar to that for laboratory variables.
+If there is evidence of a drug effect, any dose-response or drug concentration-response
+relationship or relationship to individual variables (e.g., disease, demographics, concomitant
+therapy) should be identified and the clinical relevance of the observation described.
+Particular attention should be given to changes not evaluated as efficacy variables and to those
+considered to be adverse events. Particular attention should be given to studies that were
+designed to evaluate specific safety issues, e.g., studies of QT interval prolongation
+

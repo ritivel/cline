@@ -1,0 +1,26 @@
+2.7.2 Summary of Clinical Pharmacology Studies
+2.7.2.1 Background and Overview
+This section should provide the reviewer with an overall view of the clinical pharmacology
+studies. These studies include clinical studies performed to evaluate human pharmacokinetics
+(PK), and pharmacodynamics (PD), and in vitro studies performed with human cells, tissues,
+or related materials (hereinafter referred to as human biomaterials) that are pertinent to PK
+processes. For vaccine products, this section should provide the reviewer with immune
+response data that support the selection of dose, dosage schedule, and formulation of the final
+product. Where appropriate, relevant data that are summarised in sections 2.7.1, 2.7.3 and
+2.7.4 can also be referenced to provide a comprehensive view of the approach and rationale
+for the development of the pharmacokinetic, pharmacodynamic, PK/PD and human
+biomaterial database. This section should not include detailed information about individual
+studies.
+This section should begin with a brief overview of the human biomaterial studies that were
+conducted and that were intended to help in the interpretation of PK or PD data. Studies of
+permeability (e.g., intestinal absorption, blood brain barrier passage), protein binding, hepatic
+metabolism, and metabolic-based drug-drug interactions are particularly relevant. This should
+be followed by a brief overview of the clinical studies that were carried out to characterise PK
+and PD of the medicinal product, including studies of PK/PD relationships in healthy subjects
+and patients, and relevant effects of intrinsic and extrinsic factors on PK and PK/PD
+relationships4
+. Critical aspects of study design and data analysis should be noted, e.g., the
+choice of the single or multiple doses used, the study population, choice of the intrinsic or
+extrinsic factors that were studied, the choice of PD endpoints, and whether a traditional
+approach or a population approach was used to collect and analyse data to assess PK or PD.
+

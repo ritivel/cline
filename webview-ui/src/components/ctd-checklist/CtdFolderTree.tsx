@@ -28,9 +28,19 @@ interface CtdFolderTreeProps {
 	onAssess?: (sectionId: string) => void
 	onAssessOutput?: (sectionId: string) => void
 	onGenerate?: (sectionId: string) => void
+	onAssessSection53?: () => void
+	onGenerateSection53?: () => void
+	onGenerateSection25?: () => void
+	onGenerateSection27?: () => void
 	assessingSections?: Set<string>
 	assessingOutputSections?: Set<string>
 	generatingSections?: Set<string>
+	isAssessingSection53?: boolean
+	isGeneratingSection53?: boolean
+	isGeneratingSection25?: boolean
+	isGeneratingSection27?: boolean
+	section53PaperCount?: number // Total papers assessed for section 5.3
+	section53Assessed?: boolean // Whether section 5.3 has been assessed
 }
 
 interface SectionNodeProps {
@@ -41,9 +51,19 @@ interface SectionNodeProps {
 	onAssess?: (sectionId: string) => void
 	onAssessOutput?: (sectionId: string) => void
 	onGenerate?: (sectionId: string) => void
+	onAssessSection53?: () => void
+	onGenerateSection53?: () => void
+	onGenerateSection25?: () => void
+	onGenerateSection27?: () => void
 	assessingSections?: Set<string>
 	assessingOutputSections?: Set<string>
 	generatingSections?: Set<string>
+	isAssessingSection53?: boolean
+	isGeneratingSection53?: boolean
+	isGeneratingSection25?: boolean
+	isGeneratingSection27?: boolean
+	section53PaperCount?: number
+	section53Assessed?: boolean
 }
 
 const SectionNode = ({
@@ -54,15 +74,39 @@ const SectionNode = ({
 	onAssess,
 	onAssessOutput,
 	onGenerate,
+	onAssessSection53,
+	onGenerateSection53,
+	onGenerateSection25,
+	onGenerateSection27,
 	assessingSections,
 	assessingOutputSections,
 	generatingSections,
+	isAssessingSection53,
+	isGeneratingSection53,
+	isGeneratingSection25,
+	isGeneratingSection27,
+	section53PaperCount,
+	section53Assessed,
 }: SectionNodeProps) => {
 	const [isExpanded, setIsExpanded] = useState(level < 2) // Auto-expand first 2 levels
 	const isLeaf = !section.children || section.children.length === 0
 	const hasChildren = section.children && section.children.length > 0
-	// Show buttons for leaf sections OR for section 2.5 (which needs preamble generation)
-	const showButtons = isLeaf || section.id === "2.5"
+	// Sections that should show buttons even if they're not leaf nodes
+	const intermediateSectionsWithButtons = ["2.3", "2.5"]
+	// Section 5.3 has special handling - show buttons on parent
+	const isSection53Parent = section.id === "5.3"
+	const isSection53Child = section.id.startsWith("5.3.") && section.id !== "5.3"
+	// Section 2.5 has special handling - single generate button
+	const isSection25Parent = section.id === "2.5"
+	const isSection25Child = section.id.startsWith("2.5.") && section.id !== "2.5"
+	// Section 2.7 has special handling - single generate button
+	const isSection27Parent = section.id === "2.7"
+	const isSection27Child = section.id.startsWith("2.7.") && section.id !== "2.7"
+	const showButtons = isLeaf || intermediateSectionsWithButtons.includes(section.id) || isSection53Parent
+	// Hide buttons for 5.3.x, 2.5.x, and 2.7.x subsections (they use parent's generate)
+	const hideButtonsFor53Child = isSection53Child
+	const hideButtonsFor25Child = isSection25Child
+	const hideButtonsFor27Child = isSection27Child
 	const isAssessing = assessingSections?.has(section.id) || false
 	const isAssessingOutput = assessingOutputSections?.has(section.id) || false
 	const isGenerating = generatingSections?.has(section.id) || false
@@ -132,54 +176,158 @@ const SectionNode = ({
 				<FileText className="w-5 h-5 text-(--vscode-icon-foreground)" />
 				<span className="font-medium text-base">{section.id}</span>
 				<span className="text-sm text-(--vscode-descriptionForeground) flex-1 truncate">{section.title}</span>
-				{showButtons && (
+				{/* Section 5.3 parent has special Assess button for paper search */}
+				{isSection53Parent && onGenerateSection53 && (
 					<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+						{/* Only show Assess Papers button if papers haven't been assessed yet */}
+						{!section53PaperCount && onAssessSection53 && (
+							<VSCodeButton
+								appearance="secondary"
+								disabled={isAssessingSection53 || isGeneratingSection53}
+								onClick={(e: React.MouseEvent) => {
+									e.stopPropagation()
+									onAssessSection53()
+								}}
+								style={{ minWidth: "120px", height: "28px", fontSize: "13px" }}>
+								{isAssessingSection53 ? (
+									<>
+										<Loader2 className="w-4 h-4 mr-1 animate-spin" />
+										Searching Papers...
+									</>
+								) : (
+									"Assess Papers"
+								)}
+							</VSCodeButton>
+						)}
 						<VSCodeButton
 							appearance="secondary"
-							disabled={isAssessing || isAssessingOutput || isGenerating}
-							onClick={handleAssess}
-							style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
-							{isAssessing ? (
+							disabled={isAssessingSection53 || isGeneratingSection53}
+							onClick={(e: React.MouseEvent) => {
+								e.stopPropagation()
+								onGenerateSection53()
+							}}
+							style={{ minWidth: section53PaperCount ? "160px" : "90px", height: "28px", fontSize: "13px" }}>
+							{isAssessingSection53 ? (
 								<>
 									<Loader2 className="w-4 h-4 mr-1 animate-spin" />
-									Assessing...
+									Searching Papers...
 								</>
-							) : (
-								"Assess"
-							)}
-						</VSCodeButton>
-						<VSCodeButton
-							appearance="secondary"
-							disabled={isAssessing || isAssessingOutput || isGenerating}
-							onClick={handleGenerate}
-							style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
-							{isGenerating ? (
+							) : isGeneratingSection53 ? (
 								<>
 									<Loader2 className="w-4 h-4 mr-1 animate-spin" />
 									Generating...
 								</>
+							) : section53PaperCount ? (
+								`Generate using ${section53PaperCount} papers`
 							) : (
 								"Generate"
 							)}
 						</VSCodeButton>
-						{onAssessOutput && (
+					</div>
+				)}
+				{/* Section 2.5 parent has special Generate button that uses Section 5.3 papers */}
+				{isSection25Parent && onGenerateSection25 && (
+					<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+						<VSCodeButton
+							appearance="secondary"
+							disabled={isGeneratingSection25}
+							onClick={(e: React.MouseEvent) => {
+								e.stopPropagation()
+								onGenerateSection25()
+							}}
+							style={{ minWidth: "180px", height: "28px", fontSize: "13px" }}>
+							{isGeneratingSection25 ? (
+								<>
+									<Loader2 className="w-4 h-4 mr-1 animate-spin" />
+									Generating...
+								</>
+							) : section53Assessed ? (
+								"Generate Clinical Overview"
+							) : (
+								"Generate (Assess 5.3 first)"
+							)}
+						</VSCodeButton>
+					</div>
+				)}
+				{/* Section 2.7 parent has special Generate button that uses Section 5.3 papers */}
+				{isSection27Parent && onGenerateSection27 && (
+					<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+						<VSCodeButton
+							appearance="secondary"
+							disabled={isGeneratingSection27}
+							onClick={(e: React.MouseEvent) => {
+								e.stopPropagation()
+								onGenerateSection27()
+							}}
+							style={{ minWidth: "180px", height: "28px", fontSize: "13px" }}>
+							{isGeneratingSection27 ? (
+								<>
+									<Loader2 className="w-4 h-4 mr-1 animate-spin" />
+									Generating...
+								</>
+							) : section53Assessed ? (
+								"Generate Clinical Summary"
+							) : (
+								"Generate (Assess 5.3 first)"
+							)}
+						</VSCodeButton>
+					</div>
+				)}
+				{/* Regular sections (not 5.3 parent or 5.3.x children or 2.5 parent or 2.5.x children or 2.7 parent or 2.7.x children) show normal buttons */}
+				{showButtons &&
+					!isSection53Parent &&
+					!hideButtonsFor53Child &&
+					!isSection25Parent &&
+					!hideButtonsFor25Child &&
+					!isSection27Parent &&
+					!hideButtonsFor27Child && (
+						<div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
 							<VSCodeButton
 								appearance="secondary"
 								disabled={isAssessing || isAssessingOutput || isGenerating}
-								onClick={handleAssessOutput}
+								onClick={handleAssess}
 								style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
-								{isAssessingOutput ? (
+								{isAssessing ? (
 									<>
 										<Loader2 className="w-4 h-4 mr-1 animate-spin" />
-										Reviewing...
+										Assessing...
 									</>
 								) : (
-									"Review"
+									"Assess"
 								)}
 							</VSCodeButton>
-						)}
-					</div>
-				)}
+							<VSCodeButton
+								appearance="secondary"
+								disabled={isAssessing || isAssessingOutput || isGenerating}
+								onClick={handleGenerate}
+								style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
+								{isGenerating ? (
+									<>
+										<Loader2 className="w-4 h-4 mr-1 animate-spin" />
+										Generating...
+									</>
+								) : (
+									"Generate"
+								)}
+							</VSCodeButton>
+							{onAssessOutput && (
+								<VSCodeButton
+									appearance="secondary"
+									disabled={isAssessing || isAssessingOutput || isGenerating}
+									onClick={handleAssessOutput}
+									style={{ minWidth: "90px", height: "28px", fontSize: "13px" }}>
+									{isAssessingOutput ? (
+										<>
+											<Loader2 className="w-4 h-4 mr-1 animate-spin" />
+											Reviewing...
+										</>
+									) : (
+										"Review"
+									)}
+								</VSCodeButton>
+							)}
+						</div>
+					)}
 			</div>
 			{hasChildren && isExpanded && (
 				<div>
@@ -192,13 +340,23 @@ const SectionNode = ({
 								assessingOutputSections={assessingOutputSections}
 								assessingSections={assessingSections}
 								generatingSections={generatingSections}
+								isAssessingSection53={isAssessingSection53}
+								isGeneratingSection25={isGeneratingSection25}
+								isGeneratingSection27={isGeneratingSection27}
+								isGeneratingSection53={isGeneratingSection53}
 								key={childId}
 								level={level + 1}
 								onAssess={onAssess}
 								onAssessOutput={onAssessOutput}
+								onAssessSection53={onAssessSection53}
 								onGenerate={onGenerate}
+								onGenerateSection25={onGenerateSection25}
+								onGenerateSection27={onGenerateSection27}
+								onGenerateSection53={onGenerateSection53}
 								onSectionSelect={onSectionSelect}
 								section={childSection}
+								section53Assessed={section53Assessed}
+								section53PaperCount={section53PaperCount}
 							/>
 						)
 					})}
@@ -214,9 +372,19 @@ export const CtdFolderTree = ({
 	onAssess,
 	onAssessOutput,
 	onGenerate,
+	onAssessSection53,
+	onGenerateSection53,
+	onGenerateSection25,
+	onGenerateSection27,
 	assessingSections,
 	assessingOutputSections,
 	generatingSections,
+	isAssessingSection53,
+	isGeneratingSection53,
+	isGeneratingSection25,
+	isGeneratingSection27,
+	section53PaperCount,
+	section53Assessed,
 }: CtdFolderTreeProps) => {
 	if (!structure) {
 		return <div className="p-4 text-base text-(--vscode-descriptionForeground)">Loading CTD structure...</div>
@@ -269,13 +437,23 @@ export const CtdFolderTree = ({
 									assessingOutputSections={assessingOutputSections}
 									assessingSections={assessingSections}
 									generatingSections={generatingSections}
+									isAssessingSection53={isAssessingSection53}
+									isGeneratingSection25={isGeneratingSection25}
+									isGeneratingSection27={isGeneratingSection27}
+									isGeneratingSection53={isGeneratingSection53}
 									key={section.id}
 									level={0}
 									onAssess={onAssess}
 									onAssessOutput={onAssessOutput}
+									onAssessSection53={onAssessSection53}
 									onGenerate={onGenerate}
+									onGenerateSection25={onGenerateSection25}
+									onGenerateSection27={onGenerateSection27}
+									onGenerateSection53={onGenerateSection53}
 									onSectionSelect={onSectionSelect}
 									section={section}
+									section53Assessed={section53Assessed}
+									section53PaperCount={section53PaperCount}
 								/>
 							))}
 						</div>

@@ -1,0 +1,133 @@
+2.5.6 Benefits and Risks Conclusions
+
+Preamble
+
+The purpose of this section is to provide a succinct, integrated, and clearly explained benefit-risk assessment of the medicinal product for its intended use. The benefit-risk assessment is based on a weighing of the key benefits and key risks of the medicinal product. Key benefits are favourable effects generally assessed by primary and other clinically important endpoints across the studies in a development program; key risks are unfavourable effects that are important from a clinical and/or public health perspective in terms of their frequency and/or severity. The identification of the key benefits and key risks of a product requires a critical evaluation of the entirety of the efficacy and safety information regarding the medicinal product. Not all benefits and risks will necessarily be considered key benefits and key risks. Subsequent benefit-risk assessments of approved products are the subject of the ICH E2C(R2) (Periodic Benefit-Risk Evaluation Report: PBRER) guideline, which similarly uses the concepts of key benefits and key risks.
+
+The following points should be considered when completing this section:
+
+• The aspects of the therapeutic context, benefits, and risks in the subsequent sections most pertinent to the benefit-risk assessment should be discussed in Section 2.5.6. References to more detailed information presented elsewhere in the application should be used to avoid unnecessary repetition in this section.
+
+• If multiple indications are proposed for the medicinal product, the applicant should consider whether to discuss them separately or together in the appropriate sections. Where indications are discussed separately, a separate section should be provided for each indication using headings (e.g., 2.5.6.1 Pneumonia and 2.5.6.1 Upper Respiratory Infection).
+
+• In some cases, certain effects of the medicinal product may reasonably be described under either benefits or risks, but they should not be discussed as both.
+
+• Data on benefits and risks may arise from multiple sources across different populations. Presentations of the aggregated results may be provided, if appropriate. The applicant should explain how the various data sources were handled (e.g., exclusion of particular studies, pooling strategy).
+
+• For situations where the intended population differs from the study population (e.g., where enrichment strategies have been employed), the benefit-risk assessment should be presented for the intended population.
+
+• Information about the patient perspective may be considered when describing the therapeutic context, benefits, risks, and the benefit-risk assessment.
+
+• Applicants may, at their discretion, use summary tables or graphical displays to communicate the clinical importance of the key benefits and key risks, as well as the resulting benefit-risk assessment.
+
+2.5.6.1 Therapeutic Context
+
+This section should briefly discuss the therapeutic context for the medicinal product. The term 'therapeutic context' describes the disease or condition to be treated, the population intended to be treated, and the benefits and risks of current therapies. Important limitations in the understanding of the condition and uncertainties in the benefits and risks of current therapies should be discussed. If differences in relevant subpopulations are known, they should be discussed. Information on the benefits and risks of the medicinal product should not be included here, but should be discussed in Sections 2.5.6.2 and 2.5.6.3, respectively.
+
+2.5.6.1.1 Disease or Condition
+
+This section provides a description of aspects of the disease or condition that are most relevant to, or have the greatest impact on, the intended population (e.g., incidence, duration, morbidity, mortality, health-related quality of life). The discussion should focus on the aspects of the disease that would be covered by the proposed indication for the medicinal product. Societal or public health implications of the disease (e.g., impact of poor prevention and control of an infectious disease) should also be addressed where relevant.
+
+2.5.6.1.2 Current Therapies
+
+This section provides a description of the major therapies in the intended population (i.e., those therapies used most frequently and/or recommended in clinical guidelines) and the medical need for a new therapy in terms of efficacy, safety, tolerability, convenience, or preference, if applicable. For disease areas that are treated by different pharmacologic classes of therapies, this analysis may be simplified by grouping and providing commentary by drug class. Other interventions used for the intended population may also be discussed when their use is supported by established clinical practice or clinical guidelines. Such interventions could include medical and surgical procedures, drugs used off-label, and other non-drug interventions (e.g., diet modifications, physical therapy). Major differences in current therapies between regions may be noted. If no therapies are currently available to treat the intended population, this should be stated.
+
+2.5.6.2 Benefits
+
+This section provides a factual summary of the data on the key benefits that will be discussed in the benefit-risk assessment of the medicinal product. Benefits are the favourable effects of the medicinal product. In some cases, a benefit may be described by a combination of study endpoints (e.g., the benefit of improved asthma control described by the frequency of exacerbations and hospitalizations and the number of asthma-related deaths). If a surrogate endpoint(s) is the basis of the benefit assessment, the ability of the surrogate to predict clinical benefit and the basis for this expectation should be explained. Benefits may also include important characteristics of the medicinal product, such as convenience (e.g., a more convenient dosing regimen or route of administration) that may lead to improved patient compliance, or benefits that affect those other than the patient (e.g., population benefits of a vaccine due to herd immunity).
+
+When identifying the key benefits of the medicinal product, the following characteristics should be considered:
+
+• clinical importance of the benefit (e.g., life-prolonging, curative, disease-modifying, symptomatic relief, improved patient compliance, functional or quality of life improvement, prevention of disease progression, prevention of infectious disease, diagnostic).
+
+• magnitude of the absolute difference in frequency of the effect in the study population versus the comparator(s); in some cases, also expressing the difference relative to the comparator may be informative (e.g., if the response rate is 20% in the drug group and 8% in the control group, the absolute difference is 12% (i.e., 20%-8%) and the relative effect is 2.5 (i.e., 20%/8%)).
+
+When describing each key benefit, in addition to the points above, the following considerations may also be discussed:
+
+• time course of the key benefit (e.g., time to onset, continued effect of the product over time).
+
+• variability of the key benefit, taking into account relevant subpopulations such as those defined by age, sex, ethnicity, organ function, disease severity, or genetic polymorphism.
+
+This section should also include an analysis of the strengths, limitations, and uncertainties of the evidence related to each key benefit and the implications of this information. The following points may be considered, as applicable:
+
+• study design considerations (e.g., superiority or non-inferiority comparison to active control, superiority comparison to placebo, blinding, absence of comparator).
+
+• completeness of data collection and duration of follow-up.
+
+• number of clinical studies and consistency of results across studies.
+
+• relationship between exposure (e.g., drug levels in the blood) and benefit.
+
+• generalizability of the clinical study result to clinical practice (e.g., clinically important differences between the study population and the intended population).
+
+• confidence that surrogate endpoints, if used, predict that the intended population will benefit.
+
+2.5.6.3 Risks
+
+This section provides a factual summary of the data on the key risks that will be discussed in the benefit-risk assessment of the medicinal product. Risks include adverse events and other unfavourable effects associated with the medicinal product. Risks that may be considered also include drug interactions, risks identified in the non-clinical data, risks to those other than the patient (e.g., fetus, those preparing and administering the medicinal product), and risks based on pharmacologic class or current knowledge of the product. Factors such as potential misuse, abuse, or diversion of the product may also be considered.
+
+The key risks described in this section may not include all risks that are described elsewhere (e.g., risk management plan, prescribing information). When identifying the key risks of the medicinal product, the following characteristics of risks should be considered:
+
+• seriousness and/or severity.
+
+• frequency.
+
+• reversibility.
+
+• tolerability.
+
+When describing each key risk, in addition to the points above, the following considerations may also be discussed:
+
+• frequencies should generally be presented as the absolute difference relative to the comparator (e.g., placebo, active comparator), and in the context of the background frequency in the patient population. In some cases, also expressing the difference relative to the comparator may be informative. If the frequency is 8% in the treatment group and 5% in the control group, the absolute difference is 3% (i.e., 8%-5%) and the relative risk is 1.6 (i.e., 8%/5%).
+
+• ability to monitor, minimise, or manage the risk.
+
+• variability of the key risk, taking into account relevant subpopulations such as those defined by age, sex, ethnicity, weight, organ function, disease severity, concomitant illness, concomitant therapy, or genetic polymorphism.
+
+• time course of the adverse event in the study population (i.e., time to onset and resolution, whether the frequency of the event is highest when initiating the drug and subsequently decreases, is relatively constant with time, or increases with cumulative exposure).
+
+This section should also include an analysis of the strengths, limitations, and uncertainties of the evidence related to each key risk and the implications of this information. The following points may be considered, as applicable:
+
+• study design considerations (e.g., comparison to active control, comparison to placebo, blinding, absence of comparator).
+
+• adequacy of assessment of risk (e.g., number of patients, number and design of trials, duration of exposure, frequency of monitoring).
+
+• investigation(s) to address safety issues identified during development (e.g., an ophthalmologic investigation conducted to address a non-clinical finding).
+
+• completeness of data collection and duration of follow-up.
+
+• number of patients in relevant subpopulations treated at the intended dose.
+
+• mechanism of action for the adverse event, if known, including non-clinical information or class effects.
+
+• completeness of information on patient characteristics (e.g., smoking history, concomitant medication use) that may affect risk.
+
+• consistency of results across studies.
+
+• relationship between exposure (e.g., drug levels in the blood) and risk.
+
+• generalizability of the clinical study results to clinical practice (e.g., clinically important differences between the study population and the intended population).
+
+The proposed approach to managing each key risk should also be discussed, including an explanation of why the approach provides reasonable assurance that the risk can be appropriately managed. Repetition of details from the risk management plan is not necessary. In certain cases, a discussion of the overall approach to risk management may be sufficient and may be included after all key risks have been identified and described.
+
+2.5.6.4 Benefit-Risk Assessment
+
+This section should provide the applicant's conclusion on the benefit-risk assessment of the medicinal product in the proposed indication(s). This should begin with a succinct explanation of the reasoning and judgment used in assessing and weighing the key benefits and key risks. In addition, the applicant should explain how any uncertainties affected the interpretation of the evidence and their impact on the benefit-risk assessment.
+
+When describing the benefit-risk assessment, the following additional aspects should be considered:
+
+• The impact of the therapeutic context on the assessment, which may include information on the patient perspective if available. This discussion should consist of the following:
+  o how the severity of disease and expected benefit influence the acceptability of the risks of the therapy.
+  o how the medicinal product addresses a medical need.
+
+• Key aspects of risk management that are important in reaching a favourable benefit-risk assessment, such as:
+  o the proposed labeling.
+  o whether non-responders can be readily identified allowing them to discontinue treatment.
+  o other risk management activities, such as registries or restricted distribution systems.
+
+There are many approaches available for conducting the benefit-risk assessment. This guideline does not prescribe a specific approach. A descriptive approach that explicitly communicates the interpretation of the data and the benefit-risk assessment will generally be adequate. An applicant may choose to use methods that quantitatively express the underlying judgments and uncertainties in the assessment. Analyses that compare and/or weigh benefits and risks using the submitted evidence may be presented. However, before using any method, the applicant should consider its utility, complexity, the extent to which the method is established, and the ease of interpretation of the results. In this situation, the written summary and explanation of the conclusions should be provided in this section, but the detailed presentations of the methods and results should be appended in Section 2.5.6.5. Tables or figures may be included in this section to support or provide greater clarity to key points or conclusions.
+
+2.5.6.5 Appendix
+
+Detailed presentation of methods and results used in the benefit-risk assessment that are summarized in Section 2.5.6.4 can be provided in this section.
+

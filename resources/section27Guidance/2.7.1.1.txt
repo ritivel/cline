@@ -1,0 +1,12 @@
+2.7.1 Summary of Biopharmaceutic Studies and Associated Analytical Methods
+2.7.1.1 Background and Overview
+This section should provide the reviewer with an overall view of the formulation development
+process, the in vitro and in vivo dosage form performance, and the general approach and
+rationale used in developing the bioavailability (BA), comparative BA, bioequivalence (BE),
+and in vitro dissolution profile database. Reference should be made to any guidelines or
+literature used in planning and conducting the studies. This section should also provide the
+reviewer with an overview of the analytical methods used, with emphasis on the performance
+characteristics of assay validation (e.g., linearity range, sensitivity, specificity) and quality
+control (e.g., accuracy and precision). This section should not include detailed information
+about individual studies.
+

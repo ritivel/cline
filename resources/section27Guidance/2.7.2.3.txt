@@ -1,0 +1,29 @@
+2.7.2.3 Comparison and Analyses of Results Across Studies
+This section should use the results of all in vitro human biomaterial studies and PK, PD and
+PK/PD studies to characterise the PK, PD and PK/PD relationships of the drug. Results
+related to the inter- and intra-individual variability in these data and the intrinsic and extrinsic
+factors affecting these pharmacokinetic relationships should be discussed.
+This section (typically with the use of text and tables) should provide a factual presentation of
+all data across studies pertinent to the following:
+• in vitro drug metabolism and in vitro drug-drug interaction studies and their clinical
+implications.
+• human PK studies, including the best estimates of standard parameters and sources of
+variability. The focus should be on evidence supporting dose and dose individualisation in
+the target patient population and in special populations, e.g., paediatric or geriatric
+patients, or patients with renal or hepatic impairment.
+• comparison between single and repeated-dose PK
+• population PK analyses, such as results based on sparse sampling across studies that
+address inter-individual variations in the PK or PD of the active drug substances that may
+be due to extrinsic or intrinsic factors.
+• dose-response or concentration-response relationships. This discussion should highlight
+evidence to support the selection of dosages and dose intervals studied in the important
+clinical trials. In addition, information that supports the dosage instructions in the
+proposed labelling should be discussed in Section 2.7.3.4.
+• major inconsistencies in the human biomaterial, PK, or PD database.
+• PK studies that were performed to determine whether foreign clinical data could be
+extrapolated to the new region (see ICH E5). The result of the studies and analysis of the
+similarity of the PK data between regions or races should be summarised in this section.
+Such studies that use PD biomarkers (but do not evaluate clinical efficacy) may similarly
+be summarised here. An independent subsection can be created to summarise these kinds
+of data
+

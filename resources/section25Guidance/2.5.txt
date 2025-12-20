@@ -1,0 +1,26 @@
+2.5 Clinical Overview
+
+Preamble
+
+The Clinical Overview is intended to provide a critical analysis of the clinical data in the Common Technical Document. The Clinical Overview will necessarily refer to application data provided in the comprehensive Clinical Summary, the individual clinical study reports (ICH E3), and other relevant reports; but it should primarily present the conclusions and implications of those data, and should not recapitulate them. Specifically, the Clinical Summary should provide a detailed factual summarisation of the clinical information in the CTD, and the Clinical Overview should provide a succinct discussion and interpretation of these findings together with any other relevant information (e.g., pertinent animal data or product quality issues that may have clinical implications).
+
+The Clinical Overview is primarily intended for use by regulatory agencies in the review of the clinical section of a marketing application. It should also be a useful reference to the overall clinical findings for regulatory agency staff involved in the review of other sections of the marketing application. The Clinical Overview should present the strengths and limitations of the development program and study results, analyse the benefits and risks of the medicinal product in its intended use, and describe how the study results support critical parts of the prescribing information.
+
+In order to achieve these objectives the Clinical Overview should:
+
+• describe and explain the overall approach to the clinical development of a medicinal product, including critical study design decisions.
+
+• assess the quality of the design and performance of the studies, and include a statement regarding GCP compliance.
+
+• provide a brief overview of the clinical findings, including important limitations (e.g., lack of comparisons with an especially relevant active comparator, or absence of information on some patient populations, on pertinent endpoints, or on use in combination therapy).
+
+• provide an evaluation of benefits and risks based upon the conclusions of the relevant clinical studies, including interpretation of how the efficacy and safety findings support the proposed dose and target indication and an evaluation of how prescribing information and other approaches will optimise benefits and manage risks.
+
+• address particular efficacy or safety issues encountered in development, and how they have been evaluated and resolved.
+
+• explore unresolved issues, explain why they should not be considered as barriers to approval, and describe plans to resolve them.
+
+• explain the basis for important or unusual aspects of the prescribing information.
+
+The Clinical Overview should generally be a relatively short document (about 30 pages). The length, however, will depend on the complexity of the application. The use of graphs and concise tables in the body of the text is encouraged for brevity and to facilitate understanding. It is not intended that material presented fully elsewhere be repeated in the Clinical Overview; cross-referencing to more detailed presentations provided in the Clinical Summary or in Module 5 is encouraged.
+

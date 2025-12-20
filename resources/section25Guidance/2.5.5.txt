@@ -1,0 +1,35 @@
+2.5.5 Overview of Safety
+
+The purpose of this section is to provide a concise critical analysis of the safety data, noting how results support and justify proposed prescribing information. A critical analysis of safety should consider:
+
+• adverse effects characteristic of the pharmacological class. Approaches taken to monitor for similar effects should be described.
+
+• special approaches to monitoring for particular adverse events (e.g., ophthalmic, QT interval prolongation).
+
+• relevant animal toxicology and product quality information. Findings that affect or could affect the evaluation of safety in clinical use should be considered.
+
+• the nature of the patient population and the extent of exposure, both for test drug and control treatments. Limitations of the safety database, e.g., related to inclusion/exclusion criteria and study subject demographics, should be considered, and the implications of such limitations with respect to predicting the safety of the product in the marketplace should be explicitly discussed.
+
+• common and non-serious adverse events, with reference to the tabular presentations of events with the test drug and with control agents in the Clinical Summary. The discussion should be brief, focusing on events of relatively high frequency, those with an incidence higher than placebo, and those that are known to occur in active controls or other members of the therapeutic class. Events that are substantially more or less common or problematic (considering the duration and degree of the observed events) with the test drug than with active controls are of particular interest.
+
+• serious adverse events (relevant tabulations should be cross-referenced from the Clinical Summary). This section should discuss the absolute number and frequency of serious adverse events, including deaths, and other significant adverse events (e.g., events leading to discontinuation or dose modification), and should discuss the results obtained for test drug versus control treatments. Any conclusions regarding causal relationship (or lack of this) to the product should be provided. Laboratory findings reflecting actual or possible serious medical effects should be considered.
+
+• similarities and differences in results among studies, and their effect upon the interpretation of the safety data.
+
+• any differences in rates of adverse events in population subgroups, such as those defined by demographic factors, weight, concomitant illness, concomitant therapy, or polymorphic metabolism.
+
+• relation of adverse events to dose, dose regimen, and treatment duration.
+
+• long-term safety (E1a).
+
+• methods to prevent, mitigate, or manage adverse events.
+
+• reactions due to overdose; the potential for dependence, rebound phenomena and abuse, or lack of data on these issues.
+
+• world-wide marketing experience. The following should be briefly discussed:
+  - the extent of the world-wide experience,
+  - any new or different safety issues identified,
+  - any regulatory actions related to safety.
+
+• support for the applicability to the new region of data generated in another region, where appropriate (ICH E5).
+

@@ -1,0 +1,15 @@
+2.7.2.2 Summary of Results of Individual Studies
+A tabular listing of all clinical pharmacology studies should generally be provided (see 2.7.2.5
+Appendix), together with a narrative description of the relevant features and outcomes of each
+of the critical individual studies that provided in vitro or in vivo data and information relevant
+to PK, PD and PK/PD relationships. The narrative descriptions should be brief, e.g., similar to
+an abstract for a journal article, and should describe critical design features and critical results.
+Similar studies may be described together, noting the individual study results and any
+important differences among the studies. References or electronic links to the full report of
+each study should be included in the narratives.
+Summaries of dose-response or concentration response (PK/PD) studies with
+pharmacodynamic endpoints should generally be included in this section. In some cases,
+however, when well-controlled dose-response PD or PK/PD studies provide important
+evidence of efficacy or safety, they should be placed in 2.7.3 or 2.7.4 as appropriate and
+referenced, but not summarised, here.
+

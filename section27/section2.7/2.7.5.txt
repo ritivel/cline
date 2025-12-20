@@ -1,0 +1,5 @@
+2.7.5 Literature References
+A list of references cited in the Clinical Summary should be provided. Copies of all important
+references should be provided in Module 5, Section 5.4. The reference list should indicate which references are available in Module 5, Section 5.4. All references that have not been
+provided should be available upon request.
+
