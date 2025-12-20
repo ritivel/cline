@@ -804,6 +804,30 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 				)
 			}
 
+			// Special handling for section 2.5.1 - use TaskSection251ProductDevelopmentRationale
+			if (sectionId === "2.5.1") {
+				return await this.generateSection251ProductDevelopmentRationale(
+					sectionId,
+					section,
+					sectionFolderPath,
+					tagsPath,
+					controller,
+					onProgress,
+				)
+			}
+
+			// Special handling for section 2.5.2 - use TaskSection252OverviewOfBiopharmaceutics
+			if (sectionId === "2.5.2") {
+				return await this.generateSection252OverviewOfBiopharmaceutics(
+					sectionId,
+					section,
+					sectionFolderPath,
+					tagsPath,
+					controller,
+					onProgress,
+				)
+			}
+
 			// Create subagent prompt with LaTeX guidelines
 			const subagentPrompt = this.createSubagentLaTeXPrompt(sectionId, section, sectionFolderPath, tagsPath)
 
@@ -905,6 +929,184 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error)
 			console.error(`[DossierGenerator] Error generating section 2.5 preamble: ${errorMsg}`)
+			return {
+				success: false,
+				sectionId,
+				moduleNum: 2,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Generates section 2.5.1 using specialized TaskSection251ProductDevelopmentRationale agent
+	 */
+	private async generateSection251ProductDevelopmentRationale(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		tagsPath: string,
+		controller: Controller,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+
+			// Dynamic import to break circular dependency
+			const { TaskSection251ProductDevelopmentRationale: TaskSection251ProductDevelopmentRationaleClass } = await import(
+				"@/core/task/TaskSection251ProductDevelopmentRationale"
+			)
+			console.log(`[DossierGenerator] TaskSection251ProductDevelopmentRationale class imported successfully`)
+
+			const stateManager = StateManager.get()
+			const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+			const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+			const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+			const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+			const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+			const defaultTerminalProfile = (stateManager.getGlobalSettingsKey("defaultTerminalProfile") as string) ?? "default"
+
+			// Setup workspace manager
+			const workspaceManager = await setupWorkspaceManager({
+				stateManager,
+				detectRoots: detectWorkspaceRoots,
+			})
+
+			const cwd = workspaceManager?.getPrimaryRoot()?.path || this.workspaceRoot
+			const taskId = `dossier-section251-${Date.now()}`
+
+			// Acquire task lock
+			const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+			const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+			// Create TaskSection251ProductDevelopmentRationale instance
+			const task = new TaskSection251ProductDevelopmentRationaleClass({
+				controller,
+				mcpHub: controller.mcpHub,
+				shellIntegrationTimeout,
+				terminalReuseEnabled: terminalReuseEnabled ?? true,
+				terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+				subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+				defaultTerminalProfile,
+				vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+				cwd,
+				stateManager,
+				workspaceManager,
+				task: `Generate section ${sectionId}`,
+				taskId,
+				taskLockAcquired,
+				sectionFolderPath,
+				expectedOutputFile,
+				tagsPath,
+				ichInstructions: undefined, // Use default ICH instructions
+				onProgress: (status) => onProgress?.(sectionId, status),
+			})
+
+			// Set mode to "act" for subagents
+			stateManager.setGlobalState("mode", "act")
+			stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+			// Run section generation
+			const result = await task.runSectionGeneration()
+
+			return {
+				success: result.success,
+				sectionId,
+				moduleNum: 2,
+				error: result.error,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] Error generating section 2.5.1: ${errorMsg}`)
+			return {
+				success: false,
+				sectionId,
+				moduleNum: 2,
+				error: errorMsg,
+			}
+		}
+	}
+
+	/**
+	 * Generates section 2.5.2 using specialized TaskSection252OverviewOfBiopharmaceutics agent
+	 */
+	private async generateSection252OverviewOfBiopharmaceutics(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		tagsPath: string,
+		controller: Controller,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+
+			// Dynamic import to break circular dependency
+			const { TaskSection252OverviewOfBiopharmaceutics: TaskSection252OverviewOfBiopharmaceuticsClass } = await import(
+				"@/core/task/TaskSection252OverviewOfBiopharmaceutics"
+			)
+			console.log(`[DossierGenerator] TaskSection252OverviewOfBiopharmaceutics class imported successfully`)
+
+			const stateManager = StateManager.get()
+			const shellIntegrationTimeout = stateManager.getGlobalSettingsKey("shellIntegrationTimeout")
+			const terminalReuseEnabled = stateManager.getGlobalStateKey("terminalReuseEnabled")
+			const vscodeTerminalExecutionMode = stateManager.getGlobalStateKey("vscodeTerminalExecutionMode")
+			const terminalOutputLineLimit = stateManager.getGlobalSettingsKey("terminalOutputLineLimit")
+			const subagentTerminalOutputLineLimit = stateManager.getGlobalSettingsKey("subagentTerminalOutputLineLimit")
+			const defaultTerminalProfile = (stateManager.getGlobalSettingsKey("defaultTerminalProfile") as string) ?? "default"
+
+			// Setup workspace manager
+			const workspaceManager = await setupWorkspaceManager({
+				stateManager,
+				detectRoots: detectWorkspaceRoots,
+			})
+
+			const cwd = workspaceManager?.getPrimaryRoot()?.path || this.workspaceRoot
+			const taskId = `dossier-section252-${Date.now()}`
+
+			// Acquire task lock
+			const lockResult = await tryAcquireTaskLockWithRetry(taskId)
+			const taskLockAcquired = !!(lockResult.acquired || lockResult.skipped)
+
+			// Create TaskSection252OverviewOfBiopharmaceutics instance
+			const task = new TaskSection252OverviewOfBiopharmaceuticsClass({
+				controller,
+				mcpHub: controller.mcpHub,
+				shellIntegrationTimeout,
+				terminalReuseEnabled: terminalReuseEnabled ?? true,
+				terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
+				subagentTerminalOutputLineLimit: subagentTerminalOutputLineLimit ?? 2000,
+				defaultTerminalProfile,
+				vscodeTerminalExecutionMode: vscodeTerminalExecutionMode || "backgroundExec",
+				cwd,
+				stateManager,
+				workspaceManager,
+				task: `Generate section ${sectionId}`,
+				taskId,
+				taskLockAcquired,
+				sectionFolderPath,
+				expectedOutputFile,
+				tagsPath,
+				ichInstructions: undefined, // Use default ICH instructions
+				onProgress: (status) => onProgress?.(sectionId, status),
+			})
+
+			// Set mode to "act" for subagents
+			stateManager.setGlobalState("mode", "act")
+			stateManager.setGlobalState("strictPlanModeEnabled", false)
+
+			// Run section generation
+			const result = await task.runSectionGeneration()
+
+			return {
+				success: result.success,
+				sectionId,
+				moduleNum: 2,
+				error: result.error,
+			}
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] Error generating section 2.5.2: ${errorMsg}`)
 			return {
 				success: false,
 				sectionId,

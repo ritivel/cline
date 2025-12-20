@@ -9,9 +9,9 @@ import { StateManager } from "../storage/StateManager"
 import { Task } from "./index"
 
 /**
- * Parameters for creating a TaskSection25Preamble instance
+ * Parameters for creating a TaskSection252OverviewOfBiopharmaceutics instance
  */
-export interface TaskSection25PreambleParams {
+export interface TaskSection252OverviewOfBiopharmaceuticsParams {
 	controller: Controller
 	mcpHub: McpHub
 	shellIntegrationTimeout: number
@@ -31,66 +31,32 @@ export interface TaskSection25PreambleParams {
 	sectionFolderPath: string
 	expectedOutputFile: string
 	tagsPath: string
-	ichInstructions?: string // ICH instructions for writing section 2.5
+	ichInstructions?: string // ICH instructions for writing section 2.5.2
 	onProgress?: (status: string) => void
 }
 
 /**
  * Result of task completion
  */
-export interface TaskSection25PreambleResult {
+export interface TaskSection252OverviewOfBiopharmaceuticsResult {
 	success: boolean
 	error?: string
 }
 
 /**
- * ICH Instructions for Clinical Overview (Section 2.5)
+ * ICH Instructions for Overview of Bio-pharmaceutics (Section 2.5.2)
  */
-const ICH_CLINICAL_OVERVIEW_INSTRUCTIONS = `The Clinical Overview is intended to provide a critical analysis of the clinical data in the
-Common Technical Document. The Clinical Overview will necessarily refer to application
-data provided in the comprehensive Clinical Summary, the individual clinical study reports
-(ICH E3), and other relevant reports; but it should primarily present the conclusions and
-implications of those data, and should not recapitulate them. Specifically, the Clinical
-Summary should provide a detailed factual summarisation of the clinical information in the
-CTD, and the Clinical Overview should provide a succinct discussion and interpretation of
-these findings together with any other relevant information (e.g., pertinent animal data or
-product quality issues that may have clinical implications).
-The Clinical Overview is primarily intended for use by regulatory agencies in the review of
-the clinical section of a marketing application. It should also be a useful reference to the
-overall clinical findings for regulatory agency staff involved in the review of other sections of
-the marketing application. The Clinical Overview should present the strengths and limitations
-of the development program and study results, analyse the benefits and risks of the medicinal
-product in its intended use, and describe how the study results support critical parts of the
-prescribing information.
-In order to achieve these objectives the Clinical Overview should:
-• describe and explain the overall approach to the clinical development of a medicinal
-product, including critical study design decisions.
-• assess the quality of the design and performance of the studies, and include a statement
-regarding GCP compliance.
-• provide a brief overview of the clinical findings, including important limitations (e.g., lack
-of comparisons with an especially relevant active comparator, or absence of information
-on some patient populations, on pertinent endpoints, or on use in combination therapy).
-• provide an evaluation of benefits and risks based upon the conclusions of the relevant
-clinical studies, including interpretation of how the efficacy and safety findings support
-the proposed dose and target indication and an evaluation of how prescribing information
-and other approaches will optimise benefits and manage risks.
-• address particular efficacy or safety issues encountered in development, and how they
-have been evaluated and resolved.
-• explore unresolved issues, explain why they should not be considered as barriers to
-approval, and describe plans to resolve them.
-• explain the basis for important or unusual aspects of the prescribing information.
-The Clinical Overview should generally be a relatively short document (about 30 pages). The
-length, however, will depend on the complexity of the application. The use of graphs and
-concise tables in the body of the text is encouraged for brevity and to facilitate understanding.
-It is not intended that material presented fully elsewhere be repeated in the Clinical Overview;
-cross-referencing to more detailed presentations provided in the Clinical Summary or in
-Module 5 is encouraged.`
+const ICH_OVERVIEW_OF_BIOPHARMACEUTICS_INSTRUCTIONS = `2.5.2 Overview of Bio-pharmaceutics
+The purpose of this section is to present a critical analysis of any important issues related to
+bioavailability that might affect efficacy and/or safety of the to-be-marketed formulation(s)
+(e.g., dosage form/strength proportionality, differences between the to-be-marketed
+formulation and the formulation(s) used in clinical trials, and influence of food on exposure).`
 
 /**
- * TaskSection25Preamble extends Task to generate only the preamble for section 2.5
- * It uses Module 5 section tags.md files to gather context for writing the preamble
+ * TaskSection252OverviewOfBiopharmaceutics extends Task to generate section 2.5.2
+ * It uses Module 5 section tags.md files to gather context for writing the section
  */
-export class TaskSection25Preamble extends Task {
+export class TaskSection252OverviewOfBiopharmaceutics extends Task {
 	private sectionFolderPath: string
 	private expectedOutputFile: string
 	private tagsPath: string
@@ -101,7 +67,7 @@ export class TaskSection25Preamble extends Task {
 	private completionCheckInterval?: NodeJS.Timeout
 	private isCompleted: boolean = false
 
-	constructor(params: TaskSection25PreambleParams) {
+	constructor(params: TaskSection252OverviewOfBiopharmaceuticsParams) {
 		super({
 			controller: params.controller,
 			mcpHub: params.mcpHub,
@@ -129,7 +95,7 @@ export class TaskSection25Preamble extends Task {
 		this.sectionFolderPath = params.sectionFolderPath
 		this.expectedOutputFile = params.expectedOutputFile
 		this.tagsPath = params.tagsPath
-		this.ichInstructions = params.ichInstructions || ICH_CLINICAL_OVERVIEW_INSTRUCTIONS
+		this.ichInstructions = params.ichInstructions || ICH_OVERVIEW_OF_BIOPHARMACEUTICS_INSTRUCTIONS
 		this.onProgress = params.onProgress
 	}
 
@@ -140,8 +106,7 @@ export class TaskSection25Preamble extends Task {
 		if (this.onProgress) {
 			this.onProgress(status)
 		}
-		// Don't log here - the onProgress callback from DossierGeneratorService already logs
-		// This prevents duplicate logging for every tool call
+		console.log(`[TaskSection252OverviewOfBiopharmaceutics] ${status}`)
 	}
 
 	/**
@@ -172,7 +137,7 @@ export class TaskSection25Preamble extends Task {
 
 			const fileExists = await this.checkFileExists()
 			if (fileExists && !this.isCompleted) {
-				console.log(`[TaskSection25Preamble] Output file found, marking as complete`)
+				console.log(`[TaskSection252OverviewOfBiopharmaceutics] Output file found, marking as complete`)
 				this.isCompleted = true
 				this.stopCompletionMonitoring()
 				this.reportProgress("Completed")
@@ -191,33 +156,33 @@ export class TaskSection25Preamble extends Task {
 	}
 
 	/**
-	 * Main entry point: Generates the preamble for section 2.5
+	 * Main entry point: Generates section 2.5.2
 	 */
-	public async runPreambleGeneration(): Promise<TaskSection25PreambleResult> {
+	public async runSectionGeneration(): Promise<TaskSection252OverviewOfBiopharmaceuticsResult> {
 		try {
-			this.reportProgress("Starting section 2.5 preamble generation")
+			this.reportProgress("Starting section 2.5.2 generation")
 			showSystemNotification({
-				subtitle: "Section 2.5",
-				message: "Starting preamble generation...",
+				subtitle: "Section 2.5.2",
+				message: "Starting Overview of Bio-pharmaceutics generation...",
 			})
 			this.startCompletionMonitoring()
 
-			// Read section 2.5 tags.md to get drug name
-			const section25Tags = await this.readTagsFile(this.tagsPath)
-			if (!section25Tags.drugName) {
+			// Read section 2.5.2 tags.md to get drug name
+			const section252Tags = await this.readTagsFile(this.tagsPath)
+			if (!section252Tags.drugName) {
 				return {
 					success: false,
-					error: "Could not determine drug name from section 2.5 tags.md",
+					error: "Could not determine drug name from section 2.5.2 tags.md",
 				}
 			}
 
-			this.reportProgress(`Drug: ${section25Tags.drugName}`)
+			this.reportProgress(`Drug: ${section252Tags.drugName}`)
 
 			// Build the user prompt
-			const userPrompt = this.buildUserPrompt(section25Tags.drugName)
+			const userPrompt = this.buildUserPrompt(section252Tags.drugName)
 
 			// Run the task - this will use the Task's built-in execution with tools
-			this.reportProgress("Generating preamble with AI agent...")
+			this.reportProgress("Generating section with AI agent...")
 			await this.startTask(userPrompt)
 
 			// Wait for completion (with timeout)
@@ -231,10 +196,10 @@ export class TaskSection25Preamble extends Task {
 			if (await this.checkFileExists()) {
 				this.isCompleted = true
 				this.stopCompletionMonitoring()
-				this.reportProgress("Preamble generated successfully")
+				this.reportProgress("Section generated successfully")
 				showSystemNotification({
-					subtitle: "Section 2.5",
-					message: "✓ Preamble generated successfully!",
+					subtitle: "Section 2.5.2",
+					message: "✓ Overview of Bio-pharmaceutics generated successfully!",
 				})
 				return { success: true }
 			} else {
@@ -256,25 +221,18 @@ export class TaskSection25Preamble extends Task {
 	}
 
 	/**
-	 * Builds the user prompt for section 2.5 preamble generation
+	 * Builds the user prompt for section 2.5.2 generation
 	 */
 	private buildUserPrompt(drugName: string): string {
-		return `Generate the preamble (introductory section) for CTD Section 2.5: Clinical Overview for ${drugName}.
+		return `Generate CTD Section 2.5.2: Overview of Bio-pharmaceutics for ${drugName}.
 
 ## CRITICAL INSTRUCTION - READ THIS FIRST
 **You MUST use the module5_tags_lookup tool EXACTLY 2-3 times maximum, then STOP and proceed to writing.**
 **ONLY check LEAF sections (sections with no child sections) - these are where documents are actually placed.**
 **DO NOT check parent sections that have children. DO NOT check more than 3 sections total.**
+**Only search for information that is needed and write that information.**
 
-## Important: You are writing ONLY the preamble, not the entire section
-
-The preamble should be a concise introduction that:
-1. Provides a brief introduction to the drug product
-2. Describes the drug's classification and mechanism of action
-3. Lists the main indications
-4. Provides context for the clinical data that follows
-
-## ICH Instructions for Clinical Overview
+## ICH Instructions for Overview of Bio-pharmaceutics
 
 ${this.ichInstructions}
 
@@ -288,7 +246,7 @@ ${this.ichInstructions}
    - The tool returns document NAMES and summaries (from info.json) only, NOT full content
    - After 2-3 tool calls, you MUST immediately proceed to step 2 - do NOT make more tool calls
 
-   **Available Module 5 Leaf Sections (choose 2-3 most relevant):**
+   **Available Module 5 Leaf Sections (choose 2-3 most relevant for biopharmaceutics):**
    - **5.1**: Table of Contents of Module 5
    - **5.2**: Tabular Listing of All Clinical Studies
    - **5.3.1.1**: Bioavailability (BA) Study Reports
@@ -312,22 +270,25 @@ ${this.ichInstructions}
    - **5.3.6**: Reports of Post-Marketing Experience if Available
    - **5.3.7**: Case Reports Forms and Individual Patient Listings
 
-   **Recommendation**: For a generic drug preamble, prioritize sections like **5.3.1.2** (BE studies), **5.3.3.1** or **5.3.3.2** (PK studies), and **5.3.5.1** (efficacy studies) if available.
+   **Recommendation**: For Overview of Bio-pharmaceutics, prioritize sections like **5.3.1.1** (BA studies), **5.3.1.2** (BE studies), **5.3.1.3** (IVIVC studies), and **5.3.3.1** or **5.3.3.2** (PK studies) to understand bioavailability issues.
 
-2. Based on document names and summaries from the 2-3 sections you checked, identify key clinical information:
-   - Clinical study types (e.g., bioequivalence, efficacy, safety)
-   - Main indications studied
-   - Key findings that support the drug's use
+2. Based on document names and summaries from the 2-3 sections you checked, identify key information needed for the Overview of Bio-pharmaceutics:
+   - Bioavailability issues that might affect efficacy and/or safety
+   - Dosage form/strength proportionality data
+   - Differences between to-be-marketed formulation and formulation(s) used in clinical trials
+   - Influence of food on exposure (food effect studies)
+   - Any other important biopharmaceutics-related issues
 
 3. **OPTIONAL: Read specific .mmd files ONLY when there's a clear objective**
 
    **IMPORTANT**: You may read full .mmd file content ONLY in these specific cases:
 
    **When to read a .mmd file:**
-   - When you need specific details about mechanism of action that aren't in the summary
-   - When you need precise indication information or dosing information for the preamble
-   - When you need key efficacy endpoints or safety findings that are critical for the introduction
-   - When the document summary is insufficient and you need specific data points to write an accurate preamble
+   - When you need specific bioavailability data that aren't in the summary
+   - When you need precise information about formulation differences between clinical and marketed products
+   - When you need food effect study results or dosage form proportionality data
+   - When you need specific PK parameters or bioavailability metrics
+   - When the document summary is insufficient and you need specific data points to write an accurate section
 
    **How to read .mmd files:**
    - Use the \`file_read\` tool to read .mmd files from the documents folder
@@ -337,9 +298,9 @@ ${this.ichInstructions}
    - Before reading, state your objective: "I need to read [filename].mmd to [specific reason]"
 
    **Examples of valid objectives:**
-   - "I need to read Study-101-BE.mmd to get the exact bioequivalence ratio and confidence intervals for the preamble"
-   - "I need to read PK-Study-Phase1.mmd to get the specific pharmacokinetic parameters mentioned in the introduction"
-   - "I need to read Efficacy-Study-202.mmd to get the primary endpoint results for the indication statement"
+   - "I need to read BE-Study-101.mmd to get the bioavailability ratio and food effect data for the biopharmaceutics overview"
+   - "I need to read BA-Study-Phase1.mmd to get the specific bioavailability parameters and formulation comparison data"
+   - "I need to read PK-Study-202.mmd to get the dosage form proportionality and exposure data"
 
    **Examples of invalid reasons (DO NOT read):**
    - "I'll read all documents to be thorough" ❌
@@ -348,32 +309,30 @@ ${this.ichInstructions}
 
    **If summaries are sufficient, proceed directly to step 4 without reading any .mmd files.**
 
-4. Write a VERY SHORT preamble (maximum 2 pages) that:
-   - Introduces the Clinical Overview section
-   - Briefly describes the drug (classification, mechanism of action)
-   - Lists the main indications
-   - Sets context for the detailed clinical data that follows
-   - Is concise (typically 2-4 paragraphs, maximum 2 pages)
-   - Uses professional regulatory language
-   - References Module 5 documents by name when relevant
+4. Write the Overview of Bio-pharmaceutics section that presents a critical analysis of:
+   - Important issues related to bioavailability that might affect efficacy and/or safety
+   - Dosage form/strength proportionality (if applicable)
+   - Differences between the to-be-marketed formulation and the formulation(s) used in clinical trials
+   - Influence of food on exposure (food effect studies, if applicable)
+   - Any other relevant biopharmaceutics issues
+   - Use professional regulatory language
+   - Reference Module 5 documents by name when relevant
 
-5. Use the \`write_tex\` tool to write the preamble to: ${this.expectedOutputFile}
+5. Use the \`write_tex\` tool to write the section to: ${this.expectedOutputFile}
    - The output should be LaTeX format
    - Include proper document structure with \\documentclass, \\begin{document}, etc.
-   - The preamble content should be placed between \\begin{document} and \\end{document}
+   - The section content should be placed between \\begin{document} and \\end{document}
 
 ## Output Requirements
 
-- Write ONLY the preamble, not the full Clinical Overview
-- **Maximum length: 2 pages**
+- Write the complete Overview of Bio-pharmaceutics section addressing all ICH requirements
 - Use LaTeX format
-- Be concise (2-4 paragraphs typically)
-- Reference Module 5 documents by name when relevant
-- Follow ICH guidelines for Clinical Overview
 - Use professional regulatory language
-- Use document names and summaries to inform your writing
-- If you read specific .mmd files, use only the relevant information needed for the preamble introduction
-- Do NOT include extensive data or full study details - keep it concise and introductory`
+- Reference Module 5 documents by name when relevant
+- Only include information that is needed - do not include unnecessary details
+- If you read specific .mmd files, use only the relevant information needed for the section
+- Focus on critical analysis of bioavailability issues that might affect efficacy and/or safety
+- Follow ICH guidelines for Overview of Bio-pharmaceutics`
 	}
 
 	/**
@@ -389,7 +348,7 @@ ${this.ichInstructions}
 			const lines = content.split("\n")
 
 			const result = {
-				sectionId: "2.5",
+				sectionId: "2.5.2",
 				drugName: "",
 				apiName: "",
 			}
@@ -417,11 +376,13 @@ ${this.ichInstructions}
 						result.drugName = currentProduct.drugName
 						result.apiName = currentProduct.drugName
 						console.log(
-							`[TaskSection25Preamble] Using drug name from RegulatoryProductConfig: ${currentProduct.drugName}`,
+							`[TaskSection252OverviewOfBiopharmaceutics] Using drug name from RegulatoryProductConfig: ${currentProduct.drugName}`,
 						)
 					}
 				} catch (error) {
-					console.warn(`[TaskSection25Preamble] Failed to get drug name from RegulatoryProductConfig: ${error}`)
+					console.warn(
+						`[TaskSection252OverviewOfBiopharmaceutics] Failed to get drug name from RegulatoryProductConfig: ${error}`,
+					)
 				}
 			}
 
@@ -437,17 +398,19 @@ ${this.ichInstructions}
 
 				if (currentProduct?.drugName) {
 					return {
-						sectionId: "2.5",
+						sectionId: "2.5.2",
 						drugName: currentProduct.drugName,
 						apiName: currentProduct.drugName,
 					}
 				}
 			} catch (error) {
-				console.warn(`[TaskSection25Preamble] Failed to get drug name from RegulatoryProductConfig: ${error}`)
+				console.warn(
+					`[TaskSection252OverviewOfBiopharmaceutics] Failed to get drug name from RegulatoryProductConfig: ${error}`,
+				)
 			}
 
 			return {
-				sectionId: "2.5",
+				sectionId: "2.5.2",
 				drugName: "",
 				apiName: "",
 			}
