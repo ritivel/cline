@@ -1,0 +1,13 @@
+2.7.4.6 Post-marketing Data
+If the drug has already been marketed, all relevant post-marketing data available to the
+applicant (published and unpublished, including periodic safety update reports if available)
+should be summarised. The periodic safety update reports can be included in Module 5.
+Details of the number of subjects estimated to have been exposed should be provided and
+categorised, as appropriate, by indication, dosage, route, treatment duration, and geographic
+location. The methodology used to estimate the number of subjects exposed should be
+described. If estimates of the demographic details are available from any source, these should
+be provided.
+A tabulation of serious events reported after the drug is marketed should be provided,
+including any potentially serious drug interactions.
+Any post-marketing findings in subgroups should be described
+

@@ -1,0 +1,16 @@
+2.7.1.4 Appendix
+Tables and figures should be embedded in the text of the appropriate sections when they
+enhance the readability of the document. Lengthy tables can be provided in the appendix at
+the end of the Section.
+Tables 2.7.1.1 and 2.7.1.2 are provided as examples of tabular formats for reporting
+information and results related to bioavailability and in vitro dissolution studies respectively.
+These examples give results as well as identifying the type and design of the study. Tables
+prepared for reporting the results of BE studies could also include the mean ratios
+(test/reference) for Cmax and AUC and their 90% confidence interval, or the currently
+recommended metrics for BE assessments.
+These tables are not intended to be templates, but only to illustrate the type of information that
+should be considered by an applicant in designing the tables for biopharmaceutic studies.
+Applicants should also decide whether information and results from these studies are best
+presented in tables, text or figures in order to aid clarity. If, for example, results are best
+presented in text and figures, tables might be used simply to list the studies.
+

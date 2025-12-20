@@ -1,0 +1,30 @@
+2.5.4 Overview of Efficacy
+
+The purpose of this section is to present a critical analysis of the clinical data pertinent to the efficacy of the medicinal product in the intended population. The analysis should consider all relevant data, whether positive or negative, and should explain why and how the data support the proposed indication and prescribing information. Those studies deemed relevant for evaluation of efficacy should be identified, and reasons that any apparently adequate and well-controlled studies are not considered relevant should be provided. Prematurely terminated studies should be noted and their impact considered.
+
+The following issues should generally be considered:
+
+• relevant features of the patient populations, including demographic features, disease stage, any other potentially important covariates, any important patient populations excluded from critical studies, and participation of children and elderly (ICH E11 and E7). Differences between the studied population(s) and the population that would be expected to receive the medicinal product after marketing should be discussed.
+
+• implications of the study design(s), including selection of patients, duration of studies and choice of endpoints and control group(s). Particular attention should be given to endpoints for which there is limited experience. Use of surrogate endpoints should be justified. Validation of any scales used should be discussed.
+
+• for non-inferiority trials used to demonstrate efficacy, the evidence supporting a determination that the trial had assay sensitivity and justifying the choice of non-inferiority margin (ICH E10).
+
+• statistical methods and any issues that could affect the interpretation of the study results (e.g., important modifications to the study design, including endpoint assessments and planned analyses, as they were specified in the original protocol; support for any unplanned analyses; procedures for handling missing data; and corrections for multiple endpoints).
+
+• similarities and differences in results among studies, or in different patient sub-groups within studies, and their effect upon the interpretation of the efficacy data.
+
+• observed relationships between efficacy, dose, and dosage regimen for each indication, in both the overall population and in the different patient subgroups (ICH E4).
+
+• support for the applicability to the new region of data generated in another region, where appropriate (ICH E5).
+
+• for products intended for long-term use, efficacy findings pertinent to the maintenance of long-term efficacy and the establishment of long-term dosage. Development of tolerance should be considered.
+
+• data suggesting that treatment results can be improved through plasma concentration monitoring, if any, and documentation for an optimal plasma concentration range.
+
+• the clinical relevance of the magnitude of the observed effects.
+
+• if surrogate endpoints are relied upon, the nature and magnitude of expected clinical benefit and the basis for these expectations.
+
+• efficacy in special populations. If efficacy is claimed with inadequate clinical data in the population, support should be provided for extrapolating efficacy from effects in the general population.
+

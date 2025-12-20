@@ -1,0 +1,58 @@
+2.7.4.5 Safety in Special Groups and Situations
+2.7.4.5.1 Intrinsic Factors
+This section should summarise safety data pertinent to individualising therapy or patient
+management on the basis of demographic and other factors defined as "intrinsic ethnic
+factors" in ICH E5. These factors include age, sex, height, weight, lean body mass, genetic 
+polymorphism, body composition, other illness and organ dysfunction. Safety in the paediatric
+population should be routinely analysed in applications for a proposed indication that occurs
+in children. Analysis of the impact of such factors on safety outcomes should have been
+presented in other sections but should be summarised here, together with pertinent PK or other
+information, e.g., in patients with renal or hepatic disease. If a sufficiently large number of
+subjects with a given co-morbid condition such as hypertension, heart disease, or diabetes,
+was enrolled, analyses should be carried out to assess whether the co-morbid condition
+affected the safety of the drug under study. Cross reference should be made to the tables or
+description of adverse events when analyses of such sub-groups has been carried out.
+2.7.4.5.2 Extrinsic Factors
+This section should summarise safety data pertinent to individualising therapy or patient
+management on the basis of factors defined as "extrinsic ethnic factors" in ICH E5. These are
+factors associated with the patient environment. Examples are the medical environment, use
+of other drugs (see 2.7.4.5.3, Drug Interactions), use of tobacco, use of alcohol, and food
+habits.
+For example, if a potential interaction with alcohol is suggested by the metabolic profile, by
+the results of studies, by post-marketing experience, or by information on similar drugs,
+information should be provided here.
+2.7.4.5.3 Drug Interactions
+Studies on potential drug-drug or drug-food interactions should be summarised in the
+Summary of Clinical Pharmacology Studies section of the CTD (Section 2.7.2). The potential
+impact on safety of such interactions should be summarised here, based on PK, PD, or clinical
+observations. Any observed changes in the adverse event profile, changes in blood levels
+thought to be associated with risk, or changes in drug effects associated with other therapy
+should be presented here.
+2.7.4.5.4 Use in Pregnancy and Lactation
+Any information on safety of use during pregnancy or breast-feeding that becomes available
+during clinical development or from other sources should be summarised here.
+2.7.4.5.5 Overdose
+All available clinical information relevant to overdose, including signs/symptoms, laboratory
+findings, and therapeutic measures/treatments and antidotes (if available) should be
+summarised and discussed. Information on the efficacy of specific antidotes and dialysis
+should be provided if available.
+2.7.4.5.6 Drug Abuse
+Any relevant studies/information regarding the investigation of the dependence potential of a
+new therapeutic agent in animals and in humans should be summarised and cross-referenced
+to the nonclinical summary. Particularly susceptible patient populations should be identified.
+2.7.4.5.7 Withdrawal and Rebound
+Any information or study results pertinent to rebound effects should be summarised. Events
+that occur, or increase in severity, after discontinuation of double-blind or active study
+medication should be examined to see if they are the result of withdrawal of the study
+medication. Particular emphasis should be given to studies designed to evaluate withdrawal
+and/or rebound.
+
+Data concerning tolerance should be summarised under section 2.7.3.5 in the Summary of
+Clinical Efficacy.
+2.7.4.5.8 Effects on Ability to Drive or Operate Machinery or Impairment of Mental Ability
+Safety data related to any impairment in the senses, co-ordination, or other factor that would
+result in diminished ability to drive a vehicle or operate machinery or that would impair
+mental ability should be summarised. This includes relevant adverse effects reported in safety
+monitoring (e.g., drowsiness) and specific studies concerning effects on ability to drive or
+operate machinery or impairment of mental ability.
+

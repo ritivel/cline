@@ -1,0 +1,28 @@
+5.3.1 Reports of Biopharmaceutic Studies
+
+BA studies evaluate the rate and extent of release of the active substance from the medicinal product. Comparative BA or BE studies may use PK, PD, clinical, or in vitro dissolution endpoints, and may be either single dose or multiple dose. When the primary purpose of a study is to assess the PK of a drug, but also includes BA information, the study report should be submitted in Section 5.3.1, and referenced in Sections 5.3.1.1 and/or 5.3.1.2.
+
+5.3.1.1 Bioavailability (BA) Study Reports
+
+BA studies in this section should include
+
+- studies comparing the release and systemic availability of a drug substance from a solid oral dosage form to the systemic availability of the drug substance given intravenously or as an oral liquid dosage form
+- dosage form proportionality studies, and
+- food-effect studies.
+
+5.3.1.2 Comparative BA and Bioequivalence (BE) Study Reports
+
+Studies in this section compare the rate and extent of release of the drug substance from similar drug products (e.g., tablet to tablet, tablet to capsule). Comparative BA or BE studies may include comparisons between
+
+- the drug product used in clinical studies supporting effectiveness and the to-be-marketed drug product,
+- the drug product used in clinical studies supporting effectiveness and the drug product used in stability batches, and
+- similar drug products from different manufacturers.
+
+5.3.1.3 In Vitro – In Vivo Correlation Study Reports
+
+In vitro dissolution studies that provide BA information, including studies used in seeking to correlate in vitro data with in vivo correlations, should be placed in Section 5.3.1.3. Reports of in vitro dissolution tests used for batch quality control and/or batch release should be placed in the Quality section of the CTD.
+
+5.3.1.4 Reports of Bioanalytical and Analytical Methods for Human Studies
+
+Bioanalytical and/or analytical methods for biopharmaceutic studies or in vitro dissolution studies should ordinarily be provided in individual study reports. Where a method is used in multiple studies, the method and its validation should be included once in Section 5.3.1.4 and referenced in the appropriate individual study reports.
+

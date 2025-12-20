@@ -1,0 +1,26 @@
+2.7.3.4 Analysis of Clinical Information Relevant to Dosing Recommendations
+This section should provide an integrated summary and analysis of all data that pertain to the
+dose-response or blood level-response relationships of effectiveness (including dose-blood
+level relationships), and thus have contributed to dose selection and choice of dose interval.
+Relevant data from nonclinical studies may be referenced, and relevant data from
+pharmacokinetic studies, other clinical pharmacology studies, and controlled and uncontrolled
+clinical studies should be summarised to illustrate these dose-response or blood level-response
+relationships. For pharmacokinetic and pharmacodynamic studies from which data have been
+summarised in Section 2.7.2.2, it may be appropriate to draw upon those data in this summary
+while cross-referencing the summaries in Section 2.7.2.2, without repeating those summaries.
+While the interpretation of how these data support specific dosing recommendations should be
+supplied in the Clinical Overview document, the individual study results and any cross-study
+analyses that will be used to support the dosing recommendations (including the
+recommended starting and maximal doses, the method of dose titration, and any other
+instructions regarding individualisation of dosage) should be summarised here. Any identified
+deviations from relatively simple dose-response or blood-level response relationships due to
+non-linearity of pharmacokinetics, delayed effects, tolerance, enzyme induction, etc. should be
+described.
+Any evidence of differences in dose-response relationships that result from a patient's age,
+sex, race, disease, or other factors should be described. Any evidence of different
+pharmacokinetic or pharmacodynamic responses should also be discussed, or discussions in
+Section 2.7.2 can be cross-referenced. The ways in which such differences were looked for,
+even if no differences were found, should be described (e.g., specific studies in
+subpopulations, analysis of efficacy results by subgroup, or blood level determinations of the
+test drug).
+

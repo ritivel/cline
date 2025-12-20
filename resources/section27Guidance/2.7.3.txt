@@ -1,0 +1,5 @@
+2.7.3 Summary of Clinical Efficacy
+A separate Section 2.7.3 should be provided for each indication, although closely related
+indications can be considered together. When more than one Section 2.7.3 is submitted, the
+sections should be labelled 2.7.3 pneumonia, 2.7.3 URI, etc.
+

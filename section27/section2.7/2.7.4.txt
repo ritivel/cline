@@ -1,0 +1,16 @@
+2.7.4 Summary of Clinical Safety
+This section should be a summary of data relevant to safety in the intended patient population,
+integrating the results of individual clinical study reports as well as other relevant reports, e.g.,
+the integrated analyses of safety that are routinely submitted in some regions.
+The display of safety-related data can be considered at three levels (ICH E3):
+– The extent of exposure (dose, duration, number of patients, type of patients) should be
+examined to determine the degree to which safety can be assessed from the database.
+– The more common adverse events and changes in laboratory tests should be identified and
+classified, and their occurrence should be summarised.
+– Serious adverse events (defined in ICH E2A) and other significant adverse events (defined
+in ICH E3) should be identified and their occurrence should be summarised. These events
+should be examined for frequency over time, particularly for drugs that may be used
+chronically.
+The safety profile of the drug, described on the basis of analysis of all clinical safety data,
+should be outlined in a detailed, clear, and objective manner, with use of tables and figures.
+

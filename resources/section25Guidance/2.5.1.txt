@@ -1,0 +1,10 @@
+2.5.1 Product Development Rationale
+
+The discussion of the rationale for the development of the medicinal product should:
+• identify the pharmacological class of the medicinal product.
+• describe the particular clinical/pathophysiological condition that the medicinal product is intended to treat, prevent, or diagnose (the targeted indication).
+• include a brief overview of the major therapies currently used in the intended population.
+• briefly summarise the scientific background that supported the investigation of the medicinal product for the indication(s) that was (were) studied.
+• briefly describe the clinical development programme of the medicinal product, including ongoing and planned clinical studies and the basis for the decision to submit the application at this point in the programme. Briefly describe plans for the use of foreign clinical data (ICH E5).
+• note and explain concordance or lack of concordance with current standard research approaches regarding the design, conduct and analysis of the studies. Pertinent published literature should be referenced. Regulatory guidance and advice (at least from the region(s) where the Clinical Overview is being submitted) should be identified, with discussion of how that advice was implemented. Formal advice documents (e.g., official meeting minutes, official guidance, letters from regulatory authorities) should be referenced, with copies included in the references section of Module 5.
+

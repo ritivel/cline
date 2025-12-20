@@ -1,0 +1,12 @@
+The Clinical Summary is intended to provide a detailed, factual summarisation of all of the
+clinical information in the Common Technical Document. This includes information
+provided in ICH E3 clinical study reports; information obtained from any meta-analyses or
+other cross-study analyses for which full reports have been included in Module 5; and postmarketing data for products that have been marketed in other regions. The comparisons and
+analyses of results across studies provided in this document should focus on factual
+observations. In contrast, the CTD Clinical Overview document should provide critical
+analysis of the clinical study program and its results, including discussion and interpretation of
+the clinical findings and discussion of the place of the test drug in the armamentarium.
+The length of the Clinical Summary will vary substantially according to the information to be
+conveyed, but it is anticipated that (excluding attached tables) the Clinical Summary will
+usually be in the range of 50 to 400 pages.
+

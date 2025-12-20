@@ -1,0 +1,28 @@
+2.7.4.3 Clinical Laboratory Evaluations
+This section should describe changes in patterns of laboratory tests with drug use. Marked
+laboratory abnormalities and those that led to a substantial intervention should be reported in
+section 2.7.4.2.1.3 or 2.7.4.2.1.4. If these data are also presented in this section, this duplicate
+reporting should be made clear for the reviewer. The appropriate evaluations of laboratory
+values will in part be determined by the results seen, but, in general, the analyses described
+below should be provided. For each analysis, comparison of the treatment and control groups
+should be carried out, as appropriate and as compatible with study sizes. In addition, normal
+laboratory ranges should be given for each analysis (ICH E3). Where possible, laboratory
+values should be provided in standard international units.
+A brief overview of the major changes in laboratory values across the clinical studies should
+be provided. Laboratory data should include haematology, clinical chemistry, urinalysis and
+other data as appropriate. Each parameter at each time over the course of the study (e.g., at
+each visit) should be described at the following three levels:
+• the central tendency, i.e., the group mean and median values,
+• the range of values, and the number of subjects with abnormal values or with abnormal
+values of a certain size (e.g. twice the upper limit of normal, 5 times the upper limit;
+choices should be explained). When data are pooled from centres with differences in
+normal laboratory ranges, the methodology used in pooling should be described. The
+analysis of individual subject changes by treatment group can be shown with a variety of
+approaches (e.g., shift tables, see ICH E3 for examples).
+• individual clinically important abnormalities, including those leading to discontinuations.
+The significance of the laboratory changes and the likely relation to the treatment should
+be assessed (e.g., by analysis of such features as relationship to dose, relation to drug
+concentration, disappearance on continued therapy, positive dechallenge, positive
+rechallenge, and the nature of concomitant therapy). Potential relationships to other factors
+listed in Section 2.7.4.2.1.1 should also be considered.
+

@@ -1,0 +1,70 @@
+5.3.5 Reports of Efficacy and Safety Studies
+This section should include reports of all clinical studies of efficacy and/or safety carried out
+with the drug, conducted by the sponsor, or otherwise available, including all completed and
+all ongoing studies of the drug in proposed and non-proposed indications. The study reports
+should provide the level of detail appropriate to the study and its role in the application. ICH
+E3 describes the contents of a full report for a study contributing evidence pertinent to both
+safety and efficacy. Abbreviated reports can be provided for some studies (see ICH E3 and
+individual guidance by region).
+Within Section 5.3.5, studies should be organised by design (controlled, uncontrolled) and,
+within controlled studies, by type of control. Within each section, studies should be
+categorized further, ordered by whether the study report is complete or abbreviated (ICH E3),
+with completely reported studies presented first. Published reports with limited or no further
+data available to the sponsor should be placed last in this section.
+51
+The Common Technical Document – Efficacy
+In cases where the application includes multiple therapeutic indications, the reports should be
+organized in a separate Section 5.3.5 for each indication. In such cases, if a clinical efficacy
+study is relevant to only one of the indications included in the application, it should be
+included in the appropriate Section 5.3.5; if a clinical efficacy study is relevant to multiple
+indications, the study report should be included in the most appropriate Section 5.3.5 and
+referenced as necessary in other Sections 5.3.5, e.g., Section 5.3.5A, Section 5.3.5B.
+5.3.5.1 Study Reports of Controlled Clinical Studies Pertinent to the Claimed
+Indication
+The controlled clinical study reports should be sequenced by type of control:
+• Placebo control (could include other control groups, such as an active comparator or other
+doses)
+• No-treatment control
+• Dose-response (without placebo)
+• Active control (without placebo)
+• External (Historical) control, regardless of the control treatment
+Within each control type, where relevant to assessment of drug effect, studies should be
+organized by treatment duration. Studies of indications other than the one proposed in the
+application, but that provide support for efficacy in the proposed use, should be included in
+Section 5.3.5.1.
+Where a pharmacodynamic study contributes to evidence of efficacy, it should be included in
+Section 5.3.5.1. The sequence in which studies were conducted is not considered pertinent to
+their presentation. Thus, placebo-controlled trials, whether early or late, should be placed in
+Section 5.3.5.1. Controlled safety studies, including studies in conditions that are not the
+subject of the application, should also be reported in Section 5.3.5.1.
+5.3.5.2 Study Reports of Uncontrolled Clinical Studies
+Study reports of uncontrolled clinical studies (e.g., reports of open label safety studies) should
+be included in Section 5.3.5.2. This includes studies in conditions that are not the subject of
+the marketing application.
+5.3.5.3 Reports of Analyses of Data from More than One Study
+Many clinical issues in an application can be addressed by an analysis considering data from
+more than one study. The results of such an analysis should generally be summarized in the
+clinical summary documents, but a detailed description and presentation of the results of such
+analyses are considered critical to their interpretation. Where the details of the analysis are
+too extensive to be reported in a summary document, they should be presented in a separate
+report. Such reports should be placed in Section 5.3.5.3. Examples of reports that would be
+found in this section include: a report of a formal meta-analysis or extensive exploratory
+analysis of efficacy to determine an overall estimate of effect size in all patients and/or in
+specific subpopulations, and a report of an integrated analysis of safety that assesses such
+factors as the adequacy of the safety database, estimates of event rates, and safety with respect
+to variables such as dose, demographics, and concomitant medications. A report of a detailed
+analysis of bridging, considering formal bridging studies, other relevant clinical studies, and
+other appropriate information (e.g., PK and PD information), should be placed in this section
+if the analysis is too lengthy for inclusion in the Clinical Summary.
+52
+The Common Technical Document – Efficacy
+5.3.5.4 Other Study Reports
+This section can include:
+– Reports of interim analyses of studies pertinent to the claimed indications
+– Reports of controlled safety studies not reported elsewhere
+– Reports of controlled or uncontrolled studies not related to the claimed indication
+– Published reports of clinical experiences with the medicinal product that are not included
+in Section 5.3.5.1. However, when literature is important to the demonstration or
+substantiation of efficacy, it should be included in Section 5.3.5.1
+– Reports of ongoing studies
+

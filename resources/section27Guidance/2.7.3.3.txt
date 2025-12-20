@@ -1,0 +1,87 @@
+2.7.3.3 Comparison and Analyses of Results Across Studies
+Using text, figures, and tables as appropriate (see the section 2.7.3.6 Appendix), the
+subsections of 2.7.3.3 should summarise all available data that characterise the efficacy of the
+drug. This summary should include analyses of all data, irrespective of their support for the
+overall conclusion and should, therefore, discuss the extent to which the results of the relevant
+studies do or do not reinforce each other. Any major inconsistencies in the data regarding
+efficacy should be addressed and any areas needing further exploration should be identified.
+The section will generally utilise two kinds of analyses: comparison of results of individual
+studies, and analysis of data combined from various studies. Details of analyses that are too
+extensive to be reported in a summary document should be presented in a separate report, to
+be placed in Module 5, Section 5.3.5.3.
+This section should also cross-reference important evidence from section 2.7.2, such as data
+that support the dosage and administration section of the labelling. These data include dosage
+and dose interval recommended, evidence pertinent to individualisation of dosage and need
+for modifications of dosage for specific subgroups (e.g., paediatric or geriatric subjects, or
+subjects with hepatic or renal impairment), and data relevant to dose-response or
+concentration response (PK/PD) relationships.
+2.7.3.3.1 Study Populations
+The demographic and other baseline characteristics of patients across all efficacy studies
+should be described. The following should be included:
+• the characteristics of the disease (e.g., severity, duration) and prior treatment in the study
+subjects, and study inclusion/exclusion criteria
+• differences in baseline characteristics of the study populations in different studies or
+groups of studies.
+• any differences between populations included in critical efficacy analyses and the overall
+patient population that would be expected to receive the drug when it is marketed should
+be noted.
+
+ assessment of the number of patients who dropped out of the studies, time of withdrawal
+(a defined study day or visit during treatment or follow up period), and reasons for
+discontinuation.
+Tabular presentations that combine and compare study populations across studies may be
+useful.
+2.7.3.3.2 Comparison of Efficacy Results of all Studies
+The results of any bridging studies using clinical endpoints, i.e., certain studies used to
+evaluate the ability to extrapolate certain types of foreign clinical data to the new region (see
+ICH E5), should be summarised in this section. An analysis of the similarity of efficacy in
+subjects between regions, as well as any other information that may support extrapolation of
+the efficacy data to the new region, should be summarised here. An independent subsection
+can be created to summarize these kinds of data.
+The results from all studies designed to evaluate the drug's efficacy should be summarised
+and compared, including studies with inconclusive or negative results. Important differences
+in study design such as endpoints, control group, study duration, statistical methods, patient
+population, and dose should be identified.
+Comparisons of results across studies should focus on pre-specified primary endpoints.
+However, when the primary endpoints involved different variables or time points in different
+efficacy studies, it may be useful to provide cross-study comparisons of important data
+elements that were obtained in all studies. If results over time are important, results of studies
+may be displayed in a figure that illustrates the change over time in each study.
+Confidence intervals for treatment effects should be given to aid in the interpretation of point
+estimates. If differences are shown between placebo and test drugs in the change from
+baseline, the baseline values and the magnitude of effect in all treatment groups, including
+placebo and active controls (if used), should generally be presented in the table or in text
+accompanying a figure. If the objective of an active control trial was to show equivalence or
+non-inferiority, the difference or the ratio of outcomes between treatments should be given
+with the confidence interval. The results should be evaluated by using the predefined criteria
+for defining equivalence or non-inferiority and the rationale for the criteria and support for the
+determination that the study (studies) had assay sensitivity should be provided (see ICH E10).
+Important differences in outcomes between studies with a similar design should be delineated
+and discussed. Cross-study comparisons of factors that may have contributed to differences in
+outcomes should be described.
+If a meta-analysis of the clinical studies is performed, it should be clear whether this analysis
+is conducted according to a predefined protocol or is a post hoc exercise. Any differences in
+trial designs or populations, or in efficacy measurements between trials should be described to
+allow assessment of the relevance and validity of the results and conclusions (See ICH E9). A
+detailed description of the methodology and results of the meta-analysis should generally be
+submitted in a separate report (section 5.3.5.3 of Module 5).
+2.7.3.3.3 Comparison of Results in Sub-populations
+The results of individual studies or overview analyses of efficacy in specific populations
+should be summarised in this section. The purpose of these comparisons should be to show
+whether the claimed treatment effects are observed consistently across all relevant subpopulations, especially those where there are special reasons for concern. The comparisons
+may highlight apparent variations in efficacy that require further investigation and discussion. 
+
+The limitations of such analyses, however, should be recognised (ICH E9), and it is important
+to note that their purpose is not to provide the basis for specific claims, nor to attempt to
+improve the evidence of efficacy in situations where the overall results are disappointing.
+Given the limited sample sizes in individual studies, analyses across multiple studies should
+be performed to evaluate effects of major demographic factors (age, sex, and race) and of
+other predefined or relevant intrinsic and extrinsic factors (e.g., disease severity, prior
+treatment, concomitant illness, concomitant drugs, alcohol, tobacco, and body weight) on
+efficacy. Factors of special interest may arise from general concerns (e.g., the elderly) or from
+specific issues that are related to the pharmacology of the drug or that have arisen during
+earlier drug development. Efficacy in the paediatric population should be routinely analysed in
+applications for a proposed indication that occurs in children. Depending on the data set, if
+extensive, detailed efficacy analyses are performed, they can be placed in Module 5, with the
+results of those analyses reported here.
+

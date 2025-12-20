@@ -1,0 +1,8 @@
+5.2 Tabular Listing of All Clinical Studies
+A tabular listing of all clinical studies and related information should be provided. For each
+study, this tabular listing should generally include the type of information identified in Table
+5.1 of this guideline. Other information can be included in this table if the applicant
+considers it useful. The sequence in which the studies are listed should follow the sequence
+described in Section 5.3 below. Use of a different sequence should be noted and explained in
+an introduction to the tabular listing
+

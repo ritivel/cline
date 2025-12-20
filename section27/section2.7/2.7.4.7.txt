@@ -1,0 +1,18 @@
+2.7.4.7 Appendix
+Tabular presentations should be provided that summarise the important results from all studies
+pertinent to the evaluation of safety and particularly to support product labelling.
+Tables and figures should be embedded in the text of the appropriate sections when that
+enhances the readability of the document. Lengthy tables can be provided in the appendix at
+the end of the Section.
+A few illustrative tables are provided, but a clinical summary will routinely need tables and
+figures that have been developed for the particular drug, drug class, and clinical indication(s).
+See sections 2.7.4.2.1, 2.7.4.2.2.3, and 2.7.4.3 of this guidance for additional discussion
+regarding the content of section 2.7.4 tables.
+Table 2.7.4.1Study Subject Drug Exposure by Mean Daily Dose and Duration of Exposure
+Table 2.7.4.2 Demographic Profile of Patients in Controlled Trials
+Table 2.7.4.3 Incidence of Adverse Events in Pooled Placebo and Active Controlled
+Trials
+Table 2.7.4.4Incidence of Adverse Events in the Largest Trials
+Table 2.7.4.5Patient Withdrawals by Study: Controlled Trials
+Table 2.7.4.6Listing of Deaths
+

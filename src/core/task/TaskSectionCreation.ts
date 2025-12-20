@@ -11,6 +11,7 @@ import { getCwd } from "@utils/path"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
+import { HostProvider } from "@/hosts/host-provider"
 import { ClineDefaultTool } from "@/shared/tools"
 import { Controller } from "../controller"
 import { EAC_NMRA_TEMPLATE } from "../ctd/templates/eac-nmra/definition"
@@ -73,6 +74,21 @@ interface PartialDraft {
 	chunkIndex: number
 	content: string
 	documentCount: number
+}
+
+/**
+ * Represents a paper from Section 5.3 assessment (from JSON file)
+ */
+interface Section53Paper {
+	title: string
+	url: string
+	pmid: string
+	abstract: string
+	authors: string[]
+	journal: string
+	year: string
+	alsoRelevantTo?: string[]
+	relevanceReason?: string
 }
 
 /**
@@ -597,40 +613,46 @@ Not Applicable
 
 	/**
 	 * Special generation flow for section 5.2 (Tabular Listing of All Clinical Studies).
-	 * Aggregates placements from all 5.3 subsections and generates a summary table.
+	 * Uses papers from the 5.3 papers JSON file (created by assessSection53Papers).
 	 */
 	private async runSection52Generation(): Promise<TaskSectionCreationResult> {
 		try {
 			this.reportProgress("Starting Section 5.2 special generation")
 			showSystemNotification({
 				subtitle: `Section ${this.sectionId}`,
-				message: "Aggregating clinical studies from 5.3 subsections...",
+				message: "Loading clinical studies from 5.3 papers...",
 			})
 			this.startCompletionMonitoring()
 
-			// Step 1: Collect all subsection IDs under 5.3
-			const subsectionIds = this.collectSection53Subsections()
-			this.reportProgress(`Found ${subsectionIds.length} subsections under 5.3`)
-
-			// Step 2: Aggregate all placements from 5.3 subsections
-			const allPlacements = await this.collectPlacementsFromSubsections(subsectionIds)
-			this.reportProgress(`Found ${allPlacements.length} total placements`)
+			// Step 1: Try to load 5.3 papers JSON file from global storage
+			const papers = await this.loadSection53Papers()
 
 			let content: string
-			if (allPlacements.length > 0) {
-				// Step 3: Extract study metadata from each placement
-				const studyInfos = await this.extractStudyMetadataFromPlacements(allPlacements)
-				this.reportProgress(`Extracted metadata for ${studyInfos.length} studies`)
-
-				// Step 4: Generate LaTeX table
-				content = this.generateSection52Table(studyInfos)
-			} else {
-				this.reportProgress("No placements found in 5.3 subsections")
+			if (papers && papers.length > 0) {
+				this.reportProgress(`Found ${papers.length} papers from Section 5.3 assessment`)
 				showSystemNotification({
 					subtitle: `Section ${this.sectionId}`,
-					message: "No clinical studies found, writing 'Not Applicable'",
+					message: `Generating table with ${papers.length} clinical studies...`,
 				})
-				content = `\\documentclass[11pt,a4paper]{article}
+
+				// Step 2: Generate LaTeX table using the papers
+				content = this.generateSection52TableFromPapers(papers)
+			} else {
+				// Fallback: Try the old method with placements
+				this.reportProgress("No 5.3 papers found, trying placement-based extraction...")
+				const subsectionIds = this.collectSection53Subsections()
+				const allPlacements = await this.collectPlacementsFromSubsections(subsectionIds)
+
+				if (allPlacements.length > 0) {
+					const studyInfos = await this.extractStudyMetadataFromPlacements(allPlacements)
+					content = this.generateSection52Table(studyInfos)
+				} else {
+					this.reportProgress("No clinical studies found")
+					showSystemNotification({
+						subtitle: `Section ${this.sectionId}`,
+						message: "No clinical studies found. Please run 'Assess Papers' on Section 5.3 first.",
+					})
+					content = `\\documentclass[11pt,a4paper]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
 \\usepackage[english]{babel}
@@ -638,11 +660,17 @@ Not Applicable
 \\geometry{margin=2.5cm}
 \\begin{document}
 \\section*{${this.sectionId}. ${this.sectionTitle}}
-Not Applicable
+
+\\textbf{No clinical studies found.}
+
+Please run "Assess Papers" on Section 5.3 first to search for relevant clinical studies.
+Once papers are assessed, regenerate this section to create the tabular listing.
+
 \\end{document}`
+				}
 			}
 
-			// Step 5: Write output file
+			// Step 3: Write output file
 			this.reportProgress("Writing output file...")
 			await this.writeOutputFile(content)
 			showSystemNotification({
@@ -673,6 +701,337 @@ Not Applicable
 				error: errorMsg,
 			}
 		}
+	}
+
+	/**
+	 * Loads Section 5.3 papers from the global storage JSON file
+	 */
+	private async loadSection53Papers(): Promise<Section53Paper[] | null> {
+		try {
+			// Get drug name from tags file or parsed tags
+			let drugName: string | undefined
+
+			// Try to get drug name from current regulatory product
+			const stateManager = StateManager.get()
+			const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as { drugName?: string } | undefined
+			if (currentProduct?.drugName) {
+				drugName = currentProduct.drugName
+			}
+
+			// Fallback: try to parse tags file
+			if (!drugName) {
+				try {
+					const parsedTags = await this.documentProcessor.parseTagsFile(this.tagsPath)
+					drugName = parsedTags.drugName
+				} catch {
+					// Ignore parsing errors
+				}
+			}
+
+			if (!drugName) {
+				console.log("[TaskSectionCreation 5.2] Could not determine drug name for papers lookup")
+				return null
+			}
+
+			// Build path to papers JSON in global storage
+			const globalStoragePath = path.join(HostProvider.get().globalStorageFsPath, "section53-papers")
+			const sanitizedDrugName = drugName
+				.replace(/[^\w\-_.]/g, "_")
+				.replace(/_+/g, "_")
+				.replace(/^_+|_+$/g, "")
+			const papersFilePath = path.join(globalStoragePath, `${sanitizedDrugName}_5.3_papers.json`)
+
+			if (!(await fileExistsAtPath(papersFilePath))) {
+				console.log(`[TaskSectionCreation 5.2] Papers file not found: ${papersFilePath}`)
+				return null
+			}
+
+			// Read and parse the JSON file
+			const content = await fs.promises.readFile(papersFilePath, "utf-8")
+			const data = JSON.parse(content) as {
+				drugName: string
+				sections: Record<string, { title: string; description: string; papers: Section53Paper[] }>
+			}
+
+			// Collect all unique papers (deduplicated by URL)
+			const seenUrls = new Set<string>()
+			const uniquePapers: Section53Paper[] = []
+
+			const sectionIds = Object.keys(data.sections).sort()
+			for (const sectionId of sectionIds) {
+				const section = data.sections[sectionId]
+				for (const paper of section.papers) {
+					const url = paper.url?.trim()
+					if (!url || seenUrls.has(url)) continue
+
+					// Skip placeholder papers
+					const title = paper.title?.trim()
+					if (!title || title.length < 3 || ["...", ".", "-"].includes(title)) continue
+
+					seenUrls.add(url)
+					uniquePapers.push(paper)
+				}
+			}
+
+			console.log(`[TaskSectionCreation 5.2] Loaded ${uniquePapers.length} unique papers from ${papersFilePath}`)
+			return uniquePapers
+		} catch (error) {
+			console.warn(`[TaskSectionCreation 5.2] Error loading 5.3 papers: ${error}`)
+			return null
+		}
+	}
+
+	/**
+	 * Generates LaTeX table for section 5.2 using papers from 5.3 assessment
+	 * Format matches the reference document with Sr No., Study of design, Reference Details
+	 */
+	private generateSection52TableFromPapers(papers: Section53Paper[]): string {
+		// Get drug name for header
+		let drugName = "Drug"
+		let baseDrugName = "Drug"
+		let dosage = ""
+
+		try {
+			const stateManager = StateManager.get()
+			const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as { drugName?: string } | undefined
+			if (currentProduct?.drugName) {
+				drugName = currentProduct.drugName
+
+				// Extract dosage from drug name
+				const dosageMatch = drugName.match(/(\d+\s*(?:mg|g|mcg|µg))/i)
+				dosage = dosageMatch ? dosageMatch[1] : ""
+
+				// Clean drug name (remove USP, dosage, etc.)
+				baseDrugName = drugName
+					.replace(/\s*(USP|BP|EP|JP|NF)\s*/gi, " ")
+					.replace(/\s*\d+\s*(?:mg|g|mcg|µg)\s*/gi, " ")
+					.replace(/\s+/g, " ")
+					.trim()
+			}
+		} catch {
+			// Use defaults
+		}
+
+		// Generate table rows
+		const tableRows = papers
+			.map((paper, idx) => {
+				const serialNo = idx + 1
+				const title = this.escapeLatexSection52(paper.title?.trim() || "")
+				const referenceDetails = this.formatReferenceDetails(paper)
+
+				return `${serialNo} & \\RaggedRight ${title} & \\RaggedRight ${referenceDetails} \\\\[0.3em]
+\\midrule`
+			})
+			.join("\n")
+
+		return `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage{geometry}
+\\usepackage{fancyhdr}
+\\usepackage{longtable}
+\\usepackage{array}
+\\usepackage{graphicx}
+\\usepackage{booktabs}
+\\usepackage{xcolor}
+\\usepackage{microtype}
+\\usepackage{ragged2e}
+\\usepackage{url}
+
+% Better text handling to avoid underfull hbox warnings
+\\sloppy
+\\tolerance=1000
+\\emergencystretch=3em
+\\hfuzz=0.1pt
+
+% Page geometry
+\\geometry{left=1in,right=1in,top=1in,bottom=1in}
+
+% Custom footer command
+\\newcommand{\\customfooter}{%
+  \\rule{\\textwidth}{2pt}\\\\[0.2cm]
+  \\noindent
+  \\begin{minipage}[t]{0.5\\textwidth}
+  \\vspace{0pt}
+  \\textcolor{gray}{Confidential}
+  \\end{minipage}%
+  \\begin{minipage}[t]{0.5\\textwidth}
+  \\vspace{0pt}
+  \\raggedleft
+  \\textcolor{gray}{Acme Lifetech LLP}
+  \\end{minipage}
+}
+
+% Header and footer setup
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyfoot[C]{\\customfooter}
+\\renewcommand{\\headrulewidth}{0pt}
+\\renewcommand{\\footrulewidth}{0pt}
+
+\\begin{document}
+
+% Custom header with text on right
+\\noindent
+\\begin{minipage}[t]{0.5\\textwidth}
+\\vspace{0pt}
+% Logo placeholder - replace with actual logo path if available
+\\end{minipage}%
+\\begin{minipage}[t]{0.5\\textwidth}
+\\vspace{0pt}
+\\raggedleft
+\\textbf{${this.escapeLatexSection52(baseDrugName)} Tablets USP${dosage ? ` (${this.escapeLatexSection52(dosage)})` : ""}}\\\\
+\\textbf{Module 5: Clinical Study Reports}
+\\end{minipage}
+
+% Horizontal line below header
+\\vspace{0.3cm}
+\\noindent\\rule{\\textwidth}{0.4pt}
+\\vspace{0.5cm}
+
+\\section*{5.2 Tabular Listing of all Clinical Studies}
+
+Please Find Below List of all clinical studies;
+
+\\vspace{0.5cm}
+
+% Table setup with better column formatting
+% Column widths: 0.06\\textwidth for Sr No., 0.43\\textwidth for Study, 0.47\\textwidth for References
+% Total: 0.96\\textwidth (with default \\tabcolsep, table width matches footer line)
+% Add row spacing for better readability
+\\renewcommand{\\arraystretch}{1.4}
+\\begin{longtable}{>{\\centering\\arraybackslash}p{0.06\\textwidth}>{\\RaggedRight}p{0.43\\textwidth}>{\\RaggedRight}p{0.47\\textwidth}}
+\\toprule
+\\textbf{Sr No.} & \\textbf{Study of design} & \\textbf{Reference Details.} \\\\
+\\midrule
+\\endfirsthead
+
+\\toprule
+\\textbf{Sr No.} & \\textbf{Study of design} & \\textbf{Reference Details.} \\\\
+\\midrule
+\\endhead
+
+% No bottom rule on intermediate pages - removed to avoid extra line
+\\endfoot
+
+% Only show bottom rule on the last page
+\\bottomrule
+\\endlastfoot
+
+${tableRows}
+\\end{longtable}
+
+\\end{document}`
+	}
+
+	/**
+	 * Formats reference details for LaTeX table cell (journal, year, URL, authors)
+	 */
+	private formatReferenceDetails(paper: Section53Paper): string {
+		const parts: string[] = []
+
+		// Journal and year
+		const journal = paper.journal?.trim()
+		const year = paper.year?.trim()
+		if (journal) {
+			let journalStr = this.escapeLatexSection52(journal)
+			if (year) {
+				journalStr += `, ${year}`
+			}
+			parts.push(journalStr)
+		}
+
+		// URL or DOI
+		const url = paper.url?.trim()
+		if (url) {
+			// Try to extract DOI
+			const doiMatch = url.match(/doi[=:/\s]+([^\s)]+)/i)
+			if (doiMatch) {
+				const doi = doiMatch[1].replace(/[.,;]+$/, "")
+				parts.push(`\\url{http://dx.doi.org/${doi}}`)
+			} else if (url.includes("dx.doi.org")) {
+				const doi = url.split("dx.doi.org/")[1]?.split("?")[0]?.split("#")[0]
+				if (doi) {
+					parts.push(`\\url{http://dx.doi.org/${doi}}`)
+				} else {
+					parts.push(`\\url{${url.replace(/[{}]/g, "")}}`)
+				}
+			} else {
+				parts.push(`\\url{${url.replace(/[{}]/g, "")}}`)
+			}
+		}
+
+		// Authors
+		const authors = paper.authors
+		if (authors && authors.length > 0) {
+			const maxAuthors = 10
+			let authorsStr: string
+			if (authors.length > maxAuthors) {
+				authorsStr = authors.slice(0, maxAuthors).join(", ") + ", et al."
+			} else {
+				authorsStr = authors.join(", ")
+			}
+			parts.push(this.escapeLatexSection52(authorsStr))
+		}
+
+		return parts.join(", ")
+	}
+
+	/**
+	 * Escape special LaTeX characters for Section 5.2 table
+	 */
+	private escapeLatexSection52(text: string): string {
+		if (!text) return ""
+
+		// Replace problematic Unicode characters
+		let cleaned = text
+			.replace(/\u2009/g, " ") // thin space
+			.replace(/\u200A/g, " ") // hair space
+			.replace(/\u200B/g, "") // zero-width space
+			.replace(/\u200C/g, "") // zero-width non-joiner
+			.replace(/\u200D/g, "") // zero-width joiner
+			.replace(/\u202F/g, " ") // narrow no-break space
+			.replace(/\u00A0/g, " ") // non-breaking space
+			.replace(/\u2013/g, "-") // en dash
+			.replace(/\u2014/g, "-") // em dash
+			.replace(/\u2015/g, "-") // horizontal bar
+			.replace(/\u2018/g, "'") // left single quote
+			.replace(/\u2019/g, "'") // right single quote
+			.replace(/\u201C/g, '"') // left double quote
+			.replace(/\u201D/g, '"') // right double quote
+			.replace(/\u2026/g, "...") // ellipsis
+
+		// Escape special LaTeX characters
+		cleaned = cleaned
+			.replace(/\\/g, "\\textbackslash{}")
+			.replace(/&/g, "\\&")
+			.replace(/%/g, "\\%")
+			.replace(/\$/g, "\\$")
+			.replace(/#/g, "\\#")
+			.replace(/\^/g, "\\textasciicircum{}")
+			.replace(/_/g, "\\_")
+			.replace(/\{/g, "\\{")
+			.replace(/\}/g, "\\}")
+			.replace(/~/g, "\\textasciitilde{}")
+
+		// Remove remaining problematic non-ASCII characters
+		let result = ""
+		for (const char of cleaned) {
+			const code = char.charCodeAt(0)
+			if (code < 128) {
+				result += char
+			} else if (code >= 0x00c0 && code <= 0x00ff) {
+				// Latin-1 Supplement (accented chars)
+				result += char
+			} else if ("àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ".includes(char.toLowerCase())) {
+				result += char
+			} else {
+				result += " "
+			}
+		}
+
+		// Normalize multiple spaces
+		return result.replace(/\s+/g, " ").trim()
 	}
 
 	/**

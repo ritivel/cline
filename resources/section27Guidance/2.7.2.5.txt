@@ -1,0 +1,30 @@
+2.7.2.5 Appendix
+Tables and figures should be embedded in the text of the appropriate sections when that
+enhances the readability of the document. Lengthy tables can be provided in the appendix at
+the end of the Section.
+Table 2.7.2.1 is provided as an example of a tabular format for reporting information and
+results related to pharmacokinetic drug-drug interaction studies. Similar tables could be
+prepared for PK/PD studies, dose-response studies, studies of effects on human biomaterials,
+
+and population PK studies. This table is not intended to be a template, but only to illustrate
+the type of information that should be considered by sponsors in designing their own tables.
+Applicants should also decide whether information and results from clinical pharmacology
+studies are best presented in tables, text or figures in order to aid clarity. If, for example,
+results are best presented in text and figures, the tables might simply list the studies.
+In designing tables, if any, for various types of other clinical pharmacology studies such as
+those listed below, applicants should consider including the following types of information.
+These examples are for illustrative purposes only and the sponsor should decide which
+information needs to be presented.
+• metabolism studies using human biomaterials: biomaterials used (e.g., microsomes,
+hepatocytes), probe drugs, enzymatic pathways and % contribution and relevant kinetic
+parameters (e.g., Vmax, Km).
+• in vitro studies of drug-drug interactions using human biomaterials: for studies of other
+drugs inhibiting the new drug, the metabolite(s) inhibited, enzymatic pathways affected,
+range of inhibitor concentrations used, IC50 and Ki values and proposed mechanism of
+inhibition should be included. For studies of the new drug inhibiting other drugs, the
+drugs and metabolites inhibited should be included, along with the information mentioned
+above.
+• population PK studies: co-variates studied, number and type of subjects or patients
+studied, summary statistical parameters and final estimates of mean (± standard deviation)
+PK parameters.
+

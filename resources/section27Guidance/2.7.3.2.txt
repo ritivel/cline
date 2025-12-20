@@ -1,0 +1,21 @@
+2.7.3.2 Summary of Results of Individual Studies
+A tabular listing of all studies that provided (or were designed to provide) information
+relevant to product efficacy should generally be provided (see the section 2.7.3.6 Appendix), 
+together with narrative descriptions for important studies. The narrative descriptions should be
+brief, e.g., similar to an abstract for a journal article, and should describe critical design
+features and critical results. Similar studies may be described together, noting the individual
+study results and any important differences among the studies. For studies that also
+contributed significantly to the safety analysis, study narratives should include information
+about the extent of exposure of study subjects to the test drug or control agent, and how safety
+data were collected. These narratives can be abstracted from the synopses of the clinical
+study reports (ICH E3). References or electronic links to the full report of each study should
+be included in the narratives.
+Narratives of any bridging studies using clinical endpoints, i.e., certain studies intended to
+evaluate the ability to extrapolate certain types of foreign clinical data to the new region (see
+ICH E5), should be included in this section. An analysis of the results of such studies, together
+with other information (e.g., PK and PD data) that addresses the ability to extrapolate the
+efficacy and safety results of foreign studies, should be performed if necessary. The
+conclusions of such an analysis should be noted at the start of Section 2.7.3.3.2, Comparison
+of Efficacy Results of All Studies, and the full report of the analysis should be provided in
+Module 5.
+

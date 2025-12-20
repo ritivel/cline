@@ -1,0 +1,195 @@
+2.7.4.2 Adverse Events
+2.7.4.2.1 Analysis of Adverse Events
+Data on the frequency of adverse events should be described in text and tables. Text should
+appear in the appropriate subsections of Section 2.7.4.2.1 and the tables that are not embedded
+in the text should be placed in the section 2.7.4.7 Appendix.
+All adverse events occurring or worsening after treatment has begun ("treatment emergent
+signs and symptoms," those adverse events not seen at baseline and those that worsened even
+if present at baseline) should be summarised in tables listing each event, the number of
+subjects in whom the event occurred and the frequency of occurrence in subjects treated with
+the drug under investigation, with comparator drugs, and with placebo. Such tables could also
+present results for each dose and could be modified to show, e.g., adverse event rates by
+severity, by time from onset of therapy, or by assessment of causality.
+When most of the relevant safety data are derived from a small number of studies (e.g., one or
+two studies), or when very different study subject populations were enrolled in the studies that
+were performed, presentation of data by study will often be appropriate. When the relevant 
+
+exposure data is not concentrated in a small number of studies, however, grouping the studies
+and pooling the results to improve precision of estimates and sensitivity to differences should
+generally be considered.
+While often useful, pooling of safety data across studies should be approached with caution
+because in some cases interpretation can be difficult, and it can obscure real differences. In
+cases where differences are apparent, it is more appropriate to present the data by study. The
+following issues should be considered:
+• it is most appropriate to combine data from studies that are of similar design, e.g.,
+similar in dose, duration, methods of determining adverse events, and population.
+• if the incidence for a particular adverse event differs substantially across the
+individual studies in a pool, the pooled estimate is less informative.
+• any study with an unusual adverse event pattern should be presented separately.
+• the appropriate extent of analysis depends on the seriousness of the adverse event
+and the strength of evidence of drug causation. Differences in rates of drugrelated, serious events or events leading to discontinuation or dosage change
+deserve more investigation, whereas rates of other adverse events do not merit
+elaborate analysis.
+• examination of which subjects experience extreme laboratory value abnormalities
+("outliers") may be useful in identifying subgroups of individuals who are at
+particular risk for certain adverse events.
+Groups of studies that could be used in pooled safety analyses include:
+• all controlled studies or subsets of controlled studies, such as all placebocontrolled studies, studies with any positive control, studies with a particular
+positive control, or studies of particular indications (and thus carried out in
+different populations). These groupings are considered the best source of
+information about the more common adverse events and can distinguish drugrelated events from spontaneous events. Rates in control and treatment groups
+should be compared.
+• all studies, excluding short-term studies in healthy subjects.
+This grouping is most useful for evaluating rarer events.
+• all studies using a particular dose route or regimen, or a particular concomitant
+therapy.
+• studies in which adverse event reports are elicited by checklist or direct
+questioning, or studies in which events are volunteered.
+• pools of studies by region.
+It is almost always useful to carry out the first two groupings; the others chosen would vary
+from drug to drug and should be influenced by inspection of individual study results.
+Whatever methods are used, it should be recognised that, as for results of single studies, any
+numerical rate is often only a rough approximation of reality.
+When a decision is made to pool data from several studies, the rationale for selecting the
+method used for pooling should be described. It is common to combine the numerator events
+and the denominators for the selected studies. Other methods for pooling results across studies 
+
+are available, e.g., weighting data from studies on the basis of study size or inversely to their
+variance.
+If substantial differences are seen between clinical trials in the rates of adverse events, these
+differences should be noted and possible reasons should be discussed (e.g., relevant
+differences in study populations, in dose administration, or in methods of collecting adverse
+event data).
+Adverse events should be described as shown in the individual study report (ICH E3). In
+combining data from many studies, it is important to use standardised terms to describe events
+and collect synonymous terms under a single preferred term. This can be done with a standard
+dictionary, and the MedDRA terminology (ICH M1 guideline) should be used. Until
+MedDRA can be fully implemented, other dictionaries can be used, but should be specified.
+Frequencies should be presented for preferred terms and for appropriately defined groupings.
+Examination of which adverse events led to change in therapy (discontinuation of drug use,
+change in dose, need for added therapy) can help in assessing the clinical importance of
+adverse events. These rates can be added to the adverse event rate tables, or can be presented
+in separate tables. Overall discontinuation rates by study may be useful but it is also important
+to specify the particular adverse events leading to discontinuation in a separate table. The
+preferred terms should be grouped by body system and arranged by decreasing frequency.
+2.7.4.2.1.1 Common Adverse Events
+Tabular displays of adverse event rates (see the section 2.7.4.7 Appendix) should be
+used to compare rates in treatment and control groups. For this analysis it may be
+helpful to combine the event severity categories and the causality categories, if they
+are used, leading to a simpler side-by-side comparison of treatment groups. It should
+be noted that while causality categories may be reported, if used, the presentation of
+the data should include total adverse events (whether deemed related or unrelated to
+treatment); evaluations of causality are inherently subjective and may exclude
+unexpected adverse events that are in fact treatment related. Additionally,
+comparisons of rates of adverse events between treatment and control groups in
+individual trials should be summarised here. It is often useful to tabulate rates in
+selected trials (see example table 2.7.4.4, in the Section 2.7.4.7 Appendix).
+It is usually useful to examine more closely the more common adverse events that
+seem to be drug related (e.g., those that show that a dose response and/or a clear
+difference between drug and placebo rates) for relationship to relevant factors,
+including:
+- dosage;
+- mg/kg or mg/m2 dose;
+- dose regimen;
+- duration of treatment;
+- total dose;
+- demographic characteristics such as age, sex, race;
+- concomitant medication use;
+- other baseline features such as renal status;
+- efficacy outcomes; 
+
+- drug concentration, where available.
+It may also be useful to summarise the results of examination of time of onset and
+duration for these drug-related events.
+Rigorous statistical evaluations of the possible relationship of specific adverse events
+to each of the above factors are often unnecessary. It may be apparent from initial
+display and inspection of the data that there is no evidence of a significant relationship
+to demographic or other baseline features. In that case, no further analysis of these
+particular factors is needed. Further, it is not necessary that all such analyses be
+presented in this report. When the safety analyses are too extensive to be presented in
+detail in this report, they may be presented in a separate report in Module 5, section
+5.3.5.3, and summarised here.
+Under certain circumstances, life table or similar analyses may be more informative
+than reporting of crude adverse event rates.
+2.7.4.2.1.2 Deaths
+A table in the Section 2.7.4.7 Appendix should list all deaths occurring while on study
+(including deaths that occurred shortly following treatment termination, e.g., within 30
+days or as specified in the study protocol, as well as all other deaths that occurred later
+but may have resulted from a process that began during studies). Only deaths that are
+clearly disease-related per protocol definitions and not related to the investigational
+product, either in studies of conditions with high mortality such as advanced cancer or
+in studies where mortality from disease is a primary study endpoint, should be
+excepted from this listing (it is assumed, however, that these deaths would still be
+reported in the individual ICH E3 study reports). Even these deaths should be
+examined for any unexpected patterns between study arms, and further analysed if
+unexplained differences are observed. Deaths should be examined individually and
+analysed on the basis of rates in individual trials and appropriate pools of trials,
+considering both total mortality and cause-specific deaths. Potential relationships to
+the factors listed in Section 2.7.4.2.1.1 should also be considered. Although causespecific mortality can be difficult to determine, some deaths are relatively easy to
+interpret. Thus deaths due to causes expected in the patient population (heart attacks
+and sudden death in an angina population) are individually not considered to be
+informative, but even one death due to a QT interval prolongation-associated
+arrhythmia, aplastic anaemia, or liver injury may be informative. Special caution is
+appropriate before an unusual death is attributed to concomitant illness.
+2.7.4.2.1.3 Other Serious Adverse Events
+Summaries of all serious adverse events (other than death but including the serious
+adverse events temporally associated with or preceding the deaths) should be
+displayed. Serious adverse events that occurred after the drug use was discontinued
+should be included in this section. The display should include major laboratory
+abnormalities, abnormal vital signs, and abnormal physical observations that are
+considered serious adverse events using the ICH E2A definitions. Results of analyses
+or assessments of serious adverse events across studies should be presented. Serious
+events should be examined for frequency over time, particularly for drugs that may be
+used chronically. Potential relationships to the factors listed in Section 2.7.4.2.1.1
+should also be considered.
+2.7.4.2.1.4 Other Significant Adverse Events 
+
+Marked haematologic and other laboratory abnormalities (other than those meeting the
+definition of serious) and any events that led to a substantial intervention (premature
+discontinuation of study drug, dose reduction, or substantial additional concomitant
+therapy), other than those reported as serious adverse events, should be displayed.
+Events that led to premature discontinuation of study drug represent an important
+safety concern and deserve particular attention in the analysis of drug safety for two
+reasons. First, even for expected events (based on pharmacologic activity), the need to
+discontinue (or otherwise alter) treatment reflects the severity and perceived
+importance of the event to patient and physician. Second, discontinuation may
+represent a drug-related event not yet recognised as drug related. Adverse events
+leading to treatment discontinuation should be considered possibly drug-related even if
+this was not recognised initially and even if the event was thought to represent
+intercurrent illness. Reasons for premature treatment discontinuations should be
+discussed and rates of discontinuations should be compared across studies and
+compared with those for placebo and/or active control treatment. In addition, the study
+data should be examined for any potential relationships to the factors listed in Section
+2.7.4.2.1.1.
+2.7.4.2.1.5 Analysis of Adverse Events by Organ System or Syndrome
+Assessment of the causality of, and risk factors for, deaths, other serious events, and
+other significant events is often complicated by the fact that they are uncommon. As a
+result, consideration of related events as a group, including less important events of
+potentially related pathophysiology, may be of critical value in understanding the
+safety profile. For example, the relationship to treatment of an isolated sudden death
+may become much clearer when considered in the context of cases of syncope,
+palpitations, and asymptomatic arrhythmias.
+It is thus generally useful to summarise adverse events by organ system so that they
+may be considered in the context of potentially related events including laboratory
+abnormalities. Such presentations of adverse events by organ system should be placed
+in subsections of section 2.7.4.2.1.5, labelled as 2.7.4.2.1.5.1, 2.7.4.2.1.5.2, etc., and
+titled by the organ system under consideration. The list of organ systems to be
+addressed and the approach to grouping certain events should be selected as
+appropriate to best present the adverse event data for the medicinal product. If some
+adverse events tend to occur in syndromes (e.g., influenza-like syndrome, cytokine
+release syndrome), the sponsor may choose to create some subsections of 2.7.4.2.1.5
+for syndromes rather than organ systems.
+The same data and summarisations should generally not be repeated in more than one
+subsection of Section 2.7.4.2.1. Instead, a summary presentation may be placed in one
+subsection and cross-referenced as needed in the other.
+2.7.4.2.2 Narratives
+The locations in the application of individual narratives of patient deaths, other serious
+adverse events, and other significant adverse events deemed to be of special interest because
+of clinical importance (as described in ICH E3 individual study reports) should be referenced
+here for the convenience of the reviewer. The narratives themselves should be a part of the
+individual study reports, if there is such a report. In cases where there is no individual study
+report (e.g., if many open studies are pooled as part of a safety analysis and are not
+individually described), narratives can be placed in Module 5, Section 5.3.5.3. Narratives 
+should not be included here, unless an abbreviated narrative of particular events is considered
+critical to the summary assessment of the drug.
+

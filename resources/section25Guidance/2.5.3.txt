@@ -1,0 +1,10 @@
+2.5.3 Overview of Clinical Pharmacology
+
+The purpose of this section is to present a critical analysis of the pharmacokinetic (PK), pharmacodynamic (PD), and related in vitro data in the CTD. The analysis should consider all relevant data and explain why and how the data support the conclusions drawn. It should emphasise unusual results and known or potential problems, or note the lack thereof. This section should address:
+
+• pharmacokinetics, e.g., comparative PK in healthy subjects, patients, and special populations; PK related to intrinsic factors (e.g., age, sex, race, renal and hepatic impairment) and to extrinsic factors (e.g., smoking, concomitant drugs, diet); rate and extent of absorption; distribution, including binding with plasma proteins; specific metabolic pathways, including effects of possible genetic polymorphism and the formation of active and inactive metabolites; excretion; time-dependent changes in pharmacokinetics; stereochemistry issues; clinically relevant PK interactions with other medicinal products or other substances.
+
+• pharmacodynamics, e.g., information on mechanism of action, such as receptor binding; onset and/or offset of action; relationship of favorable and unfavorable pharmacodynamic effects to dose or plasma concentration (i.e., PK/PD relationships); PD support for the proposed dose and dosing interval; clinically relevant PD interactions with other medicinal products or substances; and possible genetic differences in response.
+
+• interpretation of the results and implications of immunogenicity studies, clinical microbiology studies, or other drug class specific PD studies summarised in section 2.7.2.4 of the Clinical Summary.
+

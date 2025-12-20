@@ -1,0 +1,16 @@
+5.3.2 Reports of Studies Pertinent to Pharmacokinetics Using Human Biomaterials
+
+Human biomaterials is a term used to refer to proteins, cells, tissues and related materials derived from human sources that are used in vitro or ex vivo to assess PK properties of drug substances. Examples include cultured human colonic cells that are used to assess permeability through biological membranes and transport processes, and human albumin that is used to assess plasma protein binding. Of particular importance is the use of human biomaterials such as hepatocytes and/or hepatic microsomes to study metabolic pathways and to assess drug-drug interactions with these pathways. Studies using biomaterials to address other properties (e.g., sterility or pharmacodynamics) should not be placed in the Clinical Study Reports Section, but in the Nonclinical Study Section (Module 4).
+
+5.3.2.1 Plasma Protein Binding Study Reports
+
+Ex vivo protein binding study reports should be provided here. Protein binding data from PK blood and/or plasma studies should be provided in Section 5.3.3.
+
+5.3.2.2 Reports of Hepatic Metabolism and Drug Interaction Studies
+
+Reports of hepatic metabolism and metabolic drug interaction studies with hepatic tissue should be placed here.
+
+5.3.2.3 Reports of Studies Using Other Human Biomaterials
+
+Reports of studies with other biomaterials should be placed in this section.
+

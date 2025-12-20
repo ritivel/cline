@@ -1,0 +1,10 @@
+2.7.1.2 Summary of Results of Individual Studies
+A tabular listing of all biopharmaceutic studies should generally be provided (see 2.7.1.4
+Appendix), together with narrative descriptions of relevant features and outcomes of each of
+the individual studies that provided important in vitro or in vivo data and information relevant
+to BA and BE. The narrative descriptions should be brief, e.g., similar to an abstract for a
+journal article, and should describe critical design features and critical results. Similar studies
+may be described together, noting the individual study results and any important differences
+among the studies. These narratives may be abstracted from the ICH E3 synopsis. References
+or electronic links to the full report of each study should be included in the narratives
+

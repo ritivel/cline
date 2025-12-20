@@ -1,0 +1,18 @@
+2.7.3.6 Appendix
+Tables and figures should be embedded in the text of the appropriate sections when that
+enhances the readability of the document. Lengthy tables can be provided in the appendix at
+the end of the Section.
+Tables should identify all studies pertinent to the evaluation of efficacy (including studies that
+were terminated or are not yet completed, studies that failed to show effectiveness for any
+reason, studies available only as publications, studies reported in full technical reports (ICH
+E3), and studies described in abbreviated reports); and should provide the most important
+results of those studies. Note, however, that unplanned interim analyses on ongoing studies
+are generally not needed or encouraged. When more than one section 2.7.3 is provided for an
+application with more than one indication, usually each section should have its own appendix
+with tables.
+Illustrative tables for an antihypertensive drug are provided, but these examples will not be
+relevant to every application. In general, applications will require tables and/or figures that
+are developed specifically for the particular drug class and the studies that were carried out.
+Table 2.7.3.1Description of Clinical Efficacy and Safety Studies
+Table 2.7.3.2Results of Efficacy Studies
+

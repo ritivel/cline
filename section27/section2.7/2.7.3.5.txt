@@ -1,0 +1,17 @@
+2.7.3.5 Persistence of Efficacy and/or Tolerance Effects
+Available information on persistence of efficacy over time should be summarised. The
+number of patients for whom long-term efficacy data are available, and the length of
+exposure, should be provided. Any evidence of tolerance (loss of therapeutic effects over
+time) should be noted. Examination of any apparent relationships between dose changes over
+time and long-term efficacy may be useful.
+The primary focus should be on controlled studies specifically designed to collect long-term
+efficacy data, and such studies should be clearly differentiated from other, less rigorous, 
+studies such as open extension studies. This distinction also applies to specific studies
+designed for evaluation of tolerance and withdrawal effects. Data concerning withdrawal or
+rebound effects pertinent to product safety should be presented in the safety section (see
+section 2.7.4).
+In long-term efficacy trials, the effect of premature discontinuation of therapy or switching to
+other therapies upon the assessment of the results should be considered. These issues might
+also be important for short term trials and should be addressed when discussing the results of
+these trials, if appropriate.
+
