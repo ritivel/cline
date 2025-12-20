@@ -1,5 +1,5 @@
+import { StateManager } from "@core/storage/StateManager"
 import { String as ProtoString, StringRequest } from "@shared/proto/cline/common"
-import { OpenFileRequest } from "@shared/proto/host/window"
 import * as fs from "fs/promises"
 import * as path from "path"
 import { HostProvider } from "@/hosts/host-provider"
@@ -94,7 +94,8 @@ function generateSubsectionLatex(sectionId: string, sectionData: Section53Sectio
 
 	if (selectedPapers.length === 0) {
 		return `
-\\section{${escapeLatex(sectionId)} ${escapeLatex(sectionData.title)}}
+\\noindent{\\Large\\textbf{${escapeLatex(sectionId)} ${escapeLatex(sectionData.title)}}}
+\\vspace{1em}
 
 \\textit{Not Applicable}
 
@@ -105,7 +106,8 @@ function generateSubsectionLatex(sectionId: string, sectionData: Section53Sectio
 	const papersContent = selectedPapers.map((paper) => generatePaperLatex(paper)).join("\n")
 
 	return `
-\\section{${escapeLatex(sectionId)} ${escapeLatex(sectionData.title)}}
+\\noindent{\\Large\\textbf{${escapeLatex(sectionId)} ${escapeLatex(sectionData.title)}}}
+\\vspace{1em}
 
 ${escapeLatex(sectionData.description)}
 
@@ -117,9 +119,11 @@ ${papersContent}
 
 /**
  * Generates the complete Section 5.3 LaTeX document
+ * Header/footer styling matches 5.1 Table of Contents exactly
  */
 function generateSection53Latex(
 	drugName: string,
+	companyName: string,
 	result: Section53Result,
 	selectedPapers: Array<{ sectionId: string; pmid: string }>,
 ): string {
@@ -152,39 +156,32 @@ function generateSection53Latex(
 		})
 		.join("\n")
 
-	return `\\documentclass[12pt]{article}
+	// Header/footer styling matching 5.1 TOC exactly
+	return `\\documentclass[11pt,a4paper]{article}
 
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
 \\usepackage{geometry}
+\\geometry{margin=2.5cm, headheight=28pt}
 \\usepackage{hyperref}
 \\usepackage{fancyhdr}
-\\usepackage{titlesec}
 
-\\geometry{margin=1in}
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    pdftitle={CTD Section 5.3: Clinical Study Reports},
+    pdfauthor={Regulatory Affairs}
+}
 
-% Header and footer configuration
+% Header and footer configuration - matching 5.1 TOC exactly
 \\pagestyle{fancy}
 \\fancyhf{}
+\\fancyhead[R]{${escapeLatex(drugName)}\\\\Module 5: Clinical Study Reports}
 \\renewcommand{\\headrulewidth}{0.4pt}
-\\renewcommand{\\footrulewidth}{0.4pt}
-\\fancyhead[L]{Module 5: Clinical Study Reports}
-\\fancyhead[R]{${escapeLatex(drugName)}}
 \\fancyfoot[L]{Confidential}
-\\fancyfoot[C]{\\thepage}
-\\fancyfoot[R]{Section 5.3 Literature References}
-
-% Apply same style to first page
-\\fancypagestyle{plain}{
-  \\fancyhf{}
-  \\renewcommand{\\headrulewidth}{0.4pt}
-  \\renewcommand{\\footrulewidth}{0.4pt}
-  \\fancyhead[L]{Module 5: Clinical Study Reports}
-  \\fancyhead[R]{${escapeLatex(drugName)}}
-  \\fancyfoot[L]{Confidential}
-  \\fancyfoot[C]{\\thepage}
-  \\fancyfoot[R]{Section 5.3 Literature References}
-}
+\\fancyfoot[R]{${escapeLatex(companyName)}}
+\\renewcommand{\\footrulewidth}{0.4pt}
 
 \\begin{document}
 
@@ -220,6 +217,11 @@ export async function generateSection53(controller: Controller, request: StringR
 		}
 
 		console.log(`[generateSection53] Generating LaTeX for ${drugName} with ${selectedPapers.length} papers`)
+
+		// Get company name from state (matching 5.1 TOC)
+		const stateManager = StateManager.get()
+		const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as { companyName?: string } | undefined
+		const companyName = currentProduct?.companyName || ""
 
 		// Build set of selected PMIDs for quick lookup
 		const selectedPmidSet = new Set(selectedPapers.map((p) => p.pmid))
@@ -262,8 +264,8 @@ export async function generateSection53(controller: Controller, request: StringR
 		await fs.writeFile(selectedPapersPath, JSON.stringify(filteredResult, null, 2), "utf-8")
 		console.log(`[generateSection53] Updated papers JSON with ${totalSelectedPapers} selected papers: ${selectedPapersPath}`)
 
-		// Generate LaTeX content
-		const latexContent = generateSection53Latex(drugName, result, selectedPapers)
+		// Generate LaTeX content with company name for footer
+		const latexContent = generateSection53Latex(drugName, companyName, result, selectedPapers)
 
 		// Determine output path
 		const dossierPath = path.join(productPath, "dossier")
@@ -277,9 +279,9 @@ export async function generateSection53(controller: Controller, request: StringR
 		await fs.writeFile(texPath, latexContent, "utf-8")
 		console.log(`[generateSection53] LaTeX file written to: ${texPath}`)
 
-		// Open the .tex file using HostProvider - this will trigger LaTeX Workshop to compile and show PDF
+		// Open the .tex file - LaTeX Workshop will auto-compile and show PDF
 		try {
-			await HostProvider.get().hostBridge.windowClient.openFile(OpenFileRequest.create({ filePath: texPath }))
+			await HostProvider.window.openFile({ filePath: texPath })
 			console.log(`[generateSection53] Opened file: ${texPath}`)
 		} catch (openError) {
 			console.error(`[generateSection53] Failed to open file: ${openError}`)

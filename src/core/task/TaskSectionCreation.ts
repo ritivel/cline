@@ -451,6 +451,61 @@ export class TaskSectionCreation extends Task {
 			this.reportProgress("Parsing tags.md...")
 			this.parsedTags = await this.parseTagsFile()
 
+			// Get drug name and company name from current regulatory product (same as 5.1 TOC)
+			const stateManager = StateManager.get()
+			const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as
+				| { drugName?: string; companyName?: string }
+				| undefined
+			const drugName = currentProduct?.drugName || "Drug Product"
+			const companyName = currentProduct?.companyName || ""
+
+			// Helper function to escape LaTeX special characters
+			const escapeLatex = (text: string): string => {
+				return text
+					.replace(/\\/g, "\\textbackslash{}")
+					.replace(/{/g, "\\{")
+					.replace(/}/g, "\\}")
+					.replace(/#/g, "\\#")
+					.replace(/\$/g, "\\$")
+					.replace(/%/g, "\\%")
+					.replace(/&/g, "\\&")
+					.replace(/_/g, "\\_")
+					.replace(/\^/g, "\\textasciicircum{}")
+					.replace(/~/g, "\\textasciitilde{}")
+			}
+
+			// LaTeX preamble with header/footer matching 5.1 TOC styling
+			const latexPreamble = `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm, headheight=28pt}
+\\usepackage{fancyhdr}
+\\usepackage{graphicx}
+\\usepackage{hyperref}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    pdftitle={CTD Section ${this.sectionId}: ${escapeLatex(this.sectionTitle)}},
+    pdfauthor={Regulatory Affairs}
+}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[R]{${escapeLatex(drugName)}\\\\Module 5: Clinical Study Reports}
+\\renewcommand{\\headrulewidth}{0.4pt}
+\\fancyfoot[L]{Confidential}
+\\fancyfoot[R]{${escapeLatex(companyName)}}
+\\renewcommand{\\footrulewidth}{0.4pt}
+
+\\begin{document}
+
+\\noindent{\\Large\\textbf{${this.sectionId} ${escapeLatex(this.sectionTitle)}}}
+\\vspace{1em}
+`
+
 			let content: string
 			if (this.parsedTags.placements && this.parsedTags.placements.length > 0) {
 				this.reportProgress(`Found ${this.parsedTags.placements.length} placements, attaching...`)
@@ -459,15 +514,8 @@ export class TaskSectionCreation extends Task {
 					message: `Found ${this.parsedTags.placements.length} placements, attaching...`,
 				})
 
-				// Create a basic LaTeX shell
-				const shellContent = `\\documentclass[11pt,a4paper]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[T1]{fontenc}
-\\usepackage[english]{babel}
-\\usepackage{geometry}
-\\geometry{margin=2.5cm}
-\\begin{document}
-\\section*{${this.sectionId}. ${this.sectionTitle}}
+				// Create LaTeX shell with header/footer
+				const shellContent = `${latexPreamble}
 \\end{document}`
 
 				content = await this.attachPlacementPdfsAsImages(shellContent)
@@ -477,15 +525,9 @@ export class TaskSectionCreation extends Task {
 					subtitle: `Section ${this.sectionId}`,
 					message: "No placements found, writing 'Not Applicable'",
 				})
-				content = `\\documentclass[11pt,a4paper]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[T1]{fontenc}
-\\usepackage[english]{babel}
-\\usepackage{geometry}
-\\geometry{margin=2.5cm}
-\\begin{document}
-\\section*{${this.sectionId}. ${this.sectionTitle}}
+				content = `${latexPreamble}
 Not Applicable
+
 \\end{document}`
 			}
 
@@ -786,30 +828,27 @@ Once papers are assessed, regenerate this section to create the tabular listing.
 	 * Format matches the reference document with Sr No., Study of design, Reference Details
 	 */
 	private generateSection52TableFromPapers(papers: Section53Paper[]): string {
-		// Get drug name for header
-		let drugName = "Drug"
-		let baseDrugName = "Drug"
-		let dosage = ""
+		// Get drug name and company name from current regulatory product
+		const stateManager = StateManager.get()
+		const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as
+			| { drugName?: string; companyName?: string }
+			| undefined
+		const drugName = currentProduct?.drugName || "Drug Product"
+		const companyName = currentProduct?.companyName || ""
 
-		try {
-			const stateManager = StateManager.get()
-			const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as { drugName?: string } | undefined
-			if (currentProduct?.drugName) {
-				drugName = currentProduct.drugName
-
-				// Extract dosage from drug name
-				const dosageMatch = drugName.match(/(\d+\s*(?:mg|g|mcg|µg))/i)
-				dosage = dosageMatch ? dosageMatch[1] : ""
-
-				// Clean drug name (remove USP, dosage, etc.)
-				baseDrugName = drugName
-					.replace(/\s*(USP|BP|EP|JP|NF)\s*/gi, " ")
-					.replace(/\s*\d+\s*(?:mg|g|mcg|µg)\s*/gi, " ")
-					.replace(/\s+/g, " ")
-					.trim()
-			}
-		} catch {
-			// Use defaults
+		// Helper function to escape LaTeX special characters
+		const escapeLatex = (text: string): string => {
+			return text
+				.replace(/\\/g, "\\textbackslash{}")
+				.replace(/{/g, "\\{")
+				.replace(/}/g, "\\}")
+				.replace(/#/g, "\\#")
+				.replace(/\$/g, "\\$")
+				.replace(/%/g, "\\%")
+				.replace(/&/g, "\\&")
+				.replace(/_/g, "\\_")
+				.replace(/\^/g, "\\textasciicircum{}")
+				.replace(/~/g, "\\textasciitilde{}")
 		}
 
 		// Generate table rows
@@ -827,16 +866,18 @@ Once papers are assessed, regenerate this section to create the tabular listing.
 		return `\\documentclass[11pt,a4paper]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
 \\usepackage{geometry}
+\\geometry{margin=2.5cm, headheight=28pt}
 \\usepackage{fancyhdr}
 \\usepackage{longtable}
 \\usepackage{array}
 \\usepackage{graphicx}
 \\usepackage{booktabs}
-\\usepackage{xcolor}
 \\usepackage{microtype}
 \\usepackage{ragged2e}
 \\usepackage{url}
+\\usepackage{hyperref}
 
 % Better text handling to avoid underfull hbox warnings
 \\sloppy
@@ -844,61 +885,31 @@ Once papers are assessed, regenerate this section to create the tabular listing.
 \\emergencystretch=3em
 \\hfuzz=0.1pt
 
-% Page geometry
-\\geometry{left=1in,right=1in,top=1in,bottom=1in}
-
-% Custom footer command
-\\newcommand{\\customfooter}{%
-  \\rule{\\textwidth}{2pt}\\\\[0.2cm]
-  \\noindent
-  \\begin{minipage}[t]{0.5\\textwidth}
-  \\vspace{0pt}
-  \\textcolor{gray}{Confidential}
-  \\end{minipage}%
-  \\begin{minipage}[t]{0.5\\textwidth}
-  \\vspace{0pt}
-  \\raggedleft
-  \\textcolor{gray}{Acme Lifetech LLP}
-  \\end{minipage}
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    pdftitle={CTD Section 5.2: Tabular Listing of All Clinical Studies},
+    pdfauthor={Regulatory Affairs}
 }
 
-% Header and footer setup
 \\pagestyle{fancy}
 \\fancyhf{}
-\\fancyfoot[C]{\\customfooter}
-\\renewcommand{\\headrulewidth}{0pt}
-\\renewcommand{\\footrulewidth}{0pt}
+\\fancyhead[R]{${escapeLatex(drugName)}\\\\Module 5: Clinical Study Reports}
+\\renewcommand{\\headrulewidth}{0.4pt}
+\\fancyfoot[L]{Confidential}
+\\fancyfoot[R]{${escapeLatex(companyName)}}
+\\renewcommand{\\footrulewidth}{0.4pt}
 
 \\begin{document}
 
-% Custom header with text on right
-\\noindent
-\\begin{minipage}[t]{0.5\\textwidth}
-\\vspace{0pt}
-% Logo placeholder - replace with actual logo path if available
-\\end{minipage}%
-\\begin{minipage}[t]{0.5\\textwidth}
-\\vspace{0pt}
-\\raggedleft
-\\textbf{${this.escapeLatexSection52(baseDrugName)} Tablets USP${dosage ? ` (${this.escapeLatexSection52(dosage)})` : ""}}\\\\
-\\textbf{Module 5: Clinical Study Reports}
-\\end{minipage}
+\\noindent{\\Large\\textbf{5.2 Tabular Listing of All Clinical Studies}}
+\\vspace{1em}
 
-% Horizontal line below header
-\\vspace{0.3cm}
-\\noindent\\rule{\\textwidth}{0.4pt}
-\\vspace{0.5cm}
-
-\\section*{5.2 Tabular Listing of all Clinical Studies}
-
-Please Find Below List of all clinical studies;
+Please find below the list of all clinical studies:
 
 \\vspace{0.5cm}
 
 % Table setup with better column formatting
-% Column widths: 0.06\\textwidth for Sr No., 0.43\\textwidth for Study, 0.47\\textwidth for References
-% Total: 0.96\\textwidth (with default \\tabcolsep, table width matches footer line)
-% Add row spacing for better readability
 \\renewcommand{\\arraystretch}{1.4}
 \\begin{longtable}{>{\\centering\\arraybackslash}p{0.06\\textwidth}>{\\RaggedRight}p{0.43\\textwidth}>{\\RaggedRight}p{0.47\\textwidth}}
 \\toprule
@@ -911,10 +922,8 @@ Please Find Below List of all clinical studies;
 \\midrule
 \\endhead
 
-% No bottom rule on intermediate pages - removed to avoid extra line
 \\endfoot
 
-% Only show bottom rule on the last page
 \\bottomrule
 \\endlastfoot
 
@@ -1744,6 +1753,15 @@ ${tableRows}
 			throw new Error(`Module ${this.moduleNum} not found in template`)
 		}
 
+		// Get drug name and company name from current regulatory product
+		const stateManager = StateManager.get()
+		const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as
+			| { drugName?: string; companyName?: string }
+			| undefined
+		const drugName = currentProduct?.drugName || "Drug Product"
+		const companyName = currentProduct?.companyName || ""
+		const moduleTitle = module.title
+
 		// Build parent-child map to determine hierarchy
 		const parentMap = new Map<string, string | null>()
 		for (const [sectionId, _section] of Object.entries(module.sections)) {
@@ -1830,7 +1848,7 @@ ${tableRows}
 \\usepackage[T1]{fontenc}
 \\usepackage[english]{babel}
 \\usepackage{geometry}
-\\geometry{margin=2.5cm}
+\\geometry{margin=2.5cm, headheight=28pt}
 \\usepackage{booktabs}
 \\usepackage{longtable}
 \\usepackage{tabularx}
@@ -1857,17 +1875,16 @@ ${tableRows}
 
 \\pagestyle{fancy}
 \\fancyhf{}
-\\fancyhead[C]{CTD Section ${this.sectionId}: ${escapedSectionTitle}}
-\\fancyfoot[C]{\\thepage}
+\\fancyhead[R]{${escapeLatex(drugName)}\\\\Module ${this.moduleNum}: ${escapeLatex(moduleTitle)}}
+\\renewcommand{\\headrulewidth}{0.4pt}
+\\fancyfoot[L]{Confidential}
+\\fancyfoot[R]{${escapeLatex(companyName)}}
+\\renewcommand{\\footrulewidth}{0.4pt}
 
 \\begin{document}
 
-\\title{${this.sectionId}. ${escapedSectionTitle}}
-\\author{Regulatory Affairs}
-\\date{\\today}
-\\maketitle
-
-\\section*{${escapedSectionTitle}}
+\\noindent{\\Large\\textbf{${this.sectionId} ${escapedSectionTitle}}}
+\\vspace{1em}
 
 \\renewcommand{\\arraystretch}{1.5}
 \\begin{longtable}{|p{2.2cm}|p{11.3cm}|p{1.4cm}|}

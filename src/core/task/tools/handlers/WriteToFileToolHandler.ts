@@ -2,6 +2,7 @@ import path from "node:path"
 import type { ToolUse } from "@core/assistant-message"
 import { constructNewFileContent } from "@core/assistant-message/diff"
 import { formatResponse } from "@core/prompts/responses"
+import { StateManager } from "@core/storage/StateManager"
 import { getWorkspaceBasename, resolveWorkspacePath } from "@core/workspace"
 import { showSystemNotification } from "@integrations/notifications"
 import { ClineSayTool } from "@shared/ExtensionMessage"
@@ -334,7 +335,7 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 
 			// For .tex files, apply header/footer configuration
 			if (resolvedPath.endsWith(".tex")) {
-				newContent = this.applyTexHeaderFooter(newContent)
+				newContent = this.applyTexHeaderFooter(newContent, resolvedPath)
 			}
 		} else {
 			// can't happen, since we already checked for content/diff above. but need to do this for type error
@@ -358,7 +359,7 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 	/**
 	 * Applies header and footer configuration to LaTeX content if not already present.
 	 */
-	private applyTexHeaderFooter(content: string): string {
+	private applyTexHeaderFooter(content: string, texPath: string): string {
 		const documentBeginMatch = content.match(/\\begin\{document\}/i)
 		const documentEndMatch = content.match(/\\end\{document\}/i)
 
@@ -390,6 +391,64 @@ export class WriteToFileToolHandler implements IFullyManagedTool {
 			// Build header/footer config if missing
 			let headerFooterConfig = ""
 			if (!hasFancyhdr || !hasFancyPagestyle) {
+				// Get drug name and company name from current regulatory product
+				const stateManager = StateManager.get()
+				const currentProduct = stateManager.getGlobalStateKey("currentRegulatoryProduct") as
+					| { drugName?: string; companyName?: string }
+					| undefined
+				const drugName = currentProduct?.drugName || "Drug Product"
+				const companyName = currentProduct?.companyName || ""
+
+				// Determine module info from the tex path
+				let moduleInfo = "Module 5: Clinical Study Reports"
+				if (
+					texPath.includes("/5.") ||
+					texPath.includes("\\5.") ||
+					texPath.includes("module5") ||
+					texPath.includes("Module5")
+				) {
+					moduleInfo = "Module 5: Clinical Study Reports"
+				} else if (
+					texPath.includes("/2.") ||
+					texPath.includes("\\2.") ||
+					texPath.includes("module2") ||
+					texPath.includes("Module2")
+				) {
+					moduleInfo = "Module 2: Overview and Summary"
+				} else if (
+					texPath.includes("/3.") ||
+					texPath.includes("\\3.") ||
+					texPath.includes("module3") ||
+					texPath.includes("Module3")
+				) {
+					moduleInfo = "Module 3: Quality"
+				} else if (
+					texPath.includes("/4.") ||
+					texPath.includes("\\4.") ||
+					texPath.includes("module4") ||
+					texPath.includes("Module4")
+				) {
+					moduleInfo = "Module 4: Nonclinical Study Reports"
+				}
+
+				// Escape LaTeX special characters
+				const escapeLatex = (text: string): string => {
+					return text
+						.replace(/\\/g, "\\textbackslash{}")
+						.replace(/{/g, "\\{")
+						.replace(/}/g, "\\}")
+						.replace(/#/g, "\\#")
+						.replace(/\$/g, "\\$")
+						.replace(/%/g, "\\%")
+						.replace(/&/g, "\\&")
+						.replace(/_/g, "\\_")
+						.replace(/\^/g, "\\textasciicircum{}")
+						.replace(/~/g, "\\textasciitilde{}")
+				}
+
+				const escapedDrugName = escapeLatex(drugName)
+				const escapedCompanyName = escapeLatex(companyName)
+
 				headerFooterConfig = `
 ${!hasFancyhdr ? "\\usepackage{fancyhdr}" : ""}
 
@@ -400,21 +459,21 @@ ${!hasFancyhdr ? "\\usepackage{fancyhdr}" : ""}
 \\renewcommand{\\footrulewidth}{0.4pt}
 % Header: Logo on left, title on right
 \\fancyhead[L]{}
-\\fancyhead[R]{Aspirin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
+\\fancyhead[R]{${escapedDrugName}\\\\${moduleInfo}}
 % Footer: Confidential on left, page number in center, company name on right
 \\fancyfoot[L]{Confidential}
 \\fancyfoot[C]{\\thepage}
-\\fancyfoot[R]{YC LifeSciences Ltd}
+\\fancyfoot[R]{${escapedCompanyName}}
 % Apply the same style to the first page (plain style)
 \\fancypagestyle{plain}{%
   \\fancyhf{}
   \\renewcommand{\\headrulewidth}{0.4pt}
   \\renewcommand{\\footrulewidth}{0.4pt}
   \\fancyhead[L]{}
-  \\fancyhead[R]{Aspirin Tablets USP (500 mg)\\\\Module 2: Overview and Summary}
+  \\fancyhead[R]{${escapedDrugName}\\\\${moduleInfo}}
   \\fancyfoot[L]{Confidential}
   \\fancyfoot[C]{\\thepage}
-  \\fancyfoot[R]{YC LifeSciences Ltd}
+  \\fancyfoot[R]{${escapedCompanyName}}
 }
 `
 				// DEBUG notification

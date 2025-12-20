@@ -1,5 +1,4 @@
 import { String as ProtoString, StringRequest } from "@shared/proto/cline/common"
-import { OpenFileRequest } from "@shared/proto/host/window"
 import * as path from "path"
 import {
 	checkSection53PapersExist,
@@ -12,6 +11,7 @@ import type { Controller } from "../index"
 interface GenerateSection27Request {
 	drugName: string
 	productPath: string
+	companyName?: string
 }
 
 /**
@@ -20,7 +20,7 @@ interface GenerateSection27Request {
  */
 export async function generateSection27(controller: Controller, request: StringRequest): Promise<ProtoString> {
 	try {
-		const { drugName, productPath } = JSON.parse(request.value || "{}") as GenerateSection27Request
+		const { drugName, productPath, companyName } = JSON.parse(request.value || "{}") as GenerateSection27Request
 
 		if (!drugName || !productPath) {
 			return ProtoString.create({
@@ -71,12 +71,19 @@ export async function generateSection27(controller: Controller, request: StringR
 		console.log(`[generateSection27] Output path: ${texPath}`)
 
 		// Run the generation service
-		const result = await generateSection27Service(drugName, extensionPath, openAiApiKey, section53PapersPath, texPath)
+		const result = await generateSection27Service(
+			drugName,
+			extensionPath,
+			openAiApiKey,
+			section53PapersPath,
+			texPath,
+			companyName || "",
+		)
 
 		if (result.success && result.texPath) {
-			// Open the .tex file using HostProvider
+			// Open the .tex file - LaTeX Workshop will auto-compile and show PDF
 			try {
-				await HostProvider.get().hostBridge.windowClient.openFile(OpenFileRequest.create({ filePath: result.texPath }))
+				await HostProvider.window.openFile({ filePath: result.texPath })
 				console.log(`[generateSection27] Opened file: ${result.texPath}`)
 			} catch (openError) {
 				console.error(`[generateSection27] Failed to open file: ${openError}`)

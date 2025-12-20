@@ -454,6 +454,12 @@ Return ONLY the LaTeX code starting with the appropriate sectioning command.`
 			.replace(/\s*```$/m, "")
 			.trim()
 
+		// Ensure all section commands are unnumbered (use * version)
+		latexContent = latexContent
+			.replace(/\\section\{/g, "\\section*{")
+			.replace(/\\subsection\{/g, "\\subsection*{")
+			.replace(/\\subsubsection\{/g, "\\subsubsection*{")
+
 		// Validate quality
 		const qualityReport = validateLatexQuality(latexContent, sectionId, Math.min(relevantPapers.length, 5))
 
@@ -487,7 +493,7 @@ function escapeLatex(text: string): string {
 /**
  * Generate the complete Section 2.7 document
  */
-function generateCompleteDocument(drugName: string, subsectionContents: Record<string, string>): string {
+function generateCompleteDocument(drugName: string, companyName: string, subsectionContents: Record<string, string>): string {
 	// Sort sections by ID
 	const sortedSectionIds = Object.keys(subsectionContents).sort((a, b) => {
 		const partsA = a.split(".").map(Number)
@@ -514,7 +520,7 @@ function generateCompleteDocument(drugName: string, subsectionContents: Record<s
 \\usepackage{amsmath}
 \\usepackage{amssymb}
 
-\\geometry{margin=1in}
+\\geometry{margin=1in, headheight=28pt}
 
 % Custom commands for references
 \\newcommand{\\modref}[1]{(see Module 5, Section #1)}
@@ -526,22 +532,18 @@ function generateCompleteDocument(drugName: string, subsectionContents: Record<s
 \\fancyhf{}
 \\renewcommand{\\headrulewidth}{0.4pt}
 \\renewcommand{\\footrulewidth}{0.4pt}
-\\fancyhead[L]{\\small ICH Module 2 Section 2.7}
-\\fancyhead[R]{\\small ${escapeLatex(drugName)}}
-\\fancyfoot[L]{\\small Confidential}
-\\fancyfoot[C]{\\thepage}
-\\fancyfoot[R]{\\small Clinical Summary}
+\\fancyhead[R]{${escapeLatex(drugName)}\\\\Module 2: Overview and Summary}
+\\fancyfoot[L]{Confidential}
+\\fancyfoot[R]{${escapeLatex(companyName)}}
 
 % Apply same style to first page
 \\fancypagestyle{plain}{
   \\fancyhf{}
   \\renewcommand{\\headrulewidth}{0.4pt}
   \\renewcommand{\\footrulewidth}{0.4pt}
-  \\fancyhead[L]{\\small ICH Module 2 Section 2.7}
-  \\fancyhead[R]{\\small ${escapeLatex(drugName)}}
-  \\fancyfoot[L]{\\small Confidential}
-  \\fancyfoot[C]{\\thepage}
-  \\fancyfoot[R]{\\small Clinical Summary}
+  \\fancyhead[R]{${escapeLatex(drugName)}\\\\Module 2: Overview and Summary}
+  \\fancyfoot[L]{Confidential}
+  \\fancyfoot[R]{${escapeLatex(companyName)}}
 }
 
 \\begin{document}
@@ -561,6 +563,7 @@ export async function generateSection27(
 	openAiApiKey: string,
 	section53PapersPath: string,
 	outputPath: string,
+	companyName: string = "",
 ): Promise<GenerateSection27Response> {
 	console.log(`[Section27Service] Starting Section 2.7 generation for ${drugName}`)
 
@@ -647,7 +650,7 @@ export async function generateSection27(
 		}
 
 		// Generate complete document
-		const completeDocument = generateCompleteDocument(drugName, subsectionContents)
+		const completeDocument = generateCompleteDocument(drugName, companyName, subsectionContents)
 
 		// Ensure output directory exists
 		const outputDir = path.dirname(outputPath)

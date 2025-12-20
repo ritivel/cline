@@ -394,6 +394,7 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 					value: JSON.stringify({
 						drugName: currentRegulatoryProduct.drugName,
 						productPath: currentRegulatoryProduct.submissionsPath,
+						companyName: currentRegulatoryProduct.companyName || "",
 					}),
 				}),
 			)
@@ -445,6 +446,7 @@ const CtdChecklistView = ({ onDone }: CtdChecklistViewProps) => {
 					value: JSON.stringify({
 						drugName: currentRegulatoryProduct.drugName,
 						productPath: currentRegulatoryProduct.submissionsPath,
+						companyName: currentRegulatoryProduct.companyName || "",
 					}),
 				}),
 			)
