@@ -38,6 +38,10 @@ export const baseTemplate = `{{${SystemPromptSection.AGENT_ROLE}}}
 
 ====
 
+{{${SystemPromptSection.LATEX_GUIDELINES}}}
+
+====
+
 {{${SystemPromptSection.SYSTEM_INFO}}}
 
 ====

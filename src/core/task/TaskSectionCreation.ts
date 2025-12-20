@@ -16,6 +16,7 @@ import { ClineDefaultTool } from "@/shared/tools"
 import { Controller } from "../controller"
 import { EAC_NMRA_TEMPLATE } from "../ctd/templates/eac-nmra/definition"
 import { StateManager } from "../storage/StateManager"
+import { LATEX_FORMATTING_GUIDELINES } from "./constants/latexGuidelines"
 import { Task } from "./index"
 import { DocumentChunk, DocumentContent, DocumentProcessingService, ParsedTagsFile } from "./services/DocumentProcessingService"
 import { ErrorHandlerService } from "./services/ErrorHandlerService"
@@ -1548,13 +1549,13 @@ ${tableRows}
 	 * 2. Compile and capture any errors
 	 * 3. If PDF is generated, return the corrected content
 	 * 4. If errors exist, send them to LLM for correction
-	 * 5. Repeat up to 3 times
+	 * 5. Repeat up to 5 times
 	 *
 	 * @param content The LaTeX content to correct
 	 * @returns The corrected LaTeX content
 	 */
 	private async correctLatexCode(content: string): Promise<string> {
-		const MAX_COMPILATION_ATTEMPTS = 3
+		const MAX_COMPILATION_ATTEMPTS = 5
 		let currentContent = content
 		let tempTexPath: string | null = null
 
@@ -2238,10 +2239,11 @@ ${compilationErrors.map((err, idx) => `${idx + 1}. ${err}`).join("\n")}
 
 		let compileLogSection = ""
 		if (compileLogContent && compileLogContent.trim().length > 0) {
-			// Truncate very long logs to avoid context window issues (keep last 8000 chars)
+			// Keep only the last 100 lines to focus on the tail where errors typically appear
+			const lines = compileLogContent.split("\n")
 			const logContent =
-				compileLogContent.length > 8000
-					? `... (log truncated, showing last 8000 characters)\n${compileLogContent.slice(-8000)}`
+				lines.length > 100
+					? `... (log truncated, showing last 100 lines)\n${lines.slice(-100).join("\n")}`
 					: compileLogContent
 
 			compileLogSection = `
@@ -2254,10 +2256,18 @@ ${logContent}
 `
 		}
 
+		const latexGuidelinesSection = `
+<latex_guidelines>
+Mandatory LaTeX formatting rules to apply:
+
+${LATEX_FORMATTING_GUIDELINES}
+</latex_guidelines>
+`
+
 		return `Review and correct the following LaTeX document. Improve its code quality, fix syntax errors, and ensure it follows LaTeX best practices.
 
 IMPORTANT: You must preserve ALL semantic content, wording, and data values exactly as they are. Only fix LaTeX code structure, syntax, and formatting.
-${errorSection}${compileLogSection}<latex_content>
+${errorSection}${compileLogSection}${latexGuidelinesSection}<latex_content>
 ${content}
 </latex_content>
 

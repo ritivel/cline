@@ -29,6 +29,7 @@ export const config = createVariant(ModelFamily.MICROWAVE)
 		SystemPromptSection.CLI_SUBAGENTS,
 		SystemPromptSection.CAPABILITIES,
 		SystemPromptSection.RULES,
+		SystemPromptSection.LATEX_GUIDELINES,
 		SystemPromptSection.SYSTEM_INFO,
 		SystemPromptSection.OBJECTIVE,
 		SystemPromptSection.USER_INSTRUCTIONS,

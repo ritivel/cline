@@ -6,6 +6,7 @@ import { getCliSubagentsSection } from "./cli_subagents"
 import { getDossierCommandSection } from "./dossier_command"
 import { getEditingFilesSection } from "./editing_files"
 import { getFeedbackSection } from "./feedback"
+import { getLatexGuidelinesSection } from "./latex_guidelines"
 import { getMcp } from "./mcp"
 import { getObjectiveSection } from "./objective"
 import { getRulesSection } from "./rules"
@@ -53,5 +54,6 @@ export function getSystemPromptComponents() {
 		},
 		{ id: SystemPromptSection.TASK_PROGRESS, fn: getUpdatingTaskProgress },
 		{ id: SystemPromptSection.DOSSIER_COMMAND, fn: getDossierCommandSection },
+		{ id: SystemPromptSection.LATEX_GUIDELINES, fn: getLatexGuidelinesSection },
 	]
 }

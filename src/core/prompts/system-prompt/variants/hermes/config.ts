@@ -24,6 +24,7 @@ export const config = createVariant(ModelFamily.HERMES)
 		SystemPromptSection.AGENT_ROLE,
 		SystemPromptSection.TOOL_USE,
 		SystemPromptSection.RULES,
+		SystemPromptSection.LATEX_GUIDELINES,
 		SystemPromptSection.ACT_VS_PLAN,
 		SystemPromptSection.CLI_SUBAGENTS,
 		SystemPromptSection.CAPABILITIES,

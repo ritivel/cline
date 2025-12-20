@@ -1,5 +1,6 @@
 import type { ToolUse } from "@core/assistant-message"
 import { formatResponse } from "@core/prompts/responses"
+import { showSystemNotification } from "@integrations/notifications"
 import { fileExistsAtPath } from "@utils/fs"
 import { getCwd } from "@utils/path"
 import * as fs from "fs"
@@ -12,6 +13,9 @@ import type { IFullyManagedTool } from "../ToolExecutorCoordinator"
 import type { ToolValidator } from "../ToolValidator"
 import type { TaskConfig } from "../types/TaskConfig"
 import type { StronglyTypedUIHelpers } from "../types/UIHelpers"
+
+// Logging prefix for easy identification in console
+const LOG_PREFIX = "[🔍 Module5TagsLookup]"
 
 /**
  * Tool handler for looking up tags.md files from Module 5 sections
@@ -35,10 +39,23 @@ export class Module5TagsLookupToolHandler implements IFullyManagedTool {
 	async execute(config: TaskConfig, block: ToolUse): Promise<ToolResponse> {
 		const sectionNumber = (block.params as any).sectionNumber as string | undefined
 
+		console.log(`${LOG_PREFIX} ========== TOOL CALL START ==========`)
+		console.log(`${LOG_PREFIX} Section requested: ${sectionNumber || "MISSING"}`)
+
 		if (!sectionNumber) {
+			console.error(`${LOG_PREFIX} ❌ ERROR: Missing sectionNumber parameter`)
+			showSystemNotification({
+				subtitle: "Module5TagsLookup - Error",
+				message: "Missing sectionNumber parameter",
+			})
 			config.taskState.consecutiveMistakeCount++
 			return await config.callbacks.sayAndCreateMissingParamError(this.name as ClineDefaultTool, "sectionNumber")
 		}
+
+		showSystemNotification({
+			subtitle: "Module5TagsLookup",
+			message: `Looking up section ${sectionNumber}...`,
+		})
 
 		config.taskState.consecutiveMistakeCount = 0
 
@@ -47,24 +64,47 @@ export class Module5TagsLookupToolHandler implements IFullyManagedTool {
 			const workspaceRoot = config.workspaceManager?.getPrimaryRoot()?.path || cwd
 			const dossierPath = path.join(workspaceRoot, "dossier")
 
+			console.log(`${LOG_PREFIX} Workspace root: ${workspaceRoot}`)
+			console.log(`${LOG_PREFIX} Dossier path: ${dossierPath}`)
+
 			// Validate section number is from Module 5
 			const module5 = EAC_NMRA_TEMPLATE.modules.find((m: { moduleNumber: number }) => m.moduleNumber === 5)
 			if (!module5) {
+				console.error(`${LOG_PREFIX} ❌ ERROR: Module 5 not found in template`)
+				showSystemNotification({
+					subtitle: "Module5TagsLookup - Error",
+					message: "Module 5 not found in template",
+				})
 				return formatResponse.toolError("Module 5 not found in template")
 			}
 
 			// Find the section in Module 5
 			const section = module5.sections[sectionNumber]
 			if (!section) {
+				console.error(`${LOG_PREFIX} ❌ ERROR: Section ${sectionNumber} not found in Module 5`)
+				showSystemNotification({
+					subtitle: "Module5TagsLookup - Error",
+					message: `Section ${sectionNumber} not found`,
+				})
 				return formatResponse.toolError(`Section ${sectionNumber} not found in Module 5`)
 			}
+
+			console.log(`${LOG_PREFIX} ✓ Found section: ${section.title}`)
 
 			// Convert section number to folder path
 			const sectionFolderPath = this.sectionToFolderPath(sectionNumber, dossierPath)
 			const tagsPath = path.join(sectionFolderPath, "tags.md")
 
+			console.log(`${LOG_PREFIX} Section folder: ${sectionFolderPath}`)
+			console.log(`${LOG_PREFIX} Tags path: ${tagsPath}`)
+
 			// Check if tags.md exists
 			if (!(await fileExistsAtPath(tagsPath))) {
+				console.warn(`${LOG_PREFIX} ⚠️ tags.md not found at: ${tagsPath}`)
+				showSystemNotification({
+					subtitle: "Module5TagsLookup",
+					message: `No tags.md for section ${sectionNumber}`,
+				})
 				return JSON.stringify({
 					sectionNumber,
 					sectionTitle: section.title,
@@ -76,13 +116,53 @@ export class Module5TagsLookupToolHandler implements IFullyManagedTool {
 				})
 			}
 
+			console.log(`${LOG_PREFIX} ✓ Found tags.md, reading...`)
+
 			// Read and parse tags.md
 			const tagsContent = await fs.promises.readFile(tagsPath, "utf-8")
 			const parsedTags = this.parseTagsFile(tagsContent, sectionNumber)
 
+			console.log(`${LOG_PREFIX} ✓ Parsed tags.md:`)
+			console.log(`${LOG_PREFIX}   - Drug name: ${parsedTags.drugName || "(not found)"}`)
+			console.log(`${LOG_PREFIX}   - API name: ${parsedTags.apiName || "(not found)"}`)
+			console.log(`${LOG_PREFIX}   - Placements: ${parsedTags.placements.length}`)
+			console.log(`${LOG_PREFIX}   - References: ${parsedTags.references.length}`)
+
 			// Read document contents referenced in tags.md
 			const documentsPath = path.join(workspaceRoot, "documents")
+			console.log(`${LOG_PREFIX} Documents path: ${documentsPath}`)
+
 			const documentContents = await this.readReferencedDocuments(parsedTags, documentsPath, workspaceRoot)
+
+			console.log(`${LOG_PREFIX} ✓ Read ${documentContents.length} documents:`)
+			let docsWithoutMmd = 0
+			for (const doc of documentContents) {
+				console.log(`${LOG_PREFIX}   📄 ${doc.pdfName}`)
+				console.log(`${LOG_PREFIX}      relativePath: ${doc.relativePath}`)
+				if (doc.mmdFilePath) {
+					console.log(`${LOG_PREFIX}      mmdFileName: ${doc.mmdFileName}`)
+					console.log(`${LOG_PREFIX}      mmdFilePath: ${doc.mmdFilePath} ✓`)
+				} else {
+					console.warn(`${LOG_PREFIX}      ⚠️ NO .mmd FILE FOUND - LLM cannot read this document!`)
+					docsWithoutMmd++
+				}
+				console.log(`${LOG_PREFIX}      summary: ${doc.summary ? doc.summary.substring(0, 50) + "..." : "(no summary)"}`)
+			}
+
+			if (docsWithoutMmd > 0) {
+				console.warn(`${LOG_PREFIX} ⚠️ WARNING: ${docsWithoutMmd}/${documentContents.length} documents have NO .mmd file!`)
+				showSystemNotification({
+					subtitle: "Module5TagsLookup - Warning",
+					message: `${docsWithoutMmd} docs missing .mmd files!`,
+				})
+			}
+
+			showSystemNotification({
+				subtitle: "Module5TagsLookup - Success",
+				message: `Found ${documentContents.length} docs for section ${sectionNumber}`,
+			})
+
+			console.log(`${LOG_PREFIX} ========== TOOL CALL END (SUCCESS) ==========`)
 
 			return JSON.stringify({
 				sectionNumber,
@@ -93,7 +173,15 @@ export class Module5TagsLookupToolHandler implements IFullyManagedTool {
 				documents: documentContents,
 			})
 		} catch (error) {
-			return formatResponse.toolError(`Error: ${error instanceof Error ? error.message : String(error)}`)
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`${LOG_PREFIX} ❌ EXCEPTION: ${errorMsg}`)
+			console.error(`${LOG_PREFIX} Stack:`, error instanceof Error ? error.stack : "No stack")
+			showSystemNotification({
+				subtitle: "Module5TagsLookup - Error",
+				message: `Error: ${errorMsg.substring(0, 50)}`,
+			})
+			console.log(`${LOG_PREFIX} ========== TOOL CALL END (ERROR) ==========`)
+			return formatResponse.toolError(`Error: ${errorMsg}`)
 		}
 	}
 
@@ -200,9 +288,9 @@ export class Module5TagsLookupToolHandler implements IFullyManagedTool {
 	}
 
 	/**
-	 * Reads document names and summaries from referenced documents
-	 * Returns only document names and summaries (from info.json), NOT full .mmd content
-	 * The agent will use this information to decide which documents are relevant
+	 * Reads document names, summaries, and .mmd filenames from referenced documents
+	 * Returns document names, summaries (from info.json), and the actual .mmd filename
+	 * The agent will use this information to decide which documents are relevant and how to read them
 	 */
 	private async readReferencedDocuments(
 		tags: {
@@ -211,9 +299,15 @@ export class Module5TagsLookupToolHandler implements IFullyManagedTool {
 		},
 		documentsPath: string,
 		workspaceRoot: string,
-	): Promise<Array<{ pdfName: string; summary?: string; relativePath: string }>> {
+	): Promise<Array<{ pdfName: string; summary?: string; relativePath: string; mmdFileName?: string; mmdFilePath?: string }>> {
 		const allDocs = [...tags.placements, ...tags.references]
-		const contents: Array<{ pdfName: string; summary?: string; relativePath: string }> = []
+		const contents: Array<{
+			pdfName: string
+			summary?: string
+			relativePath: string
+			mmdFileName?: string
+			mmdFilePath?: string
+		}> = []
 
 		for (const doc of allDocs) {
 			try {
@@ -231,11 +325,30 @@ export class Module5TagsLookupToolHandler implements IFullyManagedTool {
 					// info.json not found, skip summary
 				}
 
+				// Find the .mmd file in the document folder
+				let mmdFileName: string | undefined
+				let mmdFilePath: string | undefined
+				try {
+					const entries = await fs.promises.readdir(docFolderPath, { withFileTypes: true })
+					for (const dirEntry of entries) {
+						if (dirEntry.isFile() && dirEntry.name.endsWith(".mmd")) {
+							mmdFileName = dirEntry.name
+							// Provide the full relative path from workspace root for easy use with file_read
+							mmdFilePath = `documents/${doc.relativePath}/${dirEntry.name}`
+							break
+						}
+					}
+				} catch {
+					// Directory not found or can't be read, mmdFileName remains undefined
+				}
+
 				// Always include the document (even without summary) so agent can see the name
 				contents.push({
 					pdfName: doc.pdfName,
 					summary,
 					relativePath: doc.relativePath,
+					mmdFileName,
+					mmdFilePath,
 				})
 			} catch (error) {
 				console.warn(`Failed to read document ${doc.pdfName}: ${error}`)
