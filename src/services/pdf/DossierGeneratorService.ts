@@ -2,17 +2,28 @@ import { buildApiHandler } from "@core/api"
 import { showSystemNotification } from "@integrations/notifications"
 import * as fs from "fs"
 import * as path from "path"
+import type { ToolUse } from "@/core/assistant-message"
 import { Controller } from "@/core/controller"
 import { EAC_NMRA_TEMPLATE } from "@/core/ctd/templates/eac-nmra/definition"
 import { SECTION_PARENT_MAP } from "@/core/ctd/templates/eac-nmra/prompts"
 import type { CTDModuleDef, CTDSectionDef } from "@/core/ctd/types"
+import { ClineIgnoreController } from "@/core/ignore/ClineIgnoreController"
 import { StateManager } from "@/core/storage/StateManager"
+import { MessageStateHandler } from "@/core/task/message-state"
 import { tryAcquireTaskLockWithRetry } from "@/core/task/TaskLockUtils"
 // NOTE: TaskSectionCreation is imported dynamically to avoid circular dependency
 // task/index.ts -> slash-commands -> DossierGeneratorService -> TaskSectionCreation -> task/index.ts
 import type { TaskSectionCreation } from "@/core/task/TaskSectionCreation"
+import { TaskState } from "@/core/task/TaskState"
+import { AutoApprove } from "@/core/task/tools/autoApprove"
+import { WriteTexToolHandler } from "@/core/task/tools/handlers/WriteTexToolHandler"
+import { ToolExecutorCoordinator } from "@/core/task/tools/ToolExecutorCoordinator"
+import { ToolValidator } from "@/core/task/tools/ToolValidator"
+import { resolveWorkspacePath } from "@/core/workspace"
 import { detectWorkspaceRoots } from "@/core/workspace/detection"
 import { setupWorkspaceManager } from "@/core/workspace/setup"
+import { ClineDefaultTool } from "@/shared/tools"
+import { getCwd } from "@/utils/path"
 
 interface PdfTagEntry {
 	pdfName: string
@@ -828,6 +839,11 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 				)
 			}
 
+			// Special handling for all 2.6.x subsections - generate fixed Not Applicable LaTeX
+			if (sectionId.startsWith("2.6.")) {
+				return await this.generateSection26NotApplicable(sectionId, section, sectionFolderPath, onProgress)
+			}
+
 			// Create subagent prompt with LaTeX guidelines
 			const subagentPrompt = this.createSubagentLaTeXPrompt(sectionId, section, sectionFolderPath, tagsPath)
 
@@ -1400,6 +1416,197 @@ The output MUST be a complete, standalone LaTeX document that compiles independe
 				error: errorMsg,
 			}
 		}
+	}
+
+	/**
+	 * Generates any 2.6.x subsection as a fixed Not Applicable LaTeX document
+	 */
+	private async generateSection26NotApplicable(
+		sectionId: string,
+		section: CTDSectionDef,
+		sectionFolderPath: string,
+		onProgress?: (sectionId: string, status: string) => void,
+	): Promise<{ success: boolean; sectionId: string; moduleNum: number; error?: string }> {
+		try {
+			const expectedOutputFile = path.join(sectionFolderPath, "content.tex")
+			const latex = this.createNotApplicableLatexDocument(sectionId, section.title)
+
+			await this.writeTexWithHandler(expectedOutputFile, latex)
+			onProgress?.(sectionId, "Generated Not Applicable placeholder (write_tex)")
+
+			return { success: true, sectionId, moduleNum: 2 }
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			console.error(`[DossierGenerator] Error generating section ${sectionId} Not Applicable: ${errorMsg}`)
+			return { success: false, sectionId, moduleNum: 2, error: errorMsg }
+		}
+	}
+
+	/**
+	 * Creates a simple standalone LaTeX document that marks a section as Not Applicable
+	 */
+	private createNotApplicableLatexDocument(sectionId: string, sectionTitle: string): string {
+		return `\\documentclass[11pt,a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[english]{babel}
+\\usepackage{geometry}
+\\geometry{margin=2.5cm}
+\\usepackage{booktabs}
+\\usepackage{longtable}
+\\usepackage{graphicx}
+\\usepackage{hyperref}
+\\usepackage{amsmath}
+\\usepackage{amsfonts}
+\\usepackage{siunitx}
+\\usepackage{enumitem}
+\\usepackage{xcolor}
+\\usepackage{fancyhdr}
+\\usepackage{titlesec}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    pdftitle={CTD Section ${sectionId}: ${sectionTitle}},
+    pdfauthor={Regulatory Affairs}
+}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[C]{CTD Section ${sectionId}: ${sectionTitle}}
+\\fancyfoot[C]{\\thepage}
+
+\\begin{document}
+
+\\title{CTD Section ${sectionId}: ${sectionTitle}}
+\\author{Regulatory Affairs}
+\\date{\\today}
+\\maketitle
+
+\\section{${sectionId}: ${sectionTitle}}
+Not Applicable.
+
+\\end{document}
+`
+	}
+
+	/**
+	 * Uses the write_tex tool handler to write a LaTeX file and open the compiled PDF.
+	 * This mirrors how TaskSection* classes surface PDFs to the user.
+	 */
+	private async writeTexWithHandler(texPath: string, content: string): Promise<void> {
+		// Strip potential markdown fences the caller might include
+		let cleaned = content.trim()
+		if (cleaned.startsWith("```")) {
+			cleaned = cleaned.split("\n").slice(1).join("\n")
+		}
+		if (cleaned.endsWith("```")) {
+			const parts = cleaned.split("\n")
+			parts.pop()
+			cleaned = parts.join("\n")
+		}
+		cleaned = cleaned.trim()
+
+		// Prepare minimal tool wiring to satisfy the handler
+		const clineIgnoreController = new ClineIgnoreController(this.workspaceRoot)
+		await clineIgnoreController.initialize()
+		const validator = new ToolValidator(clineIgnoreController)
+		const handler = new WriteTexToolHandler(validator)
+
+		// Build a lightweight TaskConfig with no-ops where appropriate
+		const stateManager = StateManager.get()
+		const taskId = `dossier-quick-write-tex-${Date.now()}`
+		const ulid = taskId
+		const taskState = new TaskState()
+		const messageState = new MessageStateHandler({
+			taskId,
+			ulid,
+			taskState,
+			stateManager,
+			updateTaskHistory: async () => [],
+		})
+
+		const cwd = await getCwd()
+		const pathResult = resolveWorkspacePath(cwd, texPath, "DossierGeneratorService.writeTexWithHandler")
+		const resolvedPath = typeof pathResult === "string" ? path.relative(cwd, texPath) : pathResult.resolvedPath
+
+		const toolUse: ToolUse = {
+			type: "tool_use",
+			name: ClineDefaultTool.WRITE_TEX,
+			params: {
+				path: resolvedPath,
+				content: cleaned,
+			},
+			partial: false,
+		}
+
+		const coordinator = new ToolExecutorCoordinator()
+		coordinator.register(handler)
+
+		const apiHandler = buildApiHandler(stateManager.getApiConfiguration(), "act")
+
+		const noop = async () => {}
+		const callbacks = {
+			say: async () => undefined,
+			ask: async () => ({ response: { result: "approved" } as any }),
+			saveCheckpoint: noop,
+			sayAndCreateMissingParamError: async () => "",
+			removeLastPartialMessageIfExistsWithType: noop,
+			executeCommandTool: async () => [true, undefined] as [boolean, any],
+			doesLatestTaskCompletionHaveNewChanges: async () => false,
+			updateFCListFromToolResponse: noop,
+			shouldAutoApproveTool: () => true,
+			shouldAutoApproveToolWithPath: async () => true,
+			postStateToWebview: noop,
+			reinitExistingTaskFromId: noop,
+			cancelTask: noop,
+			updateTaskHistory: async () => [],
+			applyLatestBrowserSettings: async () => undefined as any,
+			switchToActMode: async () => true,
+			setActiveHookExecution: noop,
+			clearActiveHookExecution: noop,
+			getActiveHookExecution: async () => undefined,
+			runUserPromptSubmitHook: async () => ({}),
+		}
+
+		const services = {
+			mcpHub: this.controller?.mcpHub as any,
+			browserSession: undefined as any,
+			urlContentFetcher: undefined as any,
+			diffViewProvider: undefined as any,
+			fileContextTracker: {
+				markFileAsEditedByCline: noop,
+				trackFileContext: noop,
+			} as any,
+			clineIgnoreController,
+			contextManager: undefined as any,
+			stateManager,
+		}
+
+		const config = {
+			taskId,
+			ulid,
+			cwd,
+			mode: stateManager.getGlobalSettingsKey("mode"),
+			strictPlanModeEnabled: stateManager.getGlobalSettingsKey("strictPlanModeEnabled"),
+			yoloModeToggled: stateManager.getGlobalSettingsKey("yoloModeToggled"),
+			vscodeTerminalExecutionMode: stateManager.getGlobalStateKey("vscodeTerminalExecutionMode") || "backgroundExec",
+			context: this.controller?.context as any,
+			workspaceManager: undefined,
+			isMultiRootEnabled: false,
+			taskState,
+			messageState,
+			api: apiHandler,
+			services,
+			autoApprovalSettings: stateManager.getGlobalSettingsKey("autoApprovalSettings"),
+			autoApprover: new AutoApprove(stateManager),
+			browserSettings: stateManager.getGlobalSettingsKey("browserSettings"),
+			focusChainSettings: stateManager.getGlobalSettingsKey("focusChainSettings"),
+			callbacks,
+			coordinator,
+		}
+
+		await handler.execute(config as any, toolUse)
 	}
 
 	/**
